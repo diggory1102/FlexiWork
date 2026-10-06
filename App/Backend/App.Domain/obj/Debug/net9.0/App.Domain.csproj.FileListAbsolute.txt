@@ -1,0 +1,11 @@
+C:\Users\ZZ\Desktop\Work\DATN\App\Backend\App.Domain\obj\Debug\net9.0\App.Domain.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\ZZ\Desktop\Work\DATN\App\Backend\App.Domain\obj\Debug\net9.0\App.Domain.AssemblyInfoInputs.cache
+C:\Users\ZZ\Desktop\Work\DATN\App\Backend\App.Domain\obj\Debug\net9.0\App.Domain.AssemblyInfo.cs
+C:\Users\ZZ\Desktop\Work\DATN\App\Backend\App.Domain\obj\Debug\net9.0\App.Domain.csproj.CoreCompileInputs.cache
+C:\Users\ZZ\Desktop\Work\DATN\App\Backend\App.Domain\bin\Debug\net9.0\App.Domain.deps.json
+C:\Users\ZZ\Desktop\Work\DATN\App\Backend\App.Domain\bin\Debug\net9.0\App.Domain.dll
+C:\Users\ZZ\Desktop\Work\DATN\App\Backend\App.Domain\bin\Debug\net9.0\App.Domain.pdb
+C:\Users\ZZ\Desktop\Work\DATN\App\Backend\App.Domain\obj\Debug\net9.0\App.Domain.dll
+C:\Users\ZZ\Desktop\Work\DATN\App\Backend\App.Domain\obj\Debug\net9.0\refint\App.Domain.dll
+C:\Users\ZZ\Desktop\Work\DATN\App\Backend\App.Domain\obj\Debug\net9.0\App.Domain.pdb
+C:\Users\ZZ\Desktop\Work\DATN\App\Backend\App.Domain\obj\Debug\net9.0\ref\App.Domain.dll

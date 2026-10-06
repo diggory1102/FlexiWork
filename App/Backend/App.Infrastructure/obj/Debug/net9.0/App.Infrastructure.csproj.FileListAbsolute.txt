@@ -1,0 +1,17 @@
+C:\Users\ZZ\Desktop\Work\DATN\App\Backend\App.Infrastructure\bin\Debug\net9.0\App.Infrastructure.deps.json
+C:\Users\ZZ\Desktop\Work\DATN\App\Backend\App.Infrastructure\bin\Debug\net9.0\App.Infrastructure.dll
+C:\Users\ZZ\Desktop\Work\DATN\App\Backend\App.Infrastructure\bin\Debug\net9.0\App.Infrastructure.pdb
+C:\Users\ZZ\Desktop\Work\DATN\App\Backend\App.Infrastructure\bin\Debug\net9.0\App.Application.dll
+C:\Users\ZZ\Desktop\Work\DATN\App\Backend\App.Infrastructure\bin\Debug\net9.0\App.Domain.dll
+C:\Users\ZZ\Desktop\Work\DATN\App\Backend\App.Infrastructure\bin\Debug\net9.0\App.Domain.pdb
+C:\Users\ZZ\Desktop\Work\DATN\App\Backend\App.Infrastructure\bin\Debug\net9.0\App.Application.pdb
+C:\Users\ZZ\Desktop\Work\DATN\App\Backend\App.Infrastructure\obj\Debug\net9.0\App.Infrastructure.csproj.AssemblyReference.cache
+C:\Users\ZZ\Desktop\Work\DATN\App\Backend\App.Infrastructure\obj\Debug\net9.0\App.Infrastructure.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\ZZ\Desktop\Work\DATN\App\Backend\App.Infrastructure\obj\Debug\net9.0\App.Infrastructure.AssemblyInfoInputs.cache
+C:\Users\ZZ\Desktop\Work\DATN\App\Backend\App.Infrastructure\obj\Debug\net9.0\App.Infrastructure.AssemblyInfo.cs
+C:\Users\ZZ\Desktop\Work\DATN\App\Backend\App.Infrastructure\obj\Debug\net9.0\App.Infrastructure.csproj.CoreCompileInputs.cache
+C:\Users\ZZ\Desktop\Work\DATN\App\Backend\App.Infrastructure\obj\Debug\net9.0\App.Infr.D9A1D18F.Up2Date
+C:\Users\ZZ\Desktop\Work\DATN\App\Backend\App.Infrastructure\obj\Debug\net9.0\App.Infrastructure.dll
+C:\Users\ZZ\Desktop\Work\DATN\App\Backend\App.Infrastructure\obj\Debug\net9.0\refint\App.Infrastructure.dll
+C:\Users\ZZ\Desktop\Work\DATN\App\Backend\App.Infrastructure\obj\Debug\net9.0\App.Infrastructure.pdb
+C:\Users\ZZ\Desktop\Work\DATN\App\Backend\App.Infrastructure\obj\Debug\net9.0\ref\App.Infrastructure.dll
