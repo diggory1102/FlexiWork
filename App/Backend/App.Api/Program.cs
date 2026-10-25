@@ -26,13 +26,16 @@ SqlMapper.AddTypeHandler(new JsonTypeHandler<float[]>());
 SqlMapper.AddTypeHandler(new JsonTypeHandler<List<float>>());
 
 // =============================================================================
-// 2. ĐĂNG KÝ DEPENDENCY INJECTION (REPOSITORIES)
+// 2. ĐĂNG KÝ DEPENDENCY INJECTION (REPOSITORIES & SERVICES)
 // =============================================================================
 builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
 builder.Services.AddScoped<IBranchRepository, BranchRepository>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IScheduleRepository, ScheduleRepository>();
 builder.Services.AddScoped<IAttendanceRepository, AttendanceRepository>();
+
+// Đăng ký Service giao tiếp AI Microservice
+builder.Services.AddHttpClient<App.Application.Interfaces.Services.IFaceRecognitionService, App.Infrastructure.Services.FaceRecognitionService>();
 
 // =============================================================================
 // 3. CONTROLLERS & SWAGGER UI

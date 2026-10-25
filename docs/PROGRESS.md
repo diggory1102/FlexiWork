@@ -6,10 +6,10 @@
 - **Dự án:** FlexiWork
 - **Mô tả:** Hệ thống phần mềm quản lý lịch trình làm việc, nhân sự, điểm danh, tính lương, công việc và giao tiếp nội bộ.
 - **Kiến trúc:** Clean Architecture (Chia thành các lớp: Domain, Application, Infrastructure, API).
-- **Tech Stack:** C# .NET 9, Entity Framework Core.
+- **Tech Stack:** C# .NET 8, Entity Framework Core.
 
 ## 2. Đã hoàn thành (Done)
-- [x] Khởi tạo Solution và cấu trúc project Clean Architecture (.NET 9 / .NET 8).
+- [x] Khởi tạo Solution và cấu trúc project Clean Architecture (.NET 8).
 - [x] **Database & ERD Design**:
   - [x] Chuẩn hóa thiết kế ERD 3NF cho 18 thực thể cốt lõi.
   - [x] Tạo file kịch bản DDL MySQL 8.0 hoàn chỉnh: `docs/database/flexiwork_schema.sql` (hỗ trợ Geofencing, Wi-Fi BSSID, Face ID vector JSON, Ca đêm qua ngày, Soft Delete toàn diện, Indexing tối ưu).
