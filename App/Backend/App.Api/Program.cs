@@ -33,6 +33,7 @@ builder.Services.AddScoped<IBranchRepository, BranchRepository>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IScheduleRepository, ScheduleRepository>();
 builder.Services.AddScoped<IAttendanceRepository, AttendanceRepository>();
+builder.Services.AddScoped<App.Application.Interfaces.Services.IAttendanceService, App.Application.Services.AttendanceService>();
 
 // Đăng ký Service giao tiếp AI Microservice
 builder.Services.AddHttpClient<App.Application.Interfaces.Services.IFaceRecognitionService, App.Infrastructure.Services.FaceRecognitionService>();
@@ -49,14 +50,13 @@ var app = builder.Build();
 // =============================================================================
 // 4. HTTP REQUEST PIPELINE
 // =============================================================================
-if (app.Environment.IsDevelopment())
+// Kích hoạt Swagger UI (Hiển thị ngay tại root / hoặc /swagger)
+app.UseSwagger();
+app.UseSwaggerUI(c =>
 {
-    app.UseSwagger();
-    app.UseSwaggerUI(c =>
-    {
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "FlexiWork API v1");
-    });
-}
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "FlexiWork API v1");
+    c.RoutePrefix = string.Empty; // Truy cập trực tiếp tại http://localhost:5265/
+});
 
 app.UseHttpsRedirection();
 

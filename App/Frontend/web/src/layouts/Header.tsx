@@ -10,12 +10,16 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
     <header className="bg-[#202538] text-white h-14 flex items-center justify-between px-4 z-30 sticky top-0 border-b border-slate-700 shadow-xs shrink-0">
       {/* Left Section: Logo & Toggle & Current Section */}
       <div className="flex items-center space-x-6">
-        <div className="flex flex-col justify-center leading-tight">
-          <div className="flex items-baseline space-x-1">
-            <span className="text-2xl font-black tracking-wider text-white">HRM</span>
+        <div className="flex items-center space-x-2.5">
+          <div className="w-8 h-8 rounded-lg bg-white/95 p-1 flex items-center justify-center shadow-xs overflow-hidden">
+            <img
+              src="/logo.png"
+              alt="FlexiWork Logo"
+              className="w-full h-full object-contain"
+            />
           </div>
-          <span className="text-[9px] text-slate-400 font-medium tracking-tight -mt-1">
-            Powered by <strong className="text-white font-semibold">FlexiWork</strong>
+          <span className="text-lg font-bold tracking-tight text-white">
+            FlexiWork
           </span>
         </div>
 

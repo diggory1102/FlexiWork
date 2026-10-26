@@ -66,12 +66,19 @@
     - `src/stores` & `src/services` & `src/types`: Quản lý Auth session, API client và Types chung.
   - [x] Dọn dẹp sạch sẽ 4 thư mục MVVM rỗng cũ (`Models`, `ViewModels`, `Views`, `Services`).
 
-## 3. Đang thực hiện (WIP - Work in Progress)
-- [ ] **Tính năng 1: Core Attendance Engine (Chấm công Đa lớp)**:
-  - Xây dựng thuật toán Geofencing (Haversine Formula) tính khoảng cách mét giữa điện thoại và tâm chi nhánh.
-  - Xây dựng dịch vụ so khớp Access Point Wi-Fi (BSSID).
-  - Xây dựng Use Case Check-in / Check-out trong `App.Application`: Kết hợp kết quả từ Geofence + Wi-Fi + Face ID $\rightarrow$ tự động xác định trạng thái (`valid`, `pending_approval`, `invalid`).
-  - Viết `AttendanceController` trên Backend để tiếp nhận request chấm công thực tế.
+- [x] **Core Attendance Engine (Chấm công Đa lớp - Geofence + Wi-Fi + Face ID)**:
+  - [x] Xây dựng thuật toán `GeofenceCalculator` (công thức Haversine đo khoảng cách mét giữa điện thoại và tâm chi nhánh).
+  - [x] Xây dựng cơ chế so khớp địa chỉ MAC/BSSID trạm phát Wi-Fi chi nhánh chống giả lập Fake GPS.
+  - [x] Xây dựng `IAttendanceService` & `AttendanceService` (.NET 8 Clean Architecture):
+    - Đối soát đồng thời 3 lớp: GPS Geofence (bán kính $R$), Wi-Fi BSSID và Face ID AI (InsightFace ArcFace 512D).
+    - Tự động phát hiện đi muộn (so sánh thời gian thực với `StartTime` của ca trực `shifts`).
+    - Phân loại trạng thái bản ghi tự động: `valid` (hợp lệ), `pending_approval` (ngoài vùng/chưa kết nối Wi-Fi) hoặc `invalid` (sai Face ID).
+  - [x] Cung cấp RESTful API qua `AttendanceController`:
+    - `POST /api/attendance/checkin`: Xử lý multipart form kèm ảnh selfie và tọa độ/Wi-Fi.
+    - `POST /api/attendance/checkout`: Tính số phút về sớm và tổng giờ làm thực tế.
+    - `GET /api/attendance/today/{userId}`: Tra cứu điểm danh hôm nay của nhân viên.
+    - `GET /api/attendance/branch/{branchId}`: Tra cứu nhật ký chấm công chi nhánh theo ngày.
+  - [x] Biên dịch toàn bộ Solution Backend thành công 100% (`0 Warning, 0 Error`).
   - Đấu nối dữ liệu thật từ Backend lên Web Dashboard.
 
 ## 4. Kế hoạch tiếp theo (Next Steps / To-do)
