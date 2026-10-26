@@ -33,15 +33,49 @@
   - [x] Đăng ký tự động `JsonTypeHandler<float[]>` cho Dapper khi khởi chạy ứng dụng.
   - [x] Tạo `BranchesController` kiểm chứng luồng đọc dữ liệu chi nhánh và Wi-Fi qua Dapper.
   - [x] Biên dịch toàn bộ Solution thành công 100% (`0 Warning, 0 Error`).
+- [x] **AI Face Recognition Microservice (Python FastAPI + InsightFace ArcFace 512D)**:
+  - [x] Tạo service độc lập tại `App/AiService`: `requirements.txt` (FastAPI, InsightFace, ONNXRuntime, OpenCV).
+  - [x] Viết `FaceEngine`: trích xuất vector đặc trưng 512 chiều (L2-normalized) và tính Cosine Similarity (kèm cơ chế Dev Fallback an toàn).
+  - [x] Cung cấp 2 API RESTful: `POST /api/face/extract` (đăng ký khuôn mặt) và `POST /api/face/verify` (đối soát chấm công).
+  - [x] Tạo `Dockerfile` đóng gói container độc lập.
+  - [x] Xây dựng `IFaceRecognitionService` & `FaceRecognitionService` (C# .NET 8) kết nối qua `HttpClient` với AI Service.
+  - [x] Đăng ký HttpClient trong `Program.cs` và cấu hình BaseUrl trong `appsettings.json`.
+- [x] **Frontend Web (React 18 + TypeScript + Vite + Tailwind CSS + Zustand)**:
+  - [x] Chuyển đổi và chuẩn hóa cấu trúc thư mục sang **Feature-based Modules**:
+    - `src/features/{feature_name}`: Độc lập theo nghiệp vụ HRM (Dashboard, Attendance, Shifts, Employees, Payroll, Leaves).
+    - `src/layouts`: `MainLayout`, `Header`, `Sidebar` chuẩn iPOS.vn.
+    - `src/stores` & `src/types`: Global session store & Shared entities.
+  - [x] Thiết lập Tailwind CSS, Google Font Inter, custom scrollbar.
+  - [x] Xây dựng Axios `apiClient` tập trung và Zustand Store phân tách theo Feature.
+  - [x] Tái hiện 1:1 giao diện **Web Quản trị Nhân sự HRM phong cách iPOS.vn** (`DashboardView.tsx`):
+    - Top Header xanh đậm (`#202538`) với logo HRM, nút Bảng giá, Hỗ trợ, Thông báo badge.
+    - Sidebar chuẩn 210px với đầy đủ danh mục HRM (Tổng quan, Chờ duyệt, Nhân viên, Ca kíp, Chấm công, Lương...).
+    - Hero Card tổng ca làm việc kèm vector nghệ thuật nhân viên F&B.
+    - 8 thẻ KPI chỉ số chấm công: Đi muộn, Về sớm, Quên check-in/out, Nghỉ phép, Trùng thiết bị...
+    - Banner tổng lương ngày dự kiến & lương thực tế thời gian thực.
+    - Bảng phân ca hôm nay liên kết trực tiếp dữ liệu Seed (Ca sáng, Ca chiều, Ca đêm).
+  - [x] Đã build thành công bản production (`vite build`) và đang chạy live server tại `http://localhost:5173`.
+  - [x] Commit và push toàn bộ mã nguồn lên GitHub (`origin/main`, commit `6adb1bf`).
+- [x] **Frontend Mobile (React Native / Expo - Employee App)**:
+  - [x] Chuẩn hóa toàn diện cấu trúc thư mục sang **Feature-based Modules** hướng nghiệp vụ nhân viên:
+    - `src/features/attendance`: Chấm công thông minh (Camera Face ID, GPS Geofence, Wi-Fi AP).
+    - `src/features/shifts`: Lịch ca cá nhân, đổi ca trực.
+    - `src/features/requests`: Đơn xin nghỉ phép, giải trình chấm công, làm thêm giờ.
+    - `src/features/profile`: Hồ sơ cá nhân & ví tích lũy ngày công.
+    - `src/features/notifications`: Thông báo nhắc ca và kết quả duyệt đơn.
+    - `src/stores` & `src/services` & `src/types`: Quản lý Auth session, API client và Types chung.
+  - [x] Dọn dẹp sạch sẽ 4 thư mục MVVM rỗng cũ (`Models`, `ViewModels`, `Views`, `Services`).
 
 ## 3. Đang thực hiện (WIP - Work in Progress)
-- [ ] **App.Application (Use Cases & Core Attendance Engine)**:
-  - Xây dựng thuật toán kiểm tra Geofence (Haversine Formula) tính khoảng cách mét giữa thiết bị và chi nhánh.
+- [ ] **Tính năng 1: Core Attendance Engine (Chấm công Đa lớp)**:
+  - Xây dựng thuật toán Geofencing (Haversine Formula) tính khoảng cách mét giữa điện thoại và tâm chi nhánh.
   - Xây dựng dịch vụ so khớp Access Point Wi-Fi (BSSID).
-  - Xây dựng dịch vụ so khớp vector Face ID (Cosine Similarity / Euclidean Distance).
-  - Hoàn thiện luồng Use Case Check-in / Check-out tự động phân loại trạng thái (`valid`, `pending_approval`, `invalid`).
+  - Xây dựng Use Case Check-in / Check-out trong `App.Application`: Kết hợp kết quả từ Geofence + Wi-Fi + Face ID $\rightarrow$ tự động xác định trạng thái (`valid`, `pending_approval`, `invalid`).
+  - Viết `AttendanceController` trên Backend để tiếp nhận request chấm công thực tế.
+  - Đấu nối dữ liệu thật từ Backend lên Web Dashboard.
 
 ## 4. Kế hoạch tiếp theo (Next Steps / To-do)
-- [ ] **App.Api**:
-  - Cấu hình JWT Authentication & Authorization (Token Service, Claims).
-  - Viết các Controller: `AuthController`, `SchedulesController`, `AttendanceController`.
+- [ ] **Tính năng 2: Quản lý Phân ca & Lịch làm việc (Shifts & Schedules)**.
+- [ ] **Tính năng 3: Quản lý Đơn từ & Phê duyệt (Leave Requests)**.
+- [ ] **Tính năng 4: Tổng hợp Bảng công & Chốt lương tháng (Monthly Timesheets)**.
+- [ ] Cấu hình bảo mật JWT Token Authentication & Phân quyền Role-based (Admin, Store Manager, Employee).

@@ -1,7 +1,7 @@
 import { create } from 'zustand';
-import { User, Branch } from '../Models';
+import { User, Branch } from '../types';
 
-interface AppState {
+interface GlobalAppState {
   currentUser: User | null;
   currentBranch: Branch | null;
   role: 'ADMIN' | 'MANAGER' | 'EMPLOYEE';
@@ -10,7 +10,7 @@ interface AppState {
   setRole: (role: 'ADMIN' | 'MANAGER' | 'EMPLOYEE') => void;
 }
 
-export const useAppStore = create<AppState>((set) => ({
+export const useAppStore = create<GlobalAppState>((set) => ({
   currentUser: {
     id: 3,
     employeeCode: 'EMP003',
