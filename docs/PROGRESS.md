@@ -212,8 +212,8 @@ flowchart TD
 
 > **Tổng quan Tiến độ Hiện tại:**
 > * **Giai đoạn đang thực hiện:** CẤP BẬC 1 - Tổ chức, Người dùng & Bảo mật (Identity & Organization)
-> * **Tiến độ tổng thể:** `5 / 26` Nhiệm vụ hoàn thành (`19%`)
-> * **Hành động tiếp theo:** Thực hiện **Task 1.1** (Định nghĩa Enums & Entities cho nhóm Identity & Master Data trong `FW.Domain`).
+> * **Tiến độ tổng thể:** `6 / 26` Nhiệm vụ hoàn thành (`23%`)
+> * **Hành động tiếp theo:** Thực hiện **Task 1.2** (Repository & Data Access cho nhóm Master Data trong `FW.Infrastructure`).
 
 ---
 
@@ -230,8 +230,12 @@ flowchart TD
 
 ---
 
-### 📌 CẤP BẬC 1: Tổ chức, Người dùng & Bảo mật (Identity & Organization) `[0/5]`
-- [ ] **Task 1.1:** Định nghĩa Enums & Entities (`User`, `Role`, `UserRole`, `Department`, `Position`, `Branch`, `BranchWifi`) trong `FW.Domain`.
+### 📌 CẤP BẬC 1: Tổ chức, Người dùng & Bảo mật (Identity & Organization) `[1/5]`
+- [x] **Task 1.1:** Định nghĩa Enums & Entities (`User`, `Role`, `UserRole`, `Department`, `Position`, `Branch`, `BranchWifi`) trong `FW.Domain`.
+  - Enums dạng hằng chuỗi (`RoleNames`, `UserStatus`, `BranchStatus`) khớp giá trị VARCHAR trong CSDL (Dapper ghi enum C# thành số nguyên).
+  - Bổ sung vai trò `ROLE_HR` (seed id 4); Manager phụ trách 1 chi nhánh theo `users.branch_id`.
+  - Bổ sung cột `updated_at` cho `branch_wifis`, `departments`, `positions` để mọi bảng danh mục dùng chung `BaseAuditableEntity`.
+  - Unit test `EntitySchemaMappingTests` đối chiếu 2 chiều thuộc tính Entity ↔ cột trong `flexiwork_schema.sql`.
 - [ ] **Task 1.2:** Triển khai Repository & Data Access cho nhóm bảng Master Data (`BranchRepository`, `UserRepository`, ...) trong `FW.Infrastructure`.
 - [ ] **Task 1.3:** Triển khai Authentication Service: Đăng nhập, cấp phát JWT Token (kèm claims: `UserId`, `Roles`, `BranchId`), mã hóa mật khẩu BCrypt trong `FW.Application`.
 - [ ] **Task 1.4:** Triển khai CRUD API Chi nhánh (Tọa độ Lat/Long, bán kính Geofence, Wi-Fi BSSID) và CRUD Phòng ban / Chức vụ trong `FW.API`.

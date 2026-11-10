@@ -42,7 +42,8 @@ ON DUPLICATE KEY UPDATE ssid=VALUES(ssid);
 INSERT INTO roles (id, role_name, description) VALUES
 (1, 'ROLE_ADMIN', 'Quản trị viên toàn hệ thống, toàn quyền cấu hình'),
 (2, 'ROLE_MANAGER', 'Quản lý chi nhánh / Trưởng bộ phận, duyệt đơn và phân ca'),
-(3, 'ROLE_EMPLOYEE', 'Nhân viên ca kíp, thực hiện chấm công và báo cáo công việc')
+(3, 'ROLE_EMPLOYEE', 'Nhân viên ca kíp, thực hiện chấm công và báo cáo công việc'),
+(4, 'ROLE_HR', 'Bộ phận Nhân sự, quản lý hồ sơ, đơn từ và bảng công toàn doanh nghiệp')
 ON DUPLICATE KEY UPDATE role_name=VALUES(role_name);
 
 -- 6. SEED TÀI KHOẢN NGƯỜI DÙNG (Users)

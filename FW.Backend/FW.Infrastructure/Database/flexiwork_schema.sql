@@ -71,6 +71,7 @@ CREATE TABLE branch_wifis (
     is_active TINYINT(1) NOT NULL DEFAULT 1,
     is_deleted TINYINT(1) NOT NULL DEFAULT 0,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NULL ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (branch_id) REFERENCES branches(id) ON DELETE CASCADE,
     INDEX idx_branch_wifis_lookup (bssid, is_active)
 ) ENGINE=InnoDB COMMENT='BSSID Wi-Fi hợp lệ cho chấm công từng chi nhánh';
@@ -82,7 +83,8 @@ CREATE TABLE departments (
     name VARCHAR(100) NOT NULL,
     description VARCHAR(255) NULL,
     is_deleted TINYINT(1) NOT NULL DEFAULT 0,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NULL ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB COMMENT='Phòng ban công ty';
 
 -- 1.4. Chức vụ & Đơn giá lương giờ (Positions)
@@ -92,7 +94,8 @@ CREATE TABLE positions (
     base_salary_per_hour DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
     description VARCHAR(255) NULL,
     is_deleted TINYINT(1) NOT NULL DEFAULT 0,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NULL ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB COMMENT='Chức danh và mức lương cơ sở theo giờ';
 
 -- =============================================================================
@@ -125,7 +128,7 @@ CREATE TABLE users (
 -- 2.2. Danh mục vai trò (Roles)
 CREATE TABLE roles (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    role_name VARCHAR(50) NOT NULL UNIQUE COMMENT 'ROLE_ADMIN, ROLE_MANAGER, ROLE_EMPLOYEE',
+    role_name VARCHAR(50) NOT NULL UNIQUE COMMENT 'ROLE_ADMIN, ROLE_HR, ROLE_MANAGER, ROLE_EMPLOYEE',
     description VARCHAR(255) NULL
 ) ENGINE=InnoDB COMMENT='Vai trò bảo mật RBAC';
 
