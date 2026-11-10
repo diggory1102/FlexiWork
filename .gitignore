@@ -1,0 +1,44 @@
+# ===== .NET =====
+bin/
+obj/
+*.user
+*.suo
+*.rsuser
+.vs/
+TestResults/
+*.log
+
+# ===== Node / Frontend =====
+node_modules/
+dist/
+build/
+.expo/
+web-build/
+*.tsbuildinfo
+.env
+.env.local
+.env.*.local
+
+# ===== Python / AI Service =====
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+# Model weights InsightFace (tải tự động khi chạy, dung lượng lớn)
+.insightface/
+*.onnx
+
+# ===== IDE / OS =====
+.idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+.DS_Store
+Thumbs.db
+
+# ===== Office temp =====
+~$*
+
+# ===== Tài liệu khóa luận (bản nháp, giữ cục bộ) =====
+docs/*.docx
