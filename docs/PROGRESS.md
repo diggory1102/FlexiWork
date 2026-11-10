@@ -1,7 +1,7 @@
 # FlexiWork - Nhật ký Dự án & Kiến trúc Chức năng (Project Progress & Architecture)
 
 > **Tài liệu theo dõi tiến độ, kiến trúc chức năng và ma trận phân quyền hệ thống FlexiWork.**  
-> *Thời gian cập nhật: 04/11/2026*
+> *Thời gian cập nhật: 10/11/2026*
 
 ---
 
@@ -208,12 +208,29 @@ flowchart TD
 
 ---
 
-## 6. Kế hoạch & Bảng Theo dõi Tiến độ Triển khai Backend (Actionable Checklist)
+## 6. Kế hoạch & Bảng Theo dõi Tiến độ (Actionable Checklist)
+
+> **Quy ước:**
+> * Mỗi cấp bậc là một **lát cắt dọc** hoàn chỉnh: Backend API + Web Admin + Mobile App. Kết thúc mỗi cấp bậc có bản chạy được để demo (theo phương pháp Agile tại Mục 1.5 khóa luận).
+> * Mỗi task backend có logic tính toán phải kèm **unit test** trong `FW.UnitTests`.
+> * `[Tùy chọn]`: chỉ thực hiện khi còn thời gian; có thể đưa vào "Hướng phát triển" (Chương 5).
 
 > **Tổng quan Tiến độ Hiện tại:**
-> * **Giai đoạn đang thực hiện:** CẤP BẬC 1 - Tổ chức, Người dùng & Bảo mật (Identity & Organization)
-> * **Tiến độ tổng thể:** `6 / 26` Nhiệm vụ hoàn thành (`23%`)
-> * **Hành động tiếp theo:** Thực hiện **Task 1.2** (Repository & Data Access cho nhóm Master Data trong `FW.Infrastructure`).
+> * **Giai đoạn đang thực hiện:** CẤP BẬC 1 - Tổ chức, Người dùng & Bảo mật
+> * **Tiến độ tổng thể:** `6 / 45` Nhiệm vụ hoàn thành (`13%`)
+> * **Hành động tiếp theo:** Thực hiện **Task 1.2** (BaseRepository, transaction, repository nhóm Master Data, chốt múi giờ).
+
+### Các quyết định cần chốt
+
+| Quyết định | Ảnh hưởng tới | Đề xuất mặc định |
+| :--- | :--- | :--- |
+| Hạn nộp & ngày bảo vệ khóa luận | Phân bổ khối lượng, các mục `[Tùy chọn]` | — |
+| Manager phụ trách 1 hay nhiều chi nhánh | Task 1.3, 1.5 | 1 chi nhánh (`users.branch_id`) |
+| Múi giờ lưu trữ | Task 1.2, 3.2, 5.3 | Giờ Việt Nam (UTC+7) |
+| Xử lý khi 1 lớp chấm công không đạt | Task 3.2 | GPS + Face bắt buộc; sai Wi-Fi → `pending_approval` |
+| Ca gãy | Task 2.2 | Tách thành 2 ca trong cùng ngày |
+| Đơn đổi ca cần đồng nghiệp đồng ý trước | Task 4.2 | Có |
+| Chống giả mạo khuôn mặt (liveness) | Task 6.2 | `[Tùy chọn]` |
 
 ---
 
@@ -230,51 +247,95 @@ flowchart TD
 
 ---
 
-### 📌 CẤP BẬC 1: Tổ chức, Người dùng & Bảo mật (Identity & Organization) `[1/5]`
+### 📌 CẤP BẬC 1: Tổ chức, Người dùng & Bảo mật `[1/7]`
+> 🎯 **Demo:** Đăng nhập Web Admin theo vai trò; quản lý chi nhánh, phòng ban, chức vụ, nhân sự; nhân viên đăng nhập trên Mobile.
+
 - [x] **Task 1.1:** Định nghĩa Enums & Entities (`User`, `Role`, `UserRole`, `Department`, `Position`, `Branch`, `BranchWifi`) trong `FW.Domain`.
   - Enums dạng hằng chuỗi (`RoleNames`, `UserStatus`, `BranchStatus`) khớp giá trị VARCHAR trong CSDL (Dapper ghi enum C# thành số nguyên).
   - Bổ sung vai trò `ROLE_HR` (seed id 4); Manager phụ trách 1 chi nhánh theo `users.branch_id`.
   - Bổ sung cột `updated_at` cho `branch_wifis`, `departments`, `positions` để mọi bảng danh mục dùng chung `BaseAuditableEntity`.
   - Unit test `EntitySchemaMappingTests` đối chiếu 2 chiều thuộc tính Entity ↔ cột trong `flexiwork_schema.sql`.
-- [ ] **Task 1.2:** Triển khai Repository & Data Access cho nhóm bảng Master Data (`BranchRepository`, `UserRepository`, ...) trong `FW.Infrastructure`.
-- [ ] **Task 1.3:** Triển khai Authentication Service: Đăng nhập, cấp phát JWT Token (kèm claims: `UserId`, `Roles`, `BranchId`), mã hóa mật khẩu BCrypt trong `FW.Application`.
-- [ ] **Task 1.4:** Triển khai CRUD API Chi nhánh (Tọa độ Lat/Long, bán kính Geofence, Wi-Fi BSSID) và CRUD Phòng ban / Chức vụ trong `FW.API`.
-- [ ] **Task 1.5:** Triển khai Quản lý Hồ sơ Nhân sự: Thêm mới, phân vai trò (`Admin`, `HR`, `Manager`, `Employee`), gán chi nhánh và khóa/mở tài khoản trong `FW.API`.
+- [ ] **Task 1.2:** Data Access nền tảng trong `FW.Infrastructure`:
+  - `BaseRepository<T>` (Dapper): CRUD chung, xóa mềm, phân trang, tìm kiếm.
+  - Hỗ trợ transaction (`IUnitOfWork`) cho các nghiệp vụ cập nhật nhiều bảng (duyệt đơn, đổi ca).
+  - Repository: `BranchRepository` (kèm `BranchWifi`), `DepartmentRepository`, `PositionRepository`, `UserRepository` (kèm vai trò), `RoleRepository`.
+  - Chốt múi giờ: đặt `time_zone` cho phiên kết nối MySQL và `IDateTimeProvider` dùng chung.
+- [ ] **Task 1.3:** Xác thực & Phân quyền:
+  - Đăng nhập (BCrypt), phát hành JWT (claims `UserId`, `Roles`, `BranchId`), đổi mật khẩu.
+  - Quên mật khẩu bằng OTP qua email (MailKit, OTP lưu Redis TTL 5 phút).
+  - Policy phân quyền theo vai trò và **phạm vi chi nhánh** (Manager chỉ thao tác dữ liệu chi nhánh mình) dùng chung cho mọi API.
+  - Tạo lại hash BCrypt thật cho tài khoản mẫu trong seed.
+- [ ] **Task 1.4:** API Chi nhánh (tọa độ Lat/Long, bán kính Geofence, danh sách Wi-Fi BSSID), Phòng ban, Chức vụ & đơn giá công.
+- [ ] **Task 1.5:** API Hồ sơ Nhân sự: thêm mới kèm **email mời kích hoạt tài khoản**, phân vai trò, gán chi nhánh/phòng ban/chức vụ, khóa/mở tài khoản, tìm kiếm & phân trang; cập nhật thông tin cá nhân và ảnh đại diện (Cloudinary).
+- [ ] **Task 1.6:** Web Admin: màn hình đăng nhập, quên mật khẩu, menu theo vai trò; quản lý Chi nhánh (kèm Wi-Fi), Phòng ban, Chức vụ, Nhân sự.
+- [ ] **Task 1.7:** Mobile App: đăng nhập, lưu phiên bảo mật (SecureStore), khung điều hướng tab, màn hình hồ sơ cá nhân.
 
 ---
 
-### 📌 CẤP BẬC 2: Khung ca, Xếp lịch làm việc & Dữ liệu Face ID `[0/4]`
-- [ ] **Task 2.1:** Định nghĩa Entities (`Shift`, `Schedule`, `FaceProfile`) và Repository tương ứng trong `FW.Domain` & `FW.Infrastructure`.
-- [ ] **Task 2.2:** Nghiệp vụ Quản lý Khung ca (`shifts`): CRUD ca làm việc, tính toán khung giờ ca, ca đêm, ca gãy, hệ số công.
-- [ ] **Task 2.3:** Nghiệp vụ Phân ca & Xếp lịch (`schedules`): Xếp lịch làm việc theo chu kỳ tuần/tháng cho nhân viên, kiểm tra ràng buộc chống trùng ca (`uq_user_shift_date`), API công bố và xem lịch.
-- [ ] **Task 2.4:** Đăng ký Face ID Profile: API nhận ảnh mẫu từ nhân viên, tích hợp client gọi sang `FW.AiService` trích xuất vector khuôn mặt và lưu vào bảng `face_profiles`.
+### 📌 CẤP BẬC 2: Khung ca, Xếp lịch & Dữ liệu Face ID `[0/6]`
+> 🎯 **Demo:** Quản lý xếp và công bố lịch tuần trên Web; nhân viên xem lịch và đăng ký khuôn mặt trên Mobile.
+
+- [ ] **Task 2.1:** Entities & Repository `Shift`, `Schedule`, `FaceProfile`. Bổ sung schema: `shifts.branch_id` (NULL = ca dùng chung), số phút cho phép đi muộn/về sớm, trạng thái nháp/công bố của lịch (`schedules`).
+- [ ] **Task 2.2:** API Khung ca & Quy tắc vi phạm: ca hành chính, ca xoay, ca gãy, ca đêm qua ngày, giờ nghỉ, hệ số công; cấu hình mức trừ công/phạt khi đi muộn, về sớm.
+- [ ] **Task 2.3:** API Phân ca & Xếp lịch: xếp theo tuần/tháng, chống trùng và chồng giờ giữa các ca, chuyển nháp → công bố, xem lịch cá nhân / chi nhánh.
+- [ ] **Task 2.4:** Đăng ký Face ID: nhận ảnh mẫu → lưu Cloudinary → `FW.AiService` trích xuất vector 512 chiều → lưu `face_profiles`; sửa vector mẫu trong seed cho đủ 512 chiều.
+- [ ] **Task 2.5:** Web Admin: quản lý khung ca & quy tắc; lưới xếp lịch theo tuần cho từng chi nhánh; công bố lịch.
+- [ ] **Task 2.6:** Mobile App: xem lịch ca cá nhân; chụp ảnh đăng ký Face ID.
 
 ---
 
-### 📌 CẤP BẬC 3: LÕI CHẤM CÔNG 3 LỚP (3-Factor Attendance Engine) `[0/4]`
-- [ ] **Task 3.1:** Định nghĩa Entity `AttendanceLog` và xây dựng Helper tính toán khoảng cách GPS Geofencing (Công thức Haversine) và xác minh Wi-Fi BSSID.
-- [ ] **Task 3.2:** Tích hợp Client giao tiếp với `FW.AiService`: Gửi ảnh selfie check-in để phát hiện khuôn mặt và so khớp độ tương đồng Cosine Similarity với vector Face ID gốc.
-- [ ] **Task 3.3:** Xây dựng Engine Check-in / Check-out:
-  - Kiểm tra đồng thời 3 lớp: GPS $\le$ Bán kính, Wi-Fi BSSID hợp lệ, Face ID match $\ge$ Ngưỡng tin cậy.
-  - So khớp tự động với ca làm việc (`schedules`) để tính toán: `late_minutes`, `early_minutes`, `actual_work_hours`.
-  - Ghi nhận bản ghi đầy đủ minh chứng vào `attendance_logs`.
-- [ ] **Task 3.4:** API Tra cứu Nhật ký Chấm công: Cho nhân viên xem lịch sử bản thân; cho Quản lý / HR tra cứu toàn bộ log kèm minh chứng ảnh, tọa độ và MAC Wi-Fi.
+### 📌 CẤP BẬC 3: LÕI CHẤM CÔNG 3 LỚP (3-Factor Attendance Engine) `[0/5]`
+> 🎯 **Demo:** Nhân viên check-in/check-out trên điện thoại thật; Quản lý xem nhật ký kèm minh chứng trên Web.
+
+- [ ] **Task 3.1:** Entity `AttendanceLog`; helper tính khoảng cách Haversine và xác minh Wi-Fi BSSID (kèm unit test).
+- [ ] **Task 3.2:** Engine Check-in / Check-out:
+  - Kiểm tra 3 lớp: GPS $\le$ bán kính, Wi-Fi BSSID hợp lệ, Face ID match $\ge$ ngưỡng tin cậy (qua `FaceRecognitionClient`).
+  - Xử lý khi một lớp không đạt (từ chối hoặc `pending_approval`) theo quyết định đã chốt.
+  - So khớp với ca (`schedules`) để tính `late_minutes`, `early_minutes`, `actual_work_hours`; lưu đầy đủ minh chứng vào `attendance_logs`.
+- [ ] **Task 3.3:** API Tra cứu Nhật ký Chấm công: nhân viên xem lịch sử bản thân; Quản lý / HR tra cứu theo chi nhánh kèm ảnh, tọa độ, khoảng cách, BSSID.
+- [ ] **Task 3.4:** Mobile App: màn hình chấm công (lấy GPS + BSSID + chụp selfie), hiển thị kết quả từng lớp xác minh; lịch sử chấm công cá nhân.
+- [ ] **Task 3.5:** Web Admin: nhật ký chấm công có bộ lọc; xem chi tiết minh chứng; duyệt các bản ghi `pending_approval`.
 
 ---
 
-### 📌 CẤP BẬC 4: Đơn từ, Phê duyệt & Công việc theo ca (Workflow & Shift Tasks) `[0/4]`
-- [ ] **Task 4.1:** Nghiệp vụ Quản lý Đơn từ (`leave_requests`, `leave_types`, `leave_balances`): Tạo đơn xin nghỉ, đổi ca, làm thêm giờ OT, giải trình đi muộn/về sớm kèm tệp minh chứng.
-- [ ] **Task 4.2:** Quy trình Phê duyệt Đơn từ: API Quản lý/HR phê duyệt/từ chối; tự động cấn trừ quỹ phép (`leave_balances`), cập nhật trạng thái hợp lệ lên `schedules` và `attendance_logs`.
-- [ ] **Task 4.3:** Quản lý Mẫu Checklist công việc (`shift_tasks`): Tạo danh mục công việc chuẩn cần làm gắn theo từng loại ca trực.
-- [ ] **Task 4.4:** Thực hiện & Giám sát Task theo ca (`shift_task_assignments`): Tự động gán task khi vào ca, API nhân viên tích hoàn thành kèm ảnh minh chứng hiện trường, API theo dõi tiến độ ca trực.
+### 📌 CẤP BẬC 4: Đơn từ, Phê duyệt & Công việc theo ca `[0/5]`
+> 🎯 **Demo:** Nhân viên gửi đơn trên Mobile → Quản lý duyệt trên Web → quỹ phép và lịch tự cập nhật; checklist ca trực có ảnh minh chứng.
+
+- [ ] **Task 4.1:** API Đơn từ: CRUD loại đơn (`leave_types`); tạo đơn nghỉ phép, đổi ca, OT (có giờ bắt đầu/kết thúc), giải trình đi muộn/về sớm kèm ảnh minh chứng. Bổ sung schema cho đơn OT.
+- [ ] **Task 4.2:** Quy trình Phê duyệt (transaction): Quản lý duyệt theo chi nhánh, HR duyệt toàn bộ; tự động trừ quỹ phép (`leave_balances`), cập nhật `schedules` / `attendance_logs`, hoán đổi lịch khi đổi ca; HR điều chỉnh quỹ phép.
+- [ ] **Task 4.3:** API Checklist công việc: mẫu checklist theo ca (`shift_tasks`); tự động gán khi nhân viên vào ca; tích hoàn thành kèm ảnh hiện trường; API tiến độ theo ca.
+- [ ] **Task 4.4:** Mobile App: tạo & theo dõi đơn từ; to-do list ca trực, tích hoàn thành và chụp ảnh minh chứng.
+- [ ] **Task 4.5:** Web Admin: duyệt/từ chối đơn, quản lý loại đơn & quỹ phép; quản lý checklist mẫu; giám sát tiến độ task theo ca.
 
 ---
 
-### 📌 CẤP BẬC 5: Realtime Hubs, Tổng hợp Bảng công & Báo cáo `[0/4]`
-- [ ] **Task 5.1:** Triển khai SignalR Hubs (`NotificationHub`, `ChatHub`): Đẩy thông báo tức thì khi có kết quả duyệt đơn, lịch mới, check-in thành công; hỗ trợ phòng chat 1-1 và chat nhóm chi nhánh.
-- [ ] **Task 5.2:** Thuật toán Tổng hợp Bảng công tháng (`monthly_timesheets`): Tự động gom dữ liệu từ `attendance_logs`, `schedules` và `leave_requests` tính tổng ngày công, giờ OT, số phút vi phạm.
-- [ ] **Task 5.3:** Dashboard Giám sát Quân số Realtime: Thống kê số lượng nhân sự đang làm việc, đi muộn, vắng mặt theo chi nhánh thời gian thực.
-- [ ] **Task 5.4:** Trích xuất Bảng công ra Excel: Service xuất báo cáo bảng công chi tiết toàn chi nhánh / công ty ra file định dạng `.xlsx`.
+### 📌 CẤP BẬC 5: Realtime, Tổng hợp Bảng công & Báo cáo `[0/8]`
+> 🎯 **Demo:** Thông báo & chat tức thì giữa Web và Mobile; dashboard quân số realtime; chốt bảng công tháng và xuất Excel.
 
+- [ ] **Task 5.1:** `NotificationHub` + bảng `notifications`: lưu và đẩy thông báo (kết quả duyệt đơn, lịch mới, check-in, task được giao); API danh sách, đánh dấu đã đọc.
+- [ ] **Task 5.2:** `ChatHub` + API hội thoại: chat 1-1 (văn bản, hình ảnh), nhóm tự động theo chi nhánh, lịch sử tin nhắn. Nhóm chat tùy chỉnh `[Tùy chọn]`.
+- [ ] **Task 5.3:** Thuật toán Tổng hợp Bảng công tháng (`monthly_timesheets`) từ `attendance_logs`, `schedules`, `leave_requests` (ngày công, giờ OT, phút vi phạm, nghỉ có/không lương); quy trình Quản lý xác nhận → HR khóa bảng công (kèm unit test).
+- [ ] **Task 5.4:** Dashboard quân số realtime theo chi nhánh; báo cáo vi phạm (đi muộn, về sớm, vắng mặt); báo cáo sử dụng quỹ phép.
+- [ ] **Task 5.5:** Xuất bảng công ra Excel (`.xlsx`). Xuất PDF `[Tùy chọn]`.
+- [ ] **Task 5.6:** Web Admin: dashboard, bảng công & khóa công, báo cáo, chat, trung tâm thông báo.
+- [ ] **Task 5.7:** Mobile App: thông báo, chat, bảng công cá nhân trong tháng.
+- [ ] **Task 5.8:** `[Tùy chọn]` Push Notification khi ứng dụng đang đóng (Expo Push).
 
+---
 
+### 📌 CẤP BẬC 6: Hoàn thiện, Triển khai & Thực nghiệm `[0/5]`
+> 🎯 **Demo:** Hệ thống chạy trên môi trường cloud; có số liệu thực nghiệm cho Chương 4.
+
+- [ ] **Task 6.1:** Tác vụ nền (`BackgroundService`): tự đánh dấu vắng mặt khi hết ca, xử lý quên check-out, khởi tạo quỹ phép đầu năm.
+- [ ] **Task 6.2:** Gia cố `FW.AiService`: tắt chế độ dự phòng (fallback) ngoài môi trường dev, ngưỡng nhận diện cấu hình được, xác thực Backend ↔ AI Service bằng API key. Chống giả mạo khuôn mặt (liveness) `[Tùy chọn]`.
+- [ ] **Task 6.3:** Triển khai: MySQL trên Aiven, Backend + AI Service trên Render (kiểm tra RAM cho InsightFace), Web trên Vercel, bản build Android (EAS) để demo.
+- [ ] **Task 6.4:** Dữ liệu demo quy mô 30–80 nhân sự (seed mở rộng: nhiều chi nhánh, lịch 1 tháng, lịch sử chấm công, đơn từ).
+- [ ] **Task 6.5:** Thực nghiệm trên thiết bị thật: chấm công đúng vị trí, ngoài bán kính, dùng Fake GPS, sai Wi-Fi, người khác chụp hộ; đo tỷ lệ nhận diện và thời gian xử lý; đối soát bảng công — làm số liệu cho Chương 4.
+
+---
+
+### 📝 SONG SONG: Viết Khóa luận `[0/4]`
+- [ ] **Task K.1:** Sửa Chương 2: loại bỏ nội dung còn sót từ dự án khác (SOSMap: `Post`, `RescueTask`, "mạng xã hội cứu trợ"...), điền chỗ trống "mô hình (…)", thống nhất Clean Architecture & SignalR, bổ sung Mobile (Expo) và `FW.AiService` (FastAPI + InsightFace).
+- [ ] **Task K.2:** Chương 3: quy trình TO-BE, biểu đồ Use Case, BFD, ERD, biểu đồ tuần tự (chấm công 3 lớp, duyệt đơn), thiết kế kiến trúc & CSDL.
+- [ ] **Task K.3:** Chương 4: môi trường cài đặt, giao diện Web Admin & Mobile App, kết quả thực nghiệm (từ Task 6.5).
+- [ ] **Task K.4:** Chương 5 & phần đầu: kết luận, hạn chế, hướng phát triển; cập nhật tóm tắt, mục lục, danh mục viết tắt/hình/bảng; sửa lời cam đoan ("nhóm tác giả" → cá nhân).
