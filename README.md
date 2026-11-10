@@ -53,7 +53,20 @@ dotnet run --launch-profile http
 ```
 
 Swagger: http://localhost:5010 — kiểm tra nhanh: `GET /api/HealthCheck`.
-Unit test: `dotnet test` tại thư mục `FW.Backend`.
+
+### Kiểm thử
+
+```bash
+cd FW.Backend
+dotnet test                      # unit test; test tích hợp MySQL tự bỏ qua (Skipped)
+```
+
+Test tích hợp (`FW.IntegrationTests`) chạy trên MySQL thật với **CSDL riêng** — tự tạo lại từ schema + seed mỗi lần chạy, không đụng tới `flexiwork_db`:
+
+```powershell
+$env:FW_TEST_DB = "Server=localhost;Port=3306;Database=flexiwork_test;User=root;Password=<mat_khau>;"
+dotnet test
+```
 
 ### 3. Web Admin
 

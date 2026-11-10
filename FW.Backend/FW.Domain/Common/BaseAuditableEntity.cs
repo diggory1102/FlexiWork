@@ -6,7 +6,8 @@ namespace FW.Domain.Common;
 public abstract class BaseAuditableEntity<TKey> : BaseEntity<TKey>, IAuditableEntity, ISoftDelete
 {
     public bool IsDeleted { get; set; } = false;
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    /// <summary>Do CSDL tự gán (DEFAULT CURRENT_TIMESTAMP, múi giờ +07:00) — không ghi từ ứng dụng.</summary>
+    public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
 }
 

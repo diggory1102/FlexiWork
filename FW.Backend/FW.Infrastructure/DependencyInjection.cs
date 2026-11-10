@@ -1,6 +1,9 @@
 using FW.Application.Common.Interfaces;
+using FW.Application.Common.Interfaces.Persistence;
 using FW.Application.Common.Settings;
 using FW.Infrastructure.Database;
+using FW.Infrastructure.Repositories;
+using FW.Infrastructure.Services;
 using FW.Infrastructure.Services.Caching;
 using FW.Infrastructure.Services.Email;
 using FW.Infrastructure.Services.FaceRecognition;
@@ -25,9 +28,12 @@ public static class DependencyInjection
         services.Configure<CloudinarySettings>(configuration.GetSection(CloudinarySettings.SectionName));
         services.Configure<AiServiceSettings>(configuration.GetSection(AiServiceSettings.SectionName));
 
-        // 2. Database (MySQL + Dapper)
+        // 2. Database (MySQL + Dapper) — mỗi request dùng chung 1 DbSession (kết nối + transaction)
         DapperConfig.Configure();
         services.AddSingleton<IDbConnectionFactory, MySqlDbConnectionFactory>();
+        services.AddScoped<DbSession>();
+        services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<DbSession>());
+        services.AddSingleton<IDateTimeProvider, DateTimeProvider>();
 
         // 3. Redis — chỉ kết nối khi được sử dụng lần đầu; không chặn khởi động nếu Redis chưa chạy
         services.AddSingleton<IConnectionMultiplexer>(sp =>
@@ -53,7 +59,13 @@ public static class DependencyInjection
             client.Timeout = TimeSpan.FromSeconds(settings.TimeoutSeconds);
         });
 
-        // 7. Repositories (Dapper) — đăng ký tại đây khi triển khai từ Task 1.2
+        // 7. Repositories (Dapper)
+        services.AddScoped<IBranchRepository, BranchRepository>();
+        services.AddScoped<IBranchWifiRepository, BranchWifiRepository>();
+        services.AddScoped<IDepartmentRepository, DepartmentRepository>();
+        services.AddScoped<IPositionRepository, PositionRepository>();
+        services.AddScoped<IRoleRepository, RoleRepository>();
+        services.AddScoped<IUserRepository, UserRepository>();
 
         return services;
     }

@@ -5,3 +5,4 @@
 **/appsettings.Development.json
 **/appsettings.Production.json
 FW.UnitTests/
+FW.IntegrationTests/

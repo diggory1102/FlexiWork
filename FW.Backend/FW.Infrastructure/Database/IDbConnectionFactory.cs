@@ -1,13 +1,12 @@
-using System.Data;
+using System.Data.Common;
 
 namespace FW.Infrastructure.Database;
 
 /// <summary>
-/// Giao diện khởi tạo kết nối cơ sở dữ liệu (Dapper / ADO.NET).
+/// Khởi tạo kết nối cơ sở dữ liệu đã mở sẵn (Dapper / ADO.NET).
+/// Repository không gọi trực tiếp mà lấy kết nối qua <see cref="DbSession"/> để dùng chung transaction.
 /// </summary>
 public interface IDbConnectionFactory
 {
-    IDbConnection CreateConnection();
-    Task<IDbConnection> CreateConnectionAsync(CancellationToken cancellationToken = default);
+    Task<DbConnection> CreateConnectionAsync(CancellationToken cancellationToken = default);
 }
-

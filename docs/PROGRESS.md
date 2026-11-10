@@ -217,16 +217,15 @@ flowchart TD
 
 > **Tổng quan Tiến độ Hiện tại:**
 > * **Giai đoạn đang thực hiện:** CẤP BẬC 1 - Tổ chức, Người dùng & Bảo mật
-> * **Tiến độ tổng thể:** `6 / 45` Nhiệm vụ hoàn thành (`13%`)
-> * **Hành động tiếp theo:** Thực hiện **Task 1.2** (BaseRepository, transaction, repository nhóm Master Data, chốt múi giờ).
+> * **Tiến độ tổng thể:** `7 / 45` Nhiệm vụ hoàn thành (`16%`)
+> * **Hành động tiếp theo:** Thực hiện **Task 1.3** (Đăng nhập JWT, OTP quên mật khẩu, phân quyền theo vai trò & chi nhánh).
 
 ### Các quyết định cần chốt
 
 | Quyết định | Ảnh hưởng tới | Đề xuất mặc định |
 | :--- | :--- | :--- |
-| Hạn nộp & ngày bảo vệ khóa luận | Phân bổ khối lượng, các mục `[Tùy chọn]` | — |
 | Manager phụ trách 1 hay nhiều chi nhánh | Task 1.3, 1.5 | 1 chi nhánh (`users.branch_id`) |
-| Múi giờ lưu trữ | Task 1.2, 3.2, 5.3 | Giờ Việt Nam (UTC+7) |
+| ~~Múi giờ lưu trữ~~ | Task 1.2, 3.2, 5.3 | ✅ **Đã chốt:** giờ Việt Nam (UTC+7) — `SET time_zone` mỗi kết nối + `IDateTimeProvider` |
 | Xử lý khi 1 lớp chấm công không đạt | Task 3.2 | GPS + Face bắt buộc; sai Wi-Fi → `pending_approval` |
 | Ca gãy | Task 2.2 | Tách thành 2 ca trong cùng ngày |
 | Đơn đổi ca cần đồng nghiệp đồng ý trước | Task 4.2 | Có |
@@ -247,7 +246,7 @@ flowchart TD
 
 ---
 
-### 📌 CẤP BẬC 1: Tổ chức, Người dùng & Bảo mật `[1/7]`
+### 📌 CẤP BẬC 1: Tổ chức, Người dùng & Bảo mật `[2/7]`
 > 🎯 **Demo:** Đăng nhập Web Admin theo vai trò; quản lý chi nhánh, phòng ban, chức vụ, nhân sự; nhân viên đăng nhập trên Mobile.
 
 - [x] **Task 1.1:** Định nghĩa Enums & Entities (`User`, `Role`, `UserRole`, `Department`, `Position`, `Branch`, `BranchWifi`) trong `FW.Domain`.
@@ -255,11 +254,13 @@ flowchart TD
   - Bổ sung vai trò `ROLE_HR` (seed id 4); Manager phụ trách 1 chi nhánh theo `users.branch_id`.
   - Bổ sung cột `updated_at` cho `branch_wifis`, `departments`, `positions` để mọi bảng danh mục dùng chung `BaseAuditableEntity`.
   - Unit test `EntitySchemaMappingTests` đối chiếu 2 chiều thuộc tính Entity ↔ cột trong `flexiwork_schema.sql`.
-- [ ] **Task 1.2:** Data Access nền tảng trong `FW.Infrastructure`:
-  - `BaseRepository<T>` (Dapper): CRUD chung, xóa mềm, phân trang, tìm kiếm.
-  - Hỗ trợ transaction (`IUnitOfWork`) cho các nghiệp vụ cập nhật nhiều bảng (duyệt đơn, đổi ca).
-  - Repository: `BranchRepository` (kèm `BranchWifi`), `DepartmentRepository`, `PositionRepository`, `UserRepository` (kèm vai trò), `RoleRepository`.
-  - Chốt múi giờ: đặt `time_zone` cho phiên kết nối MySQL và `IDateTimeProvider` dùng chung.
+- [x] **Task 1.2:** Data Access nền tảng trong `FW.Infrastructure`:
+  - `BaseRepository<T>` (Dapper): tự sinh SQL CRUD từ `EntityMap` (PascalCase ↔ snake_case), xóa mềm tự động với Entity có `ISoftDelete`, phân trang (`PagedQuery` → `PaginatedResult<T>`), tìm kiếm LIKE có thoát ký tự đặc biệt.
+  - `DbSession` (scoped) cài đặt `IUnitOfWork`: một kết nối + transaction dùng chung cho mọi repository trong request; `ExecuteInTransactionAsync` tự commit/rollback, hỗ trợ lồng nhau.
+  - Repository: `BranchRepository`, `BranchWifiRepository`, `DepartmentRepository`, `PositionRepository`, `RoleRepository`, `UserRepository` (lọc theo chi nhánh/phòng ban/chức vụ/trạng thái/vai trò, `SetRolesAsync` trong transaction). Kiểm tra trùng mã/email xét cả bản ghi đã xóa mềm vì ràng buộc UNIQUE.
+  - Interface repository chuyển từ `FW.Domain/Interfaces` sang `FW.Application/Common/Interfaces/Persistence` (để dùng `PaginatedResult`).
+  - Múi giờ: `MySqlDbConnectionFactory` chạy `SET time_zone = '+07:00'` mỗi lần mở kết nối; `IDateTimeProvider` trả giờ Việt Nam.
+  - Project `FW.IntegrationTests` (9 test trên MySQL thật, CSDL riêng `flexiwork_test`, bật bằng biến môi trường `FW_TEST_DB`).
 - [ ] **Task 1.3:** Xác thực & Phân quyền:
   - Đăng nhập (BCrypt), phát hành JWT (claims `UserId`, `Roles`, `BranchId`), đổi mật khẩu.
   - Quên mật khẩu bằng OTP qua email (MailKit, OTP lưu Redis TTL 5 phút).
