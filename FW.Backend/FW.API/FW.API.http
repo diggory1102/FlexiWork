@@ -1,6 +1,7 @@
 @FW.API_HostAddress = http://localhost:5010
 
-GET {{FW.API_HostAddress}}/weatherforecast/
+### Kiểm tra tình trạng hệ thống
+GET {{FW.API_HostAddress}}/api/HealthCheck
 Accept: application/json
 
 ###

@@ -1,0 +1,71 @@
+# =============================================================================
+# FlexiWork — môi trường chạy cục bộ đầy đủ: MySQL, Redis, AI Service, Backend API
+#   1. cp .env.example .env   (rồi chỉnh giá trị)
+#   2. docker compose up -d --build
+#   Swagger: http://localhost:5010/swagger  |  AI Service: http://localhost:8000/docs
+# Chỉ cần hạ tầng (chạy API bằng Visual Studio / dotnet run):
+#   docker compose up -d mysql redis ai-service
+# =============================================================================
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: flexiwork-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      TZ: Asia/Ho_Chi_Minh
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci --default-time-zone=+07:00
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+      # Chỉ chạy lần đầu khi volume còn trống
+      - ./FW.Backend/FW.Infrastructure/Database/flexiwork_schema.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
+      - ./FW.Backend/FW.Infrastructure/Database/flexiwork_seed.sql:/docker-entrypoint-initdb.d/02_seed.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: flexiwork-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+
+  ai-service:
+    build: ./FW.AiService
+    container_name: flexiwork-ai
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      # Lưu model InsightFace đã tải để không phải tải lại mỗi lần build
+      - insightface-models:/root/.insightface
+
+  api:
+    build: ./FW.Backend
+    container_name: flexiwork-api
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      ai-service:
+        condition: service_started
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__DefaultConnection: "Server=mysql;Port=3306;Database=flexiwork_db;User=root;Password=${MYSQL_ROOT_PASSWORD};AllowUserVariables=True;CharSet=utf8mb4;"
+      JwtSettings__Secret: ${JWT_SECRET}
+      Redis__ConnectionString: "redis:6379"
+      AiService__BaseUrl: "http://ai-service:8000"
+      Cors__AllowedOrigins__0: "http://localhost:5173"
+    ports:
+      - "5010:8080"
+
+volumes:
+  mysql-data:
+  insightface-models:

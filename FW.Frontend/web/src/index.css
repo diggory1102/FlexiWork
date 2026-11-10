@@ -1,0 +1,26 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Dynamic Theming: màu dạng "R G B" để Tailwind hỗ trợ độ trong suốt (bg-primary/10) */
+:root {
+  --color-primary: 37 99 235;
+  --color-surface: 255 255 255;
+  --color-background: 248 250 252;
+  --color-foreground: 15 23 42;
+  --color-muted: 100 116 139;
+  --color-border: 226 232 240;
+  --color-success: 22 163 74;
+  --color-warning: 217 119 6;
+  --color-danger: 220 38 38;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  @apply bg-background font-sans text-foreground antialiased;
+}

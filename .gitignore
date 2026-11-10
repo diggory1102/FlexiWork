@@ -42,3 +42,7 @@ Thumbs.db
 
 # ===== Tài liệu khóa luận (bản nháp, giữ cục bộ) =====
 docs/*.docx
+
+# ===== Cấu hình chứa bí mật (copy từ appsettings.Development.example.json) =====
+**/appsettings.Development.json
+**/appsettings.Production.json
