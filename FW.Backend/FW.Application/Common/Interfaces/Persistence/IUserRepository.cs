@@ -31,6 +31,9 @@ public interface IUserRepository : IGenericRepository<User>
 
     Task<IReadOnlyList<string>> GetRoleNamesAsync(int userId, CancellationToken cancellationToken = default);
 
+    /// <summary>Lấy vai trò của nhiều người dùng trong một truy vấn (tránh N+1 khi hiển thị danh sách).</summary>
+    Task<IReadOnlyDictionary<int, IReadOnlyList<string>>> GetRoleNamesByUserIdsAsync(IEnumerable<int> userIds, CancellationToken cancellationToken = default);
+
     /// <summary>Thay thế toàn bộ vai trò của người dùng (chạy trong transaction).</summary>
     Task SetRolesAsync(int userId, IEnumerable<int> roleIds, CancellationToken cancellationToken = default);
 }

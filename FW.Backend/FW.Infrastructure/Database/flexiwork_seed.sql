@@ -48,11 +48,11 @@ ON DUPLICATE KEY UPDATE role_name=VALUES(role_name);
 
 -- 6. SEED TÀI KHOẢN NGƯỜI DÙNG (Users)
 -- Mật khẩu của TẤT CẢ tài khoản mẫu: Admin@123 (hash BCrypt, work factor 11)
-INSERT INTO users (id, employee_code, email, password_hash, full_name, phone_number, branch_id, department_id, position_id, status) VALUES
-(1, 'EMP001', 'admin@flexiwork.vn', '$2a$11$4Qh91q1jTQsWXpeAgFjJdOEzx.XmGK.eTcYcFdxy5yC/NpZH9EZKO', 'Nguyễn Quản Trị', '0901234567', 1, 1, 1, 'active'),
-(2, 'EMP002', 'manager.cg@flexiwork.vn', '$2a$11$4Qh91q1jTQsWXpeAgFjJdOEzx.XmGK.eTcYcFdxy5yC/NpZH9EZKO', 'Trần Quản Lý', '0912345678', 1, 3, 3, 'active'),
-(3, 'EMP003', 'nhanvien.cg@flexiwork.vn', '$2a$11$4Qh91q1jTQsWXpeAgFjJdOEzx.XmGK.eTcYcFdxy5yC/NpZH9EZKO', 'Lê Văn Nhân Viên', '0923456789', 1, 3, 4, 'active'),
-(4, 'EMP004', 'hr@flexiwork.vn', '$2a$11$4Qh91q1jTQsWXpeAgFjJdOEzx.XmGK.eTcYcFdxy5yC/NpZH9EZKO', 'Phạm Nhân Sự', '0934567890', NULL, 2, 2, 'active')
+INSERT INTO users (id, employee_code, email, password_hash, full_name, phone_number, branch_id, department_id, position_id, employment_type, hire_date, status) VALUES
+(1, 'EMP001', 'admin@flexiwork.vn', '$2a$11$4Qh91q1jTQsWXpeAgFjJdOEzx.XmGK.eTcYcFdxy5yC/NpZH9EZKO', 'Nguyễn Quản Trị', '0901234567', 1, 1, 1, 'full_time', '2024-01-02', 'active'),
+(2, 'EMP002', 'manager.cg@flexiwork.vn', '$2a$11$4Qh91q1jTQsWXpeAgFjJdOEzx.XmGK.eTcYcFdxy5yC/NpZH9EZKO', 'Trần Quản Lý', '0912345678', 1, 3, 3, 'full_time', '2024-03-01', 'active'),
+(3, 'EMP003', 'nhanvien.cg@flexiwork.vn', '$2a$11$4Qh91q1jTQsWXpeAgFjJdOEzx.XmGK.eTcYcFdxy5yC/NpZH9EZKO', 'Lê Văn Nhân Viên', '0923456789', 1, 3, 4, 'part_time', '2025-06-15', 'active'),
+(4, 'EMP004', 'hr@flexiwork.vn', '$2a$11$4Qh91q1jTQsWXpeAgFjJdOEzx.XmGK.eTcYcFdxy5yC/NpZH9EZKO', 'Phạm Nhân Sự', '0934567890', NULL, 2, 2, 'full_time', '2024-02-01', 'active')
 ON DUPLICATE KEY UPDATE full_name=VALUES(full_name), password_hash=VALUES(password_hash);
 
 -- 7. GÁN VAI TRÒ CHO NGƯỜI DÙNG (User Roles)

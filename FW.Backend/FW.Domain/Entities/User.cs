@@ -23,8 +23,17 @@ public class User : BaseAuditableEntity
     public int? DepartmentId { get; set; }
     public int? PositionId { get; set; }
 
+    /// <summary>Loại hợp đồng, giá trị thuộc <see cref="Enums.EmploymentType"/>.</summary>
+    public string EmploymentType { get; set; } = Enums.EmploymentType.FullTime;
+
+    /// <summary>Ngày vào làm (chỉ dùng phần ngày).</summary>
+    public DateTime? HireDate { get; set; }
+
     /// <summary>Giá trị thuộc <see cref="UserStatus"/>.</summary>
     public string Status { get; set; } = UserStatus.Active;
+
+    /// <summary>Đang dùng mật khẩu tạm do hệ thống cấp — bắt buộc đổi ở lần đăng nhập tới.</summary>
+    public bool MustChangePassword { get; set; }
 
     public bool IsActive => Status == UserStatus.Active && !IsDeleted;
 }

@@ -4,6 +4,8 @@ using FW.API.Services;
 using FW.Application;
 using FW.Application.Common.Interfaces;
 using FW.Infrastructure;
+using FW.Infrastructure.Services.Storage;
+using Microsoft.Extensions.FileProviders;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -48,6 +50,18 @@ if (app.Environment.IsDevelopment())
 else
 {
     app.UseHttpsRedirection();
+}
+
+// Khi phát triển chưa có Cloudinary: phục vụ ảnh đã tải lên từ thư mục cục bộ tại /uploads
+if (LocalFileStorageService.IsEnabled(app.Configuration, app.Environment.IsDevelopment()))
+{
+    var uploadsRoot = LocalFileStorageService.ResolveRootPath(app.Configuration);
+    Directory.CreateDirectory(uploadsRoot);
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        FileProvider = new PhysicalFileProvider(uploadsRoot),
+        RequestPath = LocalFileStorageService.RequestPath
+    });
 }
 
 app.UseCors(ServiceCollectionExtensions.CorsPolicyName);

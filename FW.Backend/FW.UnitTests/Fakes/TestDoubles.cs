@@ -130,4 +130,5 @@ public class FakeUserRepository : IUserRepository
     public Task<bool> ExistsByEmailAsync(string email, int? excludeId = null, CancellationToken cancellationToken = default) => throw new NotSupportedException();
     public Task<bool> ExistsByEmployeeCodeAsync(string employeeCode, int? excludeId = null, CancellationToken cancellationToken = default) => throw new NotSupportedException();
     public Task SetRolesAsync(int userId, IEnumerable<int> roleIds, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+    public Task<IReadOnlyDictionary<int, IReadOnlyList<string>>> GetRoleNamesByUserIdsAsync(IEnumerable<int> userIds, CancellationToken cancellationToken = default) => throw new NotSupportedException();
 }

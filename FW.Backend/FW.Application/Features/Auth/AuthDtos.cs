@@ -54,6 +54,7 @@ public record AuthUserDto(
     string Email,
     string? AvatarUrl,
     int? BranchId,
-    IReadOnlyList<string> Roles);
+    IReadOnlyList<string> Roles,
+    bool MustChangePassword);
 
 public record LoginResponse(string AccessToken, DateTime ExpiresAtUtc, AuthUserDto User);

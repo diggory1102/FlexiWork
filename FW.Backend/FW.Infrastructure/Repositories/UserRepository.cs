@@ -92,6 +92,24 @@ public class UserRepository : BaseRepository<User>, IUserRepository
         return QueryAsync<string>(sql, new { UserId = userId }, cancellationToken);
     }
 
+    public async Task<IReadOnlyDictionary<int, IReadOnlyList<string>>> GetRoleNamesByUserIdsAsync(
+        IEnumerable<int> userIds, CancellationToken cancellationToken = default)
+    {
+        var ids = userIds.Distinct().ToArray();
+        if (ids.Length == 0) return new Dictionary<int, IReadOnlyList<string>>();
+
+        const string sql = """
+            SELECT ur.`user_id` AS UserId, r.`role_name` AS RoleName
+            FROM `user_roles` ur JOIN `roles` r ON r.`id` = ur.`role_id`
+            WHERE ur.`user_id` IN @UserIds ORDER BY ur.`user_id`, r.`id`
+            """;
+        var rows = await QueryAsync<(int UserId, string RoleName)>(sql, new { UserIds = ids }, cancellationToken);
+
+        return ids.ToDictionary(
+            id => id,
+            id => (IReadOnlyList<string>)rows.Where(r => r.UserId == id).Select(r => r.RoleName).ToList());
+    }
+
     public Task SetRolesAsync(int userId, IEnumerable<int> roleIds, CancellationToken cancellationToken = default)
     {
         var rows = roleIds.Distinct().Select(roleId => new { UserId = userId, RoleId = roleId }).ToList();

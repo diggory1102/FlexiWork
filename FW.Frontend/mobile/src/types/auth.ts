@@ -16,4 +16,6 @@ export interface AuthUser {
   avatarUrl?: string | null;
   branchId?: number | null;
   roles: Role[];
+  /** Đang dùng mật khẩu tạm do hệ thống cấp — phải chuyển tới màn hình đổi mật khẩu. */
+  mustChangePassword: boolean;
 }

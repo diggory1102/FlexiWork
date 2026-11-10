@@ -77,8 +77,17 @@ public static class DependencyInjection
         services.AddSingleton<IPasswordHasher, BCryptPasswordHasher>();
         services.AddSingleton<IJwtTokenGenerator, JwtTokenGenerator>();
 
-        // 6. Lưu trữ ảnh (Cloudinary)
-        services.AddSingleton<IFileStorageService, CloudinaryStorageService>();
+        // 6. Lưu trữ ảnh: Cloudinary; khi phát triển mà chưa cấu hình Cloudinary thì lưu vào thư mục cục bộ
+        if (LocalFileStorageService.IsEnabled(configuration, isDevelopment))
+        {
+            var publicBaseUrl = configuration["Storage:PublicBaseUrl"] ?? "http://localhost:5010";
+            services.AddSingleton<IFileStorageService>(
+                new LocalFileStorageService(LocalFileStorageService.ResolveRootPath(configuration), publicBaseUrl));
+        }
+        else
+        {
+            services.AddSingleton<IFileStorageService, CloudinaryStorageService>();
+        }
 
         // 7. Client gọi FW.AiService
         services.AddHttpClient<IFaceRecognitionService, FaceRecognitionClient>((sp, client) =>

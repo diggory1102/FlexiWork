@@ -217,8 +217,8 @@ flowchart TD
 
 > **Tổng quan Tiến độ Hiện tại:**
 > * **Giai đoạn đang thực hiện:** CẤP BẬC 1 - Tổ chức, Người dùng & Bảo mật
-> * **Tiến độ tổng thể:** `9 / 45` Nhiệm vụ hoàn thành (`20%`)
-> * **Hành động tiếp theo:** Thực hiện **Task 1.5** (API Hồ sơ Nhân sự: thêm mới kèm email mời kích hoạt, phân vai trò, khóa/mở tài khoản).
+> * **Tiến độ tổng thể:** `10 / 45` Nhiệm vụ hoàn thành (`22%`)
+> * **Hành động tiếp theo:** Thực hiện **Task 1.6** (Web Admin: đăng nhập, đổi mật khẩu lần đầu, quản lý Chi nhánh / Phòng ban / Chức vụ / Nhân sự).
 
 ### Các quyết định cần chốt
 
@@ -246,7 +246,7 @@ flowchart TD
 
 ---
 
-### 📌 CẤP BẬC 1: Tổ chức, Người dùng & Bảo mật `[4/7]`
+### 📌 CẤP BẬC 1: Tổ chức, Người dùng & Bảo mật `[5/7]`
 > 🎯 **Demo:** Đăng nhập Web Admin theo vai trò; quản lý chi nhánh, phòng ban, chức vụ, nhân sự; nhân viên đăng nhập trên Mobile.
 
 - [x] **Task 1.1:** Định nghĩa Enums & Entities (`User`, `Role`, `UserRole`, `Department`, `Position`, `Branch`, `BranchWifi`) trong `FW.Domain`.
@@ -277,7 +277,13 @@ flowchart TD
   - Ràng buộc nghiệp vụ: mã chi nhánh/phòng ban chuẩn hóa chữ hoa và không trùng; tên chức danh không trùng; tọa độ hợp lệ, bán kính 10–5000 m; BSSID chuẩn hóa về `XX:XX:XX:XX:XX:XX` (chấp nhận `-` hoặc liền nhau), không trùng trong chi nhánh; không xóa chi nhánh/phòng ban/chức vụ đang có nhân sự; xóa chi nhánh xóa luôn Wi-Fi (transaction).
   - Lỗi đầu vào (JSON sai, thiếu body, sai kiểu) trả thông báo tiếng Việt thay vì thông báo kỹ thuật tiếng Anh.
   - Test: 12 unit test (BSSID) + 7 integration test (nghiệp vụ & phạm vi theo vai trò); kiểm tra API thật với 4 vai trò (200/201/400/403/404).
-- [ ] **Task 1.5:** API Hồ sơ Nhân sự: thêm mới kèm **email mời kích hoạt tài khoản**, phân vai trò, gán chi nhánh/phòng ban/chức vụ, khóa/mở tài khoản, tìm kiếm & phân trang; cập nhật thông tin cá nhân và ảnh đại diện (Cloudinary).
+- [x] **Task 1.5:** API Hồ sơ Nhân sự: thêm mới kèm **email mời kích hoạt tài khoản**, phân vai trò, gán chi nhánh/phòng ban/chức vụ, khóa/mở tài khoản, tìm kiếm & phân trang; cập nhật thông tin cá nhân và ảnh đại diện (Cloudinary).
+  - `/api/users`: danh sách (lọc chi nhánh/phòng ban/chức vụ/trạng thái/vai trò), chi tiết (kèm tên chi nhánh, phòng ban, chức vụ, vai trò), tạo, sửa, `PATCH /status` (active/suspended/left), `PUT /roles` (chỉ Admin), `POST /reissue-password`, xóa mềm. `/api/profile` (+ `/avatar`): tự xem/sửa SĐT/ảnh đại diện. `/api/roles`: danh mục vai trò kèm cờ được phép gán.
+  - Tạo tài khoản: sinh **mật khẩu tạm** ngẫu nhiên (12 ký tự, bỏ ký tự dễ nhầm) gửi qua email, cờ `must_change_password` buộc đổi ở lần đăng nhập đầu (trả về trong `login`/`me`); lỗi SMTP không làm mất tài khoản (báo để HR cấp lại mật khẩu).
+  - Quy tắc: Admin gán mọi vai trò; HR chỉ gán Employee/Manager và không quản lý tài khoản Admin; Manager chỉ xem nhân sự chi nhánh mình; Manager bắt buộc thuộc một chi nhánh; không tự khóa/tự xóa/tự đổi vai trò; mã NV & email không trùng; chi nhánh/phòng ban/chức vụ phải tồn tại.
+  - Schema `users`: thêm `employment_type` (full_time/part_time), `hire_date`, `must_change_password`.
+  - Ảnh đại diện JPG/PNG/WEBP ≤ 5 MB; khi phát triển chưa có Cloudinary thì lưu cục bộ và phục vụ tại `/uploads`.
+  - Test: 8 unit test (sinh mật khẩu, quy tắc quản lý tài khoản) + 8 integration test; kiểm tra API thật (tạo NV → mật khẩu tạm → đăng nhập → ảnh đại diện → khóa → cấp lại mật khẩu).
 - [ ] **Task 1.6:** Web Admin: màn hình đăng nhập, quên mật khẩu, menu theo vai trò; quản lý Chi nhánh (kèm Wi-Fi), Phòng ban, Chức vụ, Nhân sự.
 - [ ] **Task 1.7:** Mobile App: đăng nhập, lưu phiên bảo mật (SecureStore), khung điều hướng tab, màn hình hồ sơ cá nhân.
 

@@ -185,6 +185,7 @@ public class AuthService : IAuthService
         }
 
         user.PasswordHash = _passwordHasher.Hash(newPassword);
+        user.MustChangePassword = false; // người dùng đã tự đặt mật khẩu, không còn dùng mật khẩu tạm
         await _users.UpdateAsync(user, cancellationToken);
     }
 
@@ -210,7 +211,7 @@ public class AuthService : IAuthService
     }
 
     private static AuthUserDto ToDto(User user, IReadOnlyList<string> roles) =>
-        new(user.Id, user.EmployeeCode, user.FullName, user.Email, user.AvatarUrl, user.BranchId, roles);
+        new(user.Id, user.EmployeeCode, user.FullName, user.Email, user.AvatarUrl, user.BranchId, roles, user.MustChangePassword);
 
     private static string NormalizeEmail(string email) => email.Trim().ToLowerInvariant();
 

@@ -121,6 +121,19 @@ public class AuthServiceTests
         await Assert.ThrowsAsync<UnauthorizedException>(() => Login("nv@flexiwork.vn", Password));
     }
 
+    [Fact]
+    public async Task Temporary_password_flag_is_reported_at_login_and_cleared_after_change()
+    {
+        _employee.MustChangePassword = true;
+        Assert.True((await Login("nv@flexiwork.vn", Password)).User.MustChangePassword);
+
+        await _service.ChangePasswordAsync(_employee.Id,
+            new ChangePasswordRequest { CurrentPassword = Password, NewPassword = "NewPass123" });
+
+        Assert.False(_employee.MustChangePassword);
+        Assert.False((await Login("nv@flexiwork.vn", "NewPass123")).User.MustChangePassword);
+    }
+
     // ---------------- Quên mật khẩu (OTP) ----------------
 
     private async Task<string> RequestOtp(string email = "nv@flexiwork.vn")
