@@ -4,6 +4,7 @@ using FW.Application.Common.Security;
 using FW.Application.Common.Settings;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 
@@ -91,14 +92,54 @@ public static class ServiceCollectionExtensions
         {
             options.InvalidModelStateResponseFactory = context =>
             {
-                var errors = context.ModelState.Values
-                    .SelectMany(v => v.Errors)
-                    .Select(e => string.IsNullOrWhiteSpace(e.ErrorMessage) ? "Giá trị không hợp lệ." : e.ErrorMessage)
+                // Tên tham số nhận body (vd: "request") — lỗi "The request field is required." chỉ là hệ quả của lỗi JSON
+                var bodyParameters = context.ActionDescriptor.Parameters
+                    .Where(p => p.BindingInfo?.BindingSource == BindingSource.Body)
+                    .Select(p => p.Name)
+                    .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+                var errors = context.ModelState
+                    .SelectMany(entry => entry.Value!.Errors.Select(error => TranslateModelError(entry.Key, error, bodyParameters)))
+                    .Where(message => message != null)
                     .Distinct()
                     .ToList();
-                return new BadRequestObjectResult(ApiResponse.FailureResult("Dữ liệu gửi lên không hợp lệ.", errors));
+                if (errors.Count == 0) errors.Add("Thiếu nội dung yêu cầu (body) hoặc dữ liệu không đúng định dạng JSON.");
+
+                return new BadRequestObjectResult(ApiResponse.FailureResult("Dữ liệu gửi lên không hợp lệ.", errors!));
             };
         });
+    }
+
+    /// <summary>
+    /// Chuyển lỗi model binding mặc định (tiếng Anh, lộ chi tiết kỹ thuật) thành thông báo tiếng Việt.
+    /// Lỗi từ DataAnnotations đã có thông báo tiếng Việt nên giữ nguyên.
+    /// </summary>
+    private static string? TranslateModelError(string key, ModelError error, ISet<string> bodyParameters)
+    {
+        var message = error.ErrorMessage ?? string.Empty;
+
+        // Lỗi đọc JSON: key dạng "$" hoặc "$.tenTruong"
+        if (key.StartsWith('$'))
+        {
+            var field = key.Length > 2 ? key[2..] : null;
+            return field != null && message.Contains("could not be converted")
+                ? $"Trường '{field}' sai kiểu dữ liệu."
+                : "Dữ liệu JSON không đúng định dạng.";
+        }
+
+        if (message.Contains("non-empty request body")) return "Thiếu nội dung yêu cầu (body).";
+        if (bodyParameters.Contains(key)) return null;
+
+        if (message.StartsWith("The ") && message.EndsWith(" field is required."))
+        {
+            return $"Trường '{key}' là bắt buộc.";
+        }
+        if (message.StartsWith("The value '") && message.Contains("is not valid"))
+        {
+            return $"Giá trị của '{key}' không hợp lệ.";
+        }
+
+        return string.IsNullOrWhiteSpace(message) ? "Giá trị không hợp lệ." : message;
     }
 
     private static Task WriteApiErrorAsync(HttpResponse response, int statusCode, string message)

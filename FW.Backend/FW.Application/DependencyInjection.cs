@@ -1,4 +1,5 @@
 using FW.Application.Features.Auth;
+using FW.Application.Features.Organization;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace FW.Application;
@@ -11,6 +12,10 @@ public static class DependencyInjection
     public static IServiceCollection AddApplication(this IServiceCollection services)
     {
         services.AddScoped<IAuthService, AuthService>();
+
+        services.AddScoped<IBranchService, BranchService>();
+        services.AddScoped<IDepartmentService, DepartmentService>();
+        services.AddScoped<IPositionService, PositionService>();
 
         return services;
     }

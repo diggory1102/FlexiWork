@@ -25,5 +25,11 @@ public class PaginatedResult<T>
     {
         return new PaginatedResult<T>(items, count, pageIndex, pageSize);
     }
+
+    /// <summary>Chuyển đổi từng phần tử (vd: Entity → DTO), giữ nguyên thông tin phân trang.</summary>
+    public PaginatedResult<TResult> Map<TResult>(Func<T, TResult> selector)
+    {
+        return new PaginatedResult<TResult>(Items.Select(selector).ToList(), TotalCount, PageIndex, PageSize);
+    }
 }
 

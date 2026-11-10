@@ -33,6 +33,16 @@ public class PositionRepository : BaseRepository<Position>, IPositionRepository
     protected override string TableName => "positions";
     protected override IReadOnlyList<string> SearchColumns => new[] { "`title`" };
     protected override string DefaultOrderBy => "`title` ASC";
+
+    public Task<bool> ExistsByTitleAsync(string title, int? excludeId = null, CancellationToken cancellationToken = default)
+    {
+        // Collation utf8mb4_unicode_ci đã so sánh không phân biệt hoa thường
+        const string sql = """
+            SELECT EXISTS(SELECT 1 FROM `positions`
+                          WHERE `title` = @Title AND `is_deleted` = 0 AND (@ExcludeId IS NULL OR `id` <> @ExcludeId))
+            """;
+        return ExecuteScalarAsync<bool>(sql, new { Title = title.Trim(), ExcludeId = excludeId }, cancellationToken);
+    }
 }
 
 public class RoleRepository : BaseRepository<Role>, IRoleRepository

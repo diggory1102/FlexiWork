@@ -10,6 +10,8 @@ public interface IDepartmentRepository : IGenericRepository<Department>
 
 public interface IPositionRepository : IGenericRepository<Position>
 {
+    /// <summary>Kiểm tra trùng tên chức danh (không phân biệt hoa thường, bỏ qua bản ghi đã xóa).</summary>
+    Task<bool> ExistsByTitleAsync(string title, int? excludeId = null, CancellationToken cancellationToken = default);
 }
 
 public interface IRoleRepository : IGenericRepository<Role>

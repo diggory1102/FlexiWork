@@ -1,6 +1,5 @@
 using System.Text.Encodings.Web;
 using System.Text.Json;
-using System.Text.Unicode;
 
 namespace FW.API.Extensions;
 
@@ -9,7 +8,8 @@ namespace FW.API.Extensions;
 /// </summary>
 public static class ApiJson
 {
-    public static readonly JavaScriptEncoder Encoder = JavaScriptEncoder.Create(UnicodeRanges.All);
+    // Relaxed: không mã hóa tiếng Việt và các ký tự như ' " < > (an toàn với API JSON vì client không nhúng thẳng vào HTML)
+    public static readonly JavaScriptEncoder Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping;
 
     public static readonly JsonSerializerOptions Options = new()
     {
