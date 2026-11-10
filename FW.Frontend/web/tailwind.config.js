@@ -5,7 +5,11 @@ export default {
     extend: {
       // Màu sắc lấy từ CSS variables (src/index.css) — hỗ trợ Dynamic Theming
       colors: {
-        primary: 'rgb(var(--color-primary) / <alpha-value>)',
+        primary: {
+          DEFAULT: 'rgb(var(--color-primary) / <alpha-value>)',
+          dark: 'rgb(var(--color-primary-dark) / <alpha-value>)',
+        },
+        header: 'rgb(var(--color-header) / <alpha-value>)',
         surface: 'rgb(var(--color-surface) / <alpha-value>)',
         background: 'rgb(var(--color-background) / <alpha-value>)',
         foreground: 'rgb(var(--color-foreground) / <alpha-value>)',

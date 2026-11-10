@@ -8,6 +8,12 @@ export const Roles = {
 
 export type Role = (typeof Roles)[keyof typeof Roles];
 
+/** Nhóm vai trò dùng cho phân quyền giao diện (khớp RoleNames ở backend). */
+export const RoleGroups = {
+  AdminOrHr: [Roles.Admin, Roles.Hr] as Role[],
+  Managers: [Roles.Admin, Roles.Hr, Roles.Manager] as Role[],
+};
+
 export interface AuthUser {
   id: number;
   employeeCode: string;
@@ -18,4 +24,10 @@ export interface AuthUser {
   roles: Role[];
   /** Đang dùng mật khẩu tạm do hệ thống cấp — phải chuyển tới màn hình đổi mật khẩu. */
   mustChangePassword: boolean;
+}
+
+export interface LoginResponse {
+  accessToken: string;
+  expiresAtUtc: string;
+  user: AuthUser;
 }

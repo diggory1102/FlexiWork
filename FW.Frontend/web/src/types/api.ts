@@ -17,3 +17,10 @@ export interface PaginatedResult<T> {
   hasPreviousPage: boolean;
   hasNextPage: boolean;
 }
+
+/** Tham số phân trang & tìm kiếm (PagedQuery ở backend). */
+export interface PagedQuery {
+  pageIndex?: number;
+  pageSize?: number;
+  search?: string;
+}

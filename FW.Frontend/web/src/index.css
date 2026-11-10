@@ -5,8 +5,10 @@
 /* Dynamic Theming: màu dạng "R G B" để Tailwind hỗ trợ độ trong suốt (bg-primary/10) */
 :root {
   --color-primary: 37 99 235;
+  --color-primary-dark: 29 78 216;
+  --color-header: 24 29 49;
   --color-surface: 255 255 255;
-  --color-background: 248 250 252;
+  --color-background: 244 246 250;
   --color-foreground: 15 23 42;
   --color-muted: 100 116 139;
   --color-border: 226 232 240;
@@ -22,5 +24,16 @@ body,
 }
 
 body {
-  @apply bg-background font-sans text-foreground antialiased;
+  @apply bg-background font-sans text-sm text-foreground antialiased;
+}
+
+@layer components {
+  .input {
+    @apply h-9 w-full rounded-md border border-border bg-surface px-3 text-sm text-foreground outline-none transition
+      placeholder:text-muted/70 focus:border-primary focus:ring-2 focus:ring-primary/20
+      disabled:cursor-not-allowed disabled:bg-background disabled:text-muted;
+  }
+  .card {
+    @apply rounded-xl border border-border bg-surface shadow-sm;
+  }
 }

@@ -217,8 +217,8 @@ flowchart TD
 
 > **Tổng quan Tiến độ Hiện tại:**
 > * **Giai đoạn đang thực hiện:** CẤP BẬC 1 - Tổ chức, Người dùng & Bảo mật
-> * **Tiến độ tổng thể:** `10 / 45` Nhiệm vụ hoàn thành (`22%`)
-> * **Hành động tiếp theo:** Thực hiện **Task 1.6** (Web Admin: đăng nhập, đổi mật khẩu lần đầu, quản lý Chi nhánh / Phòng ban / Chức vụ / Nhân sự).
+> * **Tiến độ tổng thể:** `11 / 45` Nhiệm vụ hoàn thành (`24%`)
+> * **Hành động tiếp theo:** Thực hiện **Task 1.7** (Mobile App: đăng nhập, đổi mật khẩu tạm, lưu phiên bảo mật, khung tab, hồ sơ cá nhân).
 
 ### Các quyết định cần chốt
 
@@ -230,6 +230,8 @@ flowchart TD
 | Ca gãy | Task 2.2 | Tách thành 2 ca trong cùng ngày |
 | Đơn đổi ca cần đồng nghiệp đồng ý trước | Task 4.2 | Có |
 | Chống giả mạo khuôn mặt (liveness) | Task 6.2 | `[Tùy chọn]` |
+| Phát hiện "trùng thiết bị" (1 điện thoại chấm công cho nhiều người) | Task 3.2 | Có — lưu mã thiết bị khi check-in, cảnh báo trên Dashboard |
+| ~~Giao diện Web Admin~~ | Task 1.6 trở đi | ✅ **Đã chốt:** tham khảo bố cục HRM iPOS, thương hiệu & hình ảnh riêng FlexiWork, bỏ Tuyển dụng/Bảng giá, Hợp đồng gộp vào hồ sơ NV, Lương → Bảng công (lương tạm tính) |
 
 ---
 
@@ -246,7 +248,7 @@ flowchart TD
 
 ---
 
-### 📌 CẤP BẬC 1: Tổ chức, Người dùng & Bảo mật `[5/7]`
+### 📌 CẤP BẬC 1: Tổ chức, Người dùng & Bảo mật `[6/7]`
 > 🎯 **Demo:** Đăng nhập Web Admin theo vai trò; quản lý chi nhánh, phòng ban, chức vụ, nhân sự; nhân viên đăng nhập trên Mobile.
 
 - [x] **Task 1.1:** Định nghĩa Enums & Entities (`User`, `Role`, `UserRole`, `Department`, `Position`, `Branch`, `BranchWifi`) trong `FW.Domain`.
@@ -284,7 +286,13 @@ flowchart TD
   - Schema `users`: thêm `employment_type` (full_time/part_time), `hire_date`, `must_change_password`.
   - Ảnh đại diện JPG/PNG/WEBP ≤ 5 MB; khi phát triển chưa có Cloudinary thì lưu cục bộ và phục vụ tại `/uploads`.
   - Test: 8 unit test (sinh mật khẩu, quy tắc quản lý tài khoản) + 8 integration test; kiểm tra API thật (tạo NV → mật khẩu tạm → đăng nhập → ảnh đại diện → khóa → cấp lại mật khẩu).
-- [ ] **Task 1.6:** Web Admin: màn hình đăng nhập, quên mật khẩu, menu theo vai trò; quản lý Chi nhánh (kèm Wi-Fi), Phòng ban, Chức vụ, Nhân sự.
+- [x] **Task 1.6:** Web Admin: màn hình đăng nhập, quên mật khẩu, menu theo vai trò; quản lý Chi nhánh (kèm Wi-Fi), Phòng ban, Chức vụ, Nhân sự.
+  - Bố cục tham khảo HRM iPOS (header tối, sidebar nhóm thu gọn, Dashboard thẻ thống kê) với thương hiệu, logo, hình minh họa SVG riêng của FlexiWork; menu theo 6 phân hệ, mục chưa làm hiển thị trang "đang phát triển".
+  - Xác thực: đăng nhập, quên mật khẩu 2 bước (email → OTP + mật khẩu mới), **bắt buộc đổi mật khẩu tạm** (chặn mọi trang khác), đổi mật khẩu chủ động, tự đăng xuất khi token hết hạn/401.
+  - Trang: Tổng quan (khung số liệu, chờ dữ liệu Cấp 3/5), Nhân viên (lọc chi nhánh/phòng ban/vai trò/trạng thái; thêm kèm vai trò; sửa; khóa/mở; cấp lại mật khẩu; phân quyền; xóa; xem chi tiết), Chi nhánh (Geofence: lấy vị trí hiện tại, xem bản đồ; quản lý Wi-Fi BSSID), Phòng ban, Chức vụ & đơn giá, Hồ sơ cá nhân (SĐT, ảnh đại diện).
+  - Hiển thị theo vai trò: Admin đầy đủ; HR không gán Admin/HR, không thao tác tài khoản Admin, không phân quyền; Manager chỉ xem chi nhánh mình; Employee thấy trang hướng dẫn dùng app di động.
+  - Kỹ thuật: MVVM (hook `usePagedList` làm ViewModel), Zustand (`authStore`, `lookupStore`, `toastStore`), Axios client chuẩn hóa `ApiError`, bộ component UI dùng chung (Button, Form, Modal, DataTable, Badge, Toaster), icon `lucide-react`.
+  - Kiểm thử bằng trình duyệt thật (Chrome headless, playwright-core): 18 màn hình, luồng tạo NV → mật khẩu tạm → buộc đổi mật khẩu, phân quyền hiển thị theo Admin/HR/Manager/Employee.
 - [ ] **Task 1.7:** Mobile App: đăng nhập, lưu phiên bảo mật (SecureStore), khung điều hướng tab, màn hình hồ sơ cá nhân.
 
 ---
