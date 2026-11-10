@@ -1,3 +1,4 @@
+using FW.Application.Features.Auth;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace FW.Application;
@@ -9,8 +10,8 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddApplication(this IServiceCollection services)
     {
-        // Sẽ đăng ký AutoMapper, MediatR/FluentValidation hoặc Domain Services tại đây khi triển khai
+        services.AddScoped<IAuthService, AuthService>();
+
         return services;
     }
 }
-

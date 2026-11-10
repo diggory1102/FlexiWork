@@ -1,6 +1,9 @@
 using System.Text;
+using FW.Application.Common.Models;
+using FW.Application.Common.Security;
 using FW.Application.Common.Settings;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 
@@ -34,6 +37,9 @@ public static class ServiceCollectionExtensions
             .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer(options =>
             {
+                // Giữ nguyên tên claim trong token (sub, role, branch_id...) — không tự đổi sang URI dài của .NET
+                options.MapInboundClaims = false;
+
                 options.TokenValidationParameters = new TokenValidationParameters
                 {
                     ValidateIssuer = true,
@@ -43,7 +49,9 @@ public static class ServiceCollectionExtensions
                     ValidateIssuerSigningKey = true,
                     IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwt.Secret)),
                     ValidateLifetime = true,
-                    ClockSkew = TimeSpan.FromMinutes(1)
+                    ClockSkew = TimeSpan.FromMinutes(1),
+                    NameClaimType = AppClaimTypes.Name,
+                    RoleClaimType = AppClaimTypes.Role
                 };
 
                 options.Events = new JwtBearerEvents
@@ -56,12 +64,48 @@ public static class ServiceCollectionExtensions
                             context.Token = accessToken;
                         }
                         return Task.CompletedTask;
-                    }
+                    },
+                    // Trả lỗi 401/403 theo định dạng ApiResponse thống nhất thay vì body rỗng
+                    OnChallenge = async context =>
+                    {
+                        context.HandleResponse();
+                        await WriteApiErrorAsync(context.Response, StatusCodes.Status401Unauthorized,
+                            "Bạn chưa đăng nhập hoặc phiên đăng nhập đã hết hạn.");
+                    },
+                    OnForbidden = context =>
+                        WriteApiErrorAsync(context.Response, StatusCodes.Status403Forbidden,
+                            "Bạn không có quyền thực hiện thao tác này.")
                 };
             });
 
         services.AddAuthorization();
         return services;
+    }
+
+    /// <summary>
+    /// Lỗi kiểm tra dữ liệu đầu vào (DataAnnotations) trả về ApiResponse thay vì ProblemDetails mặc định.
+    /// </summary>
+    public static IMvcBuilder ConfigureValidationResponse(this IMvcBuilder builder)
+    {
+        return builder.ConfigureApiBehaviorOptions(options =>
+        {
+            options.InvalidModelStateResponseFactory = context =>
+            {
+                var errors = context.ModelState.Values
+                    .SelectMany(v => v.Errors)
+                    .Select(e => string.IsNullOrWhiteSpace(e.ErrorMessage) ? "Giá trị không hợp lệ." : e.ErrorMessage)
+                    .Distinct()
+                    .ToList();
+                return new BadRequestObjectResult(ApiResponse.FailureResult("Dữ liệu gửi lên không hợp lệ.", errors));
+            };
+        });
+    }
+
+    private static Task WriteApiErrorAsync(HttpResponse response, int statusCode, string message)
+    {
+        if (response.HasStarted) return Task.CompletedTask;
+        response.StatusCode = statusCode;
+        return response.WriteAsJsonAsync(ApiResponse.FailureResult(message), ApiJson.Options);
     }
 
     /// <summary>

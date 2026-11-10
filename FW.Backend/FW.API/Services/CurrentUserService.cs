@@ -1,16 +1,14 @@
 using System.Security.Claims;
 using FW.Application.Common.Interfaces;
+using FW.Application.Common.Security;
 
 namespace FW.API.Services;
 
 /// <summary>
-/// Đọc thông tin người dùng hiện tại từ JWT claims (UserId, BranchId, Roles).
-/// Tên claim "branch_id" sẽ được dùng thống nhất khi phát hành token ở Task 1.3.
+/// Đọc thông tin người dùng hiện tại từ JWT claims (xem <see cref="AppClaimTypes"/>).
 /// </summary>
 public class CurrentUserService : ICurrentUserService
 {
-    public const string BranchIdClaim = "branch_id";
-
     private readonly IHttpContextAccessor _httpContextAccessor;
 
     public CurrentUserService(IHttpContextAccessor httpContextAccessor)
@@ -22,12 +20,12 @@ public class CurrentUserService : ICurrentUserService
 
     public bool IsAuthenticated => User?.Identity?.IsAuthenticated ?? false;
 
-    public int? UserId => ParseInt(User?.FindFirstValue(ClaimTypes.NameIdentifier));
+    public int? UserId => ParseInt(User?.FindFirstValue(AppClaimTypes.UserId));
 
-    public int? BranchId => ParseInt(User?.FindFirstValue(BranchIdClaim));
+    public int? BranchId => ParseInt(User?.FindFirstValue(AppClaimTypes.BranchId));
 
     public IReadOnlyList<string> Roles =>
-        User?.FindAll(ClaimTypes.Role).Select(c => c.Value).ToList() ?? new List<string>();
+        User?.FindAll(AppClaimTypes.Role).Select(c => c.Value).ToList() ?? new List<string>();
 
     public bool IsInRole(string role) => User?.IsInRole(role) ?? false;
 

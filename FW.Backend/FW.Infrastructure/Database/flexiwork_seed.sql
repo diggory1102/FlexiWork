@@ -47,20 +47,20 @@ INSERT INTO roles (id, role_name, description) VALUES
 ON DUPLICATE KEY UPDATE role_name=VALUES(role_name);
 
 -- 6. SEED TÀI KHOẢN NGƯỜI DÙNG (Users)
--- Mật khẩu băm BCrypt mặc định cho tất cả tài khoản là: "Admin@123" ($2a$11$0FfXf1k9e5R6h7x0a3A7OuUaXzQ5P... hoặc giả lập hash hợp lệ)
--- Dưới đây là chuỗi băm chuẩn BCrypt của mật khẩu "Admin@123":
--- $2a$12$e8Y6bFp58r3y6d7yW4F3beWq3qG8X0kL7P6V3S1N9V0I2O3U4Y5Q2 (ví dụ placeholder chuẩn)
+-- Mật khẩu của TẤT CẢ tài khoản mẫu: Admin@123 (hash BCrypt, work factor 11)
 INSERT INTO users (id, employee_code, email, password_hash, full_name, phone_number, branch_id, department_id, position_id, status) VALUES
-(1, 'EMP001', 'admin@flexiwork.vn', '$2a$11$qRzN5z3mK.e6jB8xV6QZe.Xy0eQZ0g8GzW8qZ7v5O8u3K2l1P4v5W', 'Nguyễn Quản Trị', '0901234567', 1, 1, 1, 'active'),
-(2, 'EMP002', 'manager.cg@flexiwork.vn', '$2a$11$qRzN5z3mK.e6jB8xV6QZe.Xy0eQZ0g8GzW8qZ7v5O8u3K2l1P4v5W', 'Trần Quản Lý', '0912345678', 1, 3, 3, 'active'),
-(3, 'EMP003', 'nhanvien.cg@flexiwork.vn', '$2a$11$qRzN5z3mK.e6jB8xV6QZe.Xy0eQZ0g8GzW8qZ7v5O8u3K2l1P4v5W', 'Lê Văn Nhân Viên', '0923456789', 1, 3, 4, 'active')
-ON DUPLICATE KEY UPDATE full_name=VALUES(full_name);
+(1, 'EMP001', 'admin@flexiwork.vn', '$2a$11$4Qh91q1jTQsWXpeAgFjJdOEzx.XmGK.eTcYcFdxy5yC/NpZH9EZKO', 'Nguyễn Quản Trị', '0901234567', 1, 1, 1, 'active'),
+(2, 'EMP002', 'manager.cg@flexiwork.vn', '$2a$11$4Qh91q1jTQsWXpeAgFjJdOEzx.XmGK.eTcYcFdxy5yC/NpZH9EZKO', 'Trần Quản Lý', '0912345678', 1, 3, 3, 'active'),
+(3, 'EMP003', 'nhanvien.cg@flexiwork.vn', '$2a$11$4Qh91q1jTQsWXpeAgFjJdOEzx.XmGK.eTcYcFdxy5yC/NpZH9EZKO', 'Lê Văn Nhân Viên', '0923456789', 1, 3, 4, 'active'),
+(4, 'EMP004', 'hr@flexiwork.vn', '$2a$11$4Qh91q1jTQsWXpeAgFjJdOEzx.XmGK.eTcYcFdxy5yC/NpZH9EZKO', 'Phạm Nhân Sự', '0934567890', NULL, 2, 2, 'active')
+ON DUPLICATE KEY UPDATE full_name=VALUES(full_name), password_hash=VALUES(password_hash);
 
 -- 7. GÁN VAI TRÒ CHO NGƯỜI DÙNG (User Roles)
 INSERT INTO user_roles (user_id, role_id) VALUES
 (1, 1), -- EMP001 -> ADMIN
 (2, 2), -- EMP002 -> MANAGER
-(3, 3)  -- EMP003 -> EMPLOYEE
+(3, 3), -- EMP003 -> EMPLOYEE
+(4, 4)  -- EMP004 -> HR
 ON DUPLICATE KEY UPDATE assigned_at=NOW();
 
 -- 8. SEED HỒ SƠ FACE ID (Face Profiles)

@@ -7,12 +7,15 @@ using FW.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// 1. Controllers
-builder.Services.AddControllers();
+// 1. Controllers (URL chữ thường: /api/auth/login) + lỗi validate trả về ApiResponse
+builder.Services.AddRouting(options => options.LowercaseUrls = true);
+builder.Services.AddControllers()
+    .AddJsonOptions(options => options.JsonSerializerOptions.Encoder = ApiJson.Encoder)
+    .ConfigureValidationResponse();
 
 // 2. Tầng Application & Infrastructure
 builder.Services.AddApplication();
-builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddInfrastructure(builder.Configuration, builder.Environment.IsDevelopment());
 
 // 3. Người dùng hiện tại (đọc từ JWT claims)
 builder.Services.AddHttpContextAccessor();

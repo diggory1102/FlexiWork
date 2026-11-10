@@ -52,7 +52,20 @@ cp appsettings.Development.example.json appsettings.Development.json   # điền
 dotnet run --launch-profile http
 ```
 
-Swagger: http://localhost:5010 — kiểm tra nhanh: `GET /api/HealthCheck`.
+Swagger: http://localhost:5010 — kiểm tra nhanh: `GET /api/healthcheck`.
+
+**Tài khoản mẫu** (từ `flexiwork_seed.sql`, mật khẩu chung `Admin@123`):
+
+| Email | Vai trò | Chi nhánh |
+|---|---|---|
+| `admin@flexiwork.vn` | Admin | Cầu Giấy |
+| `hr@flexiwork.vn` | HR | — (toàn công ty) |
+| `manager.cg@flexiwork.vn` | Manager | Cầu Giấy |
+| `nhanvien.cg@flexiwork.vn` | Employee | Cầu Giấy |
+
+Khi phát triển (`ASPNETCORE_ENVIRONMENT=Development`):
+- Để trống `Redis:ConnectionString` → dùng cache trong bộ nhớ thay Redis.
+- Để trống `Smtp:Host` → email (kể cả mã OTP quên mật khẩu) được **ghi ra console** thay vì gửi thật.
 
 ### Kiểm thử
 

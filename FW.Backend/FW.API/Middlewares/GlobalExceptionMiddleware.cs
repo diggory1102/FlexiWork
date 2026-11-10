@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text.Json;
+using FW.API.Extensions;
 using FW.Application.Common.Exceptions;
 using FW.Application.Common.Models;
 
@@ -57,12 +58,7 @@ public class GlobalExceptionMiddleware
         context.Response.StatusCode = (int)statusCode;
 
         var response = ApiResponse.FailureResult(message, errors);
-        var jsonOptions = new JsonSerializerOptions
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-        };
-
-        var json = JsonSerializer.Serialize(response, jsonOptions);
+        var json = JsonSerializer.Serialize(response, ApiJson.Options);
         await context.Response.WriteAsync(json);
     }
 }

@@ -3,6 +3,7 @@ using FW.Application.Common.Interfaces.Persistence;
 using FW.Application.Common.Settings;
 using FW.Infrastructure.Database;
 using FW.Infrastructure.Repositories;
+using FW.Infrastructure.Security;
 using FW.Infrastructure.Services;
 using FW.Infrastructure.Services.Caching;
 using FW.Infrastructure.Services.Email;
@@ -20,7 +21,10 @@ namespace FW.Infrastructure;
 /// </summary>
 public static class DependencyInjection
 {
-    public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
+    /// <param name="isDevelopment">
+    /// Môi trường phát triển: cho phép thay Redis bằng bộ nhớ trong và ghi email ra log khi chưa cấu hình SMTP.
+    /// </param>
+    public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration, bool isDevelopment = false)
     {
         // 1. Cấu hình (Options pattern)
         services.Configure<SmtpSettings>(configuration.GetSection(SmtpSettings.SectionName));
@@ -35,23 +39,48 @@ public static class DependencyInjection
         services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<DbSession>());
         services.AddSingleton<IDateTimeProvider, DateTimeProvider>();
 
-        // 3. Redis — chỉ kết nối khi được sử dụng lần đầu; không chặn khởi động nếu Redis chưa chạy
-        services.AddSingleton<IConnectionMultiplexer>(sp =>
+        // 3. Cache: Redis; khi phát triển mà để trống Redis:ConnectionString thì dùng bộ nhớ trong
+        var redisConnection = configuration[$"{RedisSettings.SectionName}:ConnectionString"];
+        if (string.IsNullOrWhiteSpace(redisConnection))
         {
-            var settings = sp.GetRequiredService<IOptions<RedisSettings>>().Value;
-            var options = ConfigurationOptions.Parse(settings.ConnectionString);
-            options.AbortOnConnectFail = false;
-            return ConnectionMultiplexer.Connect(options);
-        });
-        services.AddSingleton<ICacheService, RedisCacheService>();
+            if (!isDevelopment)
+            {
+                throw new InvalidOperationException("Chưa cấu hình Redis:ConnectionString.");
+            }
+            services.AddMemoryCache();
+            services.AddSingleton<ICacheService, MemoryCacheService>();
+        }
+        else
+        {
+            // Chỉ kết nối khi được dùng lần đầu; không chặn khởi động nếu Redis tạm thời chưa sẵn sàng
+            services.AddSingleton<IConnectionMultiplexer>(_ =>
+            {
+                var options = ConfigurationOptions.Parse(redisConnection);
+                options.AbortOnConnectFail = false;
+                return ConnectionMultiplexer.Connect(options);
+            });
+            services.AddSingleton<ICacheService, RedisCacheService>();
+        }
 
-        // 4. Email (MailKit + SMTP)
-        services.AddTransient<IEmailService, SmtpEmailService>();
+        // 4. Email: MailKit + SMTP; khi phát triển mà chưa cấu hình SMTP thì ghi email ra log
+        var smtpHost = configuration[$"{SmtpSettings.SectionName}:Host"];
+        if (string.IsNullOrWhiteSpace(smtpHost) && isDevelopment)
+        {
+            services.AddTransient<IEmailService, LoggingEmailService>();
+        }
+        else
+        {
+            services.AddTransient<IEmailService, SmtpEmailService>();
+        }
 
-        // 5. Lưu trữ ảnh (Cloudinary)
+        // 5. Bảo mật: băm mật khẩu & phát hành JWT (JwtSettings được bind ở tầng API)
+        services.AddSingleton<IPasswordHasher, BCryptPasswordHasher>();
+        services.AddSingleton<IJwtTokenGenerator, JwtTokenGenerator>();
+
+        // 6. Lưu trữ ảnh (Cloudinary)
         services.AddSingleton<IFileStorageService, CloudinaryStorageService>();
 
-        // 6. Client gọi FW.AiService
+        // 7. Client gọi FW.AiService
         services.AddHttpClient<IFaceRecognitionService, FaceRecognitionClient>((sp, client) =>
         {
             var settings = sp.GetRequiredService<IOptions<AiServiceSettings>>().Value;
@@ -59,7 +88,7 @@ public static class DependencyInjection
             client.Timeout = TimeSpan.FromSeconds(settings.TimeoutSeconds);
         });
 
-        // 7. Repositories (Dapper)
+        // 8. Repositories (Dapper)
         services.AddScoped<IBranchRepository, BranchRepository>();
         services.AddScoped<IBranchWifiRepository, BranchWifiRepository>();
         services.AddScoped<IDepartmentRepository, DepartmentRepository>();
