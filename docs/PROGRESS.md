@@ -1,7 +1,7 @@
 # FlexiWork - Nhật ký Dự án & Kiến trúc Chức năng (Project Progress & Architecture)
 
 > **Tài liệu theo dõi tiến độ, kiến trúc chức năng và ma trận phân quyền hệ thống FlexiWork.**  
-> *Thời gian cập nhật: 10/11/2026*
+> *Thời gian cập nhật: 12/11/2026*
 
 ---
 
@@ -13,14 +13,16 @@
 
 > [!IMPORTANT]
 > **Phạm vi giới hạn dự án (Scope Boundary):**
-> * Đề tài tập trung tối ưu bài toán chấm công thông minh, quản lý ca kíp linh hoạt, giao việc theo ca và chuẩn bị dữ liệu bảng công tự động.
-> * **Không bao gồm:** Tính toán chi tiết bảo hiểm xã hội (BHXH) hay thuế TNCN phức tạp.
+> * Đề tài tập trung tối ưu bài toán chấm công thông minh, quản lý ca kíp linh hoạt, giao việc theo ca, tổng hợp bảng công tự động và **tính lương tạm tính rút gọn** từ bảng công.
+> * **Không bao gồm:** Tính toán chi tiết bảo hiểm xã hội (BHXH) hay thuế TNCN phức tạp (lương rút gọn chỉ gồm: công × đơn giá + phụ cấp + OT − phạt).
 > * **Không bao gồm:** Công cụ quản lý dự án đa cấp (Kanban, biểu đồ Gantt chuyên sâu).
 > * **Không bao gồm:** Cuộc gọi thoại hoặc video call nội bộ.
 
 ---
 
-## 2. Danh mục 6 Phân hệ Chức năng Cốt lõi
+## 2. Danh mục 7 Phân hệ Chức năng Cốt lõi
+
+> Đối chiếu `docs/UML.md` (9 phân hệ, 39 UC): UML tách "Hệ thống & Danh mục" và "Hồ sơ Nhân sự" thành 2 phân hệ — ở đây gộp vào 2.1; Phân hệ 8 (Bảng lương rút gọn) tương ứng mục 2.7.
 
 ### 2.1. Phân hệ Quản lý Hồ sơ & Tổ chức (Web Admin)
 * **Quản lý danh sách chi nhánh / cửa hàng:** Khai báo thông tin hành chính, thiết lập tâm tọa độ vĩ độ/kinh độ, bán kính chấm công hợp lệ (GPS Geofencing) và danh sách địa chỉ phần cứng Wi-Fi BSSID nội bộ.
@@ -59,6 +61,12 @@
 * **Tự động tổng hợp bảng công:** Tự động gom dữ liệu chấm công thô, so khớp với khung ca và đơn từ hợp lệ để tính toán chính xác số giờ làm việc, thời gian đi muộn, về sớm, giờ OT và ngày công quy đổi.
 * **Trích xuất dữ liệu (Export):** Hỗ trợ xuất dữ liệu bảng công chi tiết ra định dạng file **Excel (.xlsx)** hoặc **PDF** phục vụ cho bộ phận kế toán/nhân sự tính lương.
 
+### 2.7. Phân hệ Bảng lương Rút gọn (Web Admin & Mobile App) — UML Phân hệ 8
+* **Cấu hình mức lương & phụ cấp (UC 8.1):** Lương tháng (nhân viên toàn thời gian) hoặc đơn giá giờ theo chức vụ (bán thời gian, có thể ghi đè theo từng nhân viên); phụ cấp ca gãy/ca đêm, phụ cấp cố định; hệ số OT; định mức phạt.
+* **Tự động gom dữ liệu (UC 8.2):** Lấy ngày công, giờ công, giờ OT, số ca gãy/đêm, phút vi phạm từ bảng công tháng đã khóa (Phân hệ 2.6).
+* **Tính lương tạm tính (UC 8.3):** `(Công thực tế × Đơn giá) + Phụ cấp + OT − Tiền phạt`, lưu chi tiết từng khoản để đối soát.
+* **Chốt & phát hành phiếu lương (UC 8.4):** Chốt kỳ lương, gửi phiếu lương điện tử qua email, nhân viên xem trên Mobile, xuất Excel cho kế toán.
+
 ---
 
 ## 3. Sơ đồ Phân rã Chức năng (BFD - Business Function Decomposition)
@@ -73,6 +81,7 @@ flowchart TD
     ROOT --> M4["4. Quản lý Công việc theo ca (Web & Mobile)"]
     ROOT --> M5["5. Trao đổi Thời gian thực (Web & Mobile)"]
     ROOT --> M6["6. Báo cáo & Bảng công (Web Admin)"]
+    ROOT --> M7["7. Bảng lương Rút gọn (Web & Mobile)"]
 
     %% Module 1
     M1 --> M1_1["1.1 Quản lý Chi nhánh & Geofencing / Wi-Fi"]
@@ -107,6 +116,12 @@ flowchart TD
     M6 --> M6_2["6.2 Báo cáo vi phạm (Đi muộn / Về sớm / Vắng mặt)"]
     M6 --> M6_3["6.3 Tự động tổng hợp dữ liệu Bảng công"]
     M6 --> M6_4["6.4 Trích xuất Bảng công ra Excel (.xlsx) / PDF"]
+
+    %% Module 7
+    M7 --> M7_1["7.1 Cấu hình Mức lương, Phụ cấp & Hệ số OT"]
+    M7 --> M7_2["7.2 Tính Bảng lương tạm tính từ Bảng công"]
+    M7 --> M7_3["7.3 Chốt kỳ lương & Gửi phiếu lương điện tử"]
+    M7 --> M7_4["7.4 Xuất Bảng lương ra Excel cho Kế toán"]
 ```
 
 ---
@@ -169,6 +184,12 @@ flowchart TD
 | - Báo cáo vi phạm (Đi muộn, về sớm, vắng) | Web | `R` | `R` | `R` *(theo CN)* | `-` |
 | - Tổng hợp số giờ công, công quy đổi, giờ OT | Web | `R` | `CRUD` | `R` *(theo CN)* | `R` *(Cá nhân)* |
 | - Trích xuất file Bảng công (Excel / PDF) | Web | `E` | `E` | `E` *(theo CN)* | `-` |
+| **7. Bảng lương Rút gọn** | | | | | |
+| - Cấu hình Mức lương, Phụ cấp, Hệ số OT, Mức phạt | Web | `CRUD` | `CRUD` | `-` | `-` |
+| - Tính & Xem Bảng lương tạm tính | Web | `CRUD` | `CRUD` | `R` *(theo CN)* | `-` |
+| - Chốt kỳ lương & Gửi phiếu lương | Web | `E` | `E` | `-` | `-` |
+| - Xem phiếu lương cá nhân | Mobile/Web | `R` | `R` | `R` | `R` *(Cá nhân)* |
+| - Xuất Bảng lương ra Excel | Web | `E` | `E` | `-` | `-` |
 
 ---
 
@@ -217,7 +238,7 @@ flowchart TD
 
 > **Tổng quan Tiến độ Hiện tại:**
 > * **Giai đoạn đang thực hiện:** CẤP BẬC 1 - Tổ chức, Người dùng & Bảo mật
-> * **Tiến độ tổng thể:** `11 / 45` Nhiệm vụ hoàn thành (`24%`)
+> * **Tiến độ tổng thể:** `11 / 47` Nhiệm vụ hoàn thành (`23%`)
 > * **Hành động tiếp theo:** Thực hiện **Task 1.7** (Mobile App: đăng nhập, đổi mật khẩu tạm, lưu phiên bảo mật, khung tab, hồ sơ cá nhân).
 
 ### Các quyết định cần chốt
@@ -232,6 +253,13 @@ flowchart TD
 | Chống giả mạo khuôn mặt (liveness) | Task 6.2 | `[Tùy chọn]` |
 | Phát hiện "trùng thiết bị" (1 điện thoại chấm công cho nhiều người) | Task 3.2 | Có — lưu mã thiết bị khi check-in, cảnh báo trên Dashboard |
 | ~~Giao diện Web Admin~~ | Task 1.6 trở đi | ✅ **Đã chốt:** tham khảo bố cục HRM iPOS, thương hiệu & hình ảnh riêng FlexiWork, bỏ Tuyển dụng/Bảng giá, Hợp đồng gộp vào hồ sơ NV, Lương → Bảng công (lương tạm tính) |
+| ~~Phân hệ Bảng lương rút gọn (UML Phân hệ 8)~~ | Task 5.4, 5.5 | ✅ **Đã chốt (12/11/2026):** đưa vào phạm vi, không gồm thuế TNCN/BHXH |
+| Cách tính lương | Task 5.4, 5.5 | Toàn thời gian: `lương tháng ÷ công chuẩn × ngày công`; bán thời gian: `giờ công × đơn giá giờ` (chức vụ, ghi đè được theo NV); OT ngày thường × 1,5; phạt theo quy tắc vi phạm (Task 2.2) |
+| Vai trò HR (UML UC 1.6 mới ghi 3 vai trò) | Task K.2 | Giữ 4 vai trò; sửa UC 1.6 trong UML/Chương 3 thêm HR |
+| Nhóm chat tùy chỉnh (UML UC 7.2) | Task 5.2 | Vẫn `[Tùy chọn]`; nhóm tự động theo chi nhánh là bắt buộc |
+| ~~Công cụ bổ sung ngoài Chương 2~~ | Cấp 2–6 | ✅ **Đã chốt:** Excel → **ClosedXML** (MIT); PDF → **QuestPDF**; biểu đồ → **Recharts**; bản đồ → **Leaflet + OpenStreetMap** (tìm địa chỉ: Nominatim) thay Google Maps; ngày giờ Web → **dayjs**; push → **expo-notifications + Expo Push**; Fake GPS → cờ `mocked` của `expo-location`; mã thiết bị → **expo-application**; ảnh minh chứng → `expo-image-picker` + `expo-image-manipulator`; tác vụ nền → `BackgroundService` (.NET) |
+| SMTP gửi email | Task 1.3, 5.5, 6.3 | Local: Gmail + App Password; Render: kiểm tra chặn cổng SMTP gói free → dùng HTTP API (Brevo/Resend) qua `IEmailService` nếu cần |
+| Redis khi triển khai | Task 6.3 | Aiven (đúng Chương 2) hoặc Upstash — kiểm tra gói free lúc triển khai |
 
 ---
 
@@ -334,17 +362,19 @@ flowchart TD
 
 ---
 
-### 📌 CẤP BẬC 5: Realtime, Tổng hợp Bảng công & Báo cáo `[0/8]`
-> 🎯 **Demo:** Thông báo & chat tức thì giữa Web và Mobile; dashboard quân số realtime; chốt bảng công tháng và xuất Excel.
+### 📌 CẤP BẬC 5: Realtime, Bảng công, Bảng lương & Báo cáo `[0/10]`
+> 🎯 **Demo:** Thông báo & chat tức thì giữa Web và Mobile; dashboard quân số realtime; chốt bảng công tháng → tính lương tạm tính → gửi phiếu lương; xuất Excel.
 
 - [ ] **Task 5.1:** `NotificationHub` + bảng `notifications`: lưu và đẩy thông báo (kết quả duyệt đơn, lịch mới, check-in, task được giao); API danh sách, đánh dấu đã đọc.
 - [ ] **Task 5.2:** `ChatHub` + API hội thoại: chat 1-1 (văn bản, hình ảnh), nhóm tự động theo chi nhánh, lịch sử tin nhắn. Nhóm chat tùy chỉnh `[Tùy chọn]`.
-- [ ] **Task 5.3:** Thuật toán Tổng hợp Bảng công tháng (`monthly_timesheets`) từ `attendance_logs`, `schedules`, `leave_requests` (ngày công, giờ OT, phút vi phạm, nghỉ có/không lương); quy trình Quản lý xác nhận → HR khóa bảng công (kèm unit test).
-- [ ] **Task 5.4:** Dashboard quân số realtime theo chi nhánh; báo cáo vi phạm (đi muộn, về sớm, vắng mặt); báo cáo sử dụng quỹ phép.
-- [ ] **Task 5.5:** Xuất bảng công ra Excel (`.xlsx`). Xuất PDF `[Tùy chọn]`.
-- [ ] **Task 5.6:** Web Admin: dashboard, bảng công & khóa công, báo cáo, chat, trung tâm thông báo.
-- [ ] **Task 5.7:** Mobile App: thông báo, chat, bảng công cá nhân trong tháng.
-- [ ] **Task 5.8:** `[Tùy chọn]` Push Notification khi ứng dụng đang đóng (Expo Push).
+- [ ] **Task 5.3:** Thuật toán Tổng hợp Bảng công tháng (`monthly_timesheets`) từ `attendance_logs`, `schedules`, `leave_requests` (ngày công, giờ OT, phút vi phạm, nghỉ có/không lương, số ca gãy/đêm); quy trình Quản lý xác nhận → HR khóa bảng công (kèm unit test).
+- [ ] **Task 5.4:** Cấu hình lương (UC 8.1): bổ sung schema — lương tháng / đơn giá giờ riêng theo nhân viên (`users`), danh mục phụ cấp & phụ cấp theo nhân viên, hệ số OT, kỳ lương (`payroll_periods`) và phiếu lương chi tiết từng khoản (`payslips`, `payslip_items`); API CRUD cấu hình.
+- [ ] **Task 5.5:** Tính & chốt Bảng lương rút gọn (UC 8.2–8.4): gom dữ liệu từ bảng công đã khóa → `(công × đơn giá) + phụ cấp + OT − phạt` (kèm unit test); tính lại khi còn nháp; chốt kỳ lương (transaction); gửi phiếu lương HTML qua email (MailKit); API phiếu lương cá nhân.
+- [ ] **Task 5.6:** Dashboard quân số realtime theo chi nhánh; báo cáo vi phạm (đi muộn, về sớm, vắng mặt); báo cáo sử dụng quỹ phép.
+- [ ] **Task 5.7:** Xuất bảng công & bảng lương ra Excel (`.xlsx`, ClosedXML). Xuất PDF (QuestPDF) `[Tùy chọn]`.
+- [ ] **Task 5.8:** Web Admin: dashboard (Recharts), bảng công & khóa công, cấu hình lương & phụ cấp, bảng lương & chốt kỳ, báo cáo, chat, trung tâm thông báo.
+- [ ] **Task 5.9:** Mobile App: thông báo, chat, bảng công cá nhân trong tháng, phiếu lương cá nhân.
+- [ ] **Task 5.10:** `[Tùy chọn]` Push Notification khi ứng dụng đang đóng (Expo Push).
 
 ---
 
@@ -360,7 +390,11 @@ flowchart TD
 ---
 
 ### 📝 SONG SONG: Viết Khóa luận `[0/4]`
-- [ ] **Task K.1:** Sửa Chương 2: loại bỏ nội dung còn sót từ dự án khác (SOSMap: `Post`, `RescueTask`, "mạng xã hội cứu trợ"...), điền chỗ trống "mô hình (…)", thống nhất Clean Architecture & SignalR, bổ sung Mobile (Expo) và `FW.AiService` (FastAPI + InsightFace).
-- [ ] **Task K.2:** Chương 3: quy trình TO-BE, biểu đồ Use Case, BFD, ERD, biểu đồ tuần tự (chấm công 3 lớp, duyệt đơn), thiết kế kiến trúc & CSDL.
+- [ ] **Task K.1:** Sửa Chương 1–2:
+  - Loại bỏ nội dung còn sót từ dự án SOSMap: `Post`, `RescueTask`, `Comment`, "mạng xã hội cứu trợ", "SosReport", feed bài đăng, Flat Threading bình luận, FilterJson, Optimistic UI; Google Maps "tính thời gian đến điểm cứu hộ" → Leaflet/OpenStreetMap chọn tâm geofence.
+  - Điền chỗ trống "mô hình (…)"; thống nhất Clean Architecture; chỉ dùng **SignalR** (bỏ Socket.io).
+  - Bổ sung công nghệ đang dùng: Mobile (Expo, expo-camera/location, NetInfo, SecureStore), `FW.AiService` (FastAPI + InsightFace), xUnit, ClosedXML/QuestPDF, Recharts, Expo Push.
+  - Mục 1.4.2: thêm phân hệ Bảng lương rút gọn cho khớp `docs/UML.md`.
+- [ ] **Task K.2:** Chương 3: quy trình TO-BE, biểu đồ Use Case (theo `docs/UML.md`, UC 1.6 thêm vai trò HR), BFD, ERD, biểu đồ tuần tự (chấm công 3 lớp, duyệt đơn, tính lương), thiết kế kiến trúc & CSDL. Công cụ vẽ: draw.io / StarUML.
 - [ ] **Task K.3:** Chương 4: môi trường cài đặt, giao diện Web Admin & Mobile App, kết quả thực nghiệm (từ Task 6.5).
 - [ ] **Task K.4:** Chương 5 & phần đầu: kết luận, hạn chế, hướng phát triển; cập nhật tóm tắt, mục lục, danh mục viết tắt/hình/bảng; sửa lời cam đoan ("nhóm tác giả" → cá nhân).
