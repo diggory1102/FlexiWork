@@ -93,11 +93,24 @@ npm run dev                     # http://localhost:5173
 ### 4. Mobile App
 
 ```bash
+# Backend phải lắng nghe trên mạng LAN để điện thoại gọi được (mặc định chỉ localhost)
+cd FW.Backend/FW.API
+dotnet run --launch-profile http --urls http://0.0.0.0:5010
+
+# Terminal khác
 cd FW.Frontend/mobile
-cp .env.example .env.local      # dùng IP LAN của máy chạy backend
+cp .env.example .env.local      # sửa IP thành IP LAN của máy chạy backend (ipconfig)
 npm install
-npx expo start
+npx expo start                  # quét QR bằng Expo Go; nhấn "w" để xem thử trên trình duyệt
 ```
+
+| Thiết bị | `EXPO_PUBLIC_API_BASE_URL` |
+| --- | --- |
+| Điện thoại thật (cùng Wi-Fi với máy tính) | `http://<IP LAN>:5010/api` — mở cổng 5010 trên Windows Firewall nếu bị chặn |
+| Android Emulator | `http://10.0.2.2:5010/api` |
+| Trình duyệt (`w`) — chỉ để xem giao diện | `http://localhost:5010/api` (đã cho phép CORS `localhost:8081` trong cấu hình dev) |
+
+Đã có (Task 1.7): đăng nhập, quên mật khẩu bằng OTP, bắt buộc đổi mật khẩu tạm, phiên lưu trong SecureStore (Keychain/Keystore) và tự đồng bộ khi mở lại app, khung 5 tab, hồ sơ cá nhân (ảnh đại diện, số điện thoại).
 
 > Đọc Wi-Fi BSSID và chấm công cần **development build** (`npx expo run:android` hoặc `eas build --profile development`), không chạy đầy đủ trên Expo Go.
 > iOS cần quyền "Access Wi-Fi Information" (đã khai báo trong `app.json`) và tài khoản Apple Developer.

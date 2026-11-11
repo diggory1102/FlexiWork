@@ -19,3 +19,10 @@ export interface AuthUser {
   /** Đang dùng mật khẩu tạm do hệ thống cấp — phải chuyển tới màn hình đổi mật khẩu. */
   mustChangePassword: boolean;
 }
+
+/** Khớp LoginResponse ở backend (POST /api/auth/login). */
+export interface LoginResponse {
+  accessToken: string;
+  expiresAtUtc: string;
+  user: AuthUser;
+}

@@ -237,9 +237,9 @@ flowchart TD
 > * `[Tùy chọn]`: chỉ thực hiện khi còn thời gian; có thể đưa vào "Hướng phát triển" (Chương 5).
 
 > **Tổng quan Tiến độ Hiện tại:**
-> * **Giai đoạn đang thực hiện:** CẤP BẬC 1 - Tổ chức, Người dùng & Bảo mật
-> * **Tiến độ tổng thể:** `11 / 47` Nhiệm vụ hoàn thành (`23%`)
-> * **Hành động tiếp theo:** Thực hiện **Task 1.7** (Mobile App: đăng nhập, đổi mật khẩu tạm, lưu phiên bảo mật, khung tab, hồ sơ cá nhân).
+> * **Giai đoạn đang thực hiện:** CẤP BẬC 2 - Khung ca, Xếp lịch & Dữ liệu Face ID
+> * **Tiến độ tổng thể:** `12 / 47` Nhiệm vụ hoàn thành (`26%`)
+> * **Hành động tiếp theo:** Thực hiện **Task 2.1** (Entities & Repository `Shift`, `Schedule`, `FaceProfile`; bổ sung schema ca/lịch). Việc nhỏ đang chờ: bản đồ chọn tâm geofence trên form chi nhánh (Leaflet + OpenStreetMap).
 
 ### Các quyết định cần chốt
 
@@ -276,7 +276,7 @@ flowchart TD
 
 ---
 
-### 📌 CẤP BẬC 1: Tổ chức, Người dùng & Bảo mật `[6/7]`
+### 📌 CẤP BẬC 1: Tổ chức, Người dùng & Bảo mật `[7/7]` ✅ HOÀN THÀNH
 > 🎯 **Demo:** Đăng nhập Web Admin theo vai trò; quản lý chi nhánh, phòng ban, chức vụ, nhân sự; nhân viên đăng nhập trên Mobile.
 
 - [x] **Task 1.1:** Định nghĩa Enums & Entities (`User`, `Role`, `UserRole`, `Department`, `Position`, `Branch`, `BranchWifi`) trong `FW.Domain`.
@@ -321,7 +321,13 @@ flowchart TD
   - Hiển thị theo vai trò: Admin đầy đủ; HR không gán Admin/HR, không thao tác tài khoản Admin, không phân quyền; Manager chỉ xem chi nhánh mình; Employee thấy trang hướng dẫn dùng app di động.
   - Kỹ thuật: MVVM (hook `usePagedList` làm ViewModel), Zustand (`authStore`, `lookupStore`, `toastStore`), Axios client chuẩn hóa `ApiError`, bộ component UI dùng chung (Button, Form, Modal, DataTable, Badge, Toaster), icon `lucide-react`.
   - Kiểm thử bằng trình duyệt thật (Chrome headless, playwright-core): 18 màn hình, luồng tạo NV → mật khẩu tạm → buộc đổi mật khẩu, phân quyền hiển thị theo Admin/HR/Manager/Employee.
-- [ ] **Task 1.7:** Mobile App: đăng nhập, lưu phiên bảo mật (SecureStore), khung điều hướng tab, màn hình hồ sơ cá nhân.
+- [x] **Task 1.7:** Mobile App: đăng nhập, lưu phiên bảo mật (SecureStore), khung điều hướng tab, màn hình hồ sơ cá nhân.
+  - Định tuyến theo phiên bằng `Stack.Protected` (Expo Router): chưa đăng nhập → Đăng nhập / Quên mật khẩu; đang dùng **mật khẩu tạm** → chỉ màn hình đổi mật khẩu (không vào được tab, có nút đăng xuất); đã đăng nhập → 5 tab: Trang chủ, Lịch ca, Chấm công, Đơn từ, Cá nhân (+ màn hình Công việc, Tin nhắn chờ Cấp 4–5).
+  - Phiên lưu trong `expo-secure-store` (iOS Keychain / Android Keystore) qua Zustand `persist`; giữ màn hình khởi động tới khi đọc xong phiên; `useSessionGuard`: token hết hạn → đăng xuất, mở lại app → đồng bộ `/auth/me` (bị khóa → 401 → đăng xuất; được cấp lại mật khẩu → buộc đổi mật khẩu).
+  - Quên mật khẩu 2 bước (OTP 6 số, đếm ngược 60 giây gửi lại khớp backend), đổi mật khẩu chủ động, kiểm tra mật khẩu khớp `PasswordPolicy`.
+  - Trang chủ: lời chào, đồng hồ, nút chấm công nhanh, thẻ "Ca làm hôm nay" (chờ Cấp 2), lối tắt. Hồ sơ: thông tin công việc, đổi ảnh đại diện (chụp hoặc chọn ảnh, cắt vuông, JPEG trên iOS), sửa SĐT (ràng buộc khớp backend), đổi mật khẩu, đăng xuất có xác nhận.
+  - Kỹ thuật: MVVM (`useProfile` làm ViewModel), bộ component dùng chung (`Screen`, `Button`, `TextField`, `Notice`, `Card`, `Badge`, `Avatar`), theme màu đồng bộ Web Admin, icon `@expo/vector-icons`; `react-native-web` để xem thử trên trình duyệt (bản web lưu phiên vào localStorage).
+  - Kiểm thử: `tsc` sạch, đóng gói Android (`expo export`) thành công; chạy bản web khổ 390×844 với backend thật (Chrome headless): 14 màn hình — chuyển hướng khi chưa đăng nhập, sai mật khẩu, giữ phiên sau khi tải lại, tab, sửa SĐT, tải ảnh đại diện, đăng xuất, NV mới bị buộc đổi mật khẩu tạm (không vào được tab), quên mật khẩu bằng OTP → đăng nhập bằng mật khẩu mới.
 
 ---
 

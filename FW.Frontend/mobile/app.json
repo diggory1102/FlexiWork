@@ -41,6 +41,14 @@
         }
       ],
       [
+        "expo-image-picker",
+        {
+          "photosPermission": "FlexiWork cần truy cập thư viện ảnh để bạn chọn ảnh đại diện.",
+          "cameraPermission": "FlexiWork cần quyền camera để chụp ảnh selfie chấm công và ảnh minh chứng công việc.",
+          "microphonePermission": false
+        }
+      ],
+      [
         "expo-location",
         {
           "locationWhenInUsePermission": "FlexiWork cần vị trí GPS và thông tin Wi-Fi để xác minh bạn đang ở chi nhánh khi chấm công."
