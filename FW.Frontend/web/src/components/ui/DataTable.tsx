@@ -1,5 +1,8 @@
 import type { ReactNode } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { Pagination as AstryxPagination } from '@astryxdesign/core/Pagination';
+import { HStack } from '@astryxdesign/core/Stack';
+import { Table, TableBody, TableCell, TableHeader, TableHeaderCell, TableRow } from '@astryxdesign/core/Table';
+import { Text } from '@astryxdesign/core/Text';
 import type { PaginatedResult } from '@/types/api';
 import { EmptyState, Spinner } from './Feedback';
 
@@ -7,7 +10,11 @@ export interface Column<T> {
   key: string;
   header: string;
   render: (row: T) => ReactNode;
+  /** Độ rộng tối thiểu (px) của cột — đặt trên ô tiêu đề (class Tailwind bị style của Astryx Table ghi đè). */
+  width?: number;
+  /** Class Tailwind thêm cho ô. */
   className?: string;
+  align?: 'start' | 'center' | 'end';
 }
 
 interface DataTableProps<T> {
@@ -19,35 +26,42 @@ interface DataTableProps<T> {
   onRowClick?: (row: T) => void;
 }
 
+const alignClass = { start: 'text-left', center: 'text-center', end: 'text-right' };
+
+/** Bảng dữ liệu (Astryx Table, chế độ tự ghép): trạng thái đang tải, rỗng, bấm dòng để xem chi tiết. */
 export function DataTable<T>({ columns, rows, rowKey, loading, emptyText = 'Chưa có dữ liệu', onRowClick }: DataTableProps<T>) {
+  const cellClass = (c: Column<T>) => `${c.align ? alignClass[c.align] : ''} ${c.className ?? ''}`;
+
   return (
     <div className="relative overflow-x-auto">
-      <table className="w-full min-w-[720px] text-left text-sm">
-        <thead>
-          <tr className="border-b border-border bg-background/60 text-xs uppercase tracking-wide text-muted">
-            {columns.map((c) => (
-              <th key={c.key} className={`px-4 py-2.5 font-medium ${c.className ?? ''}`}>
-                {c.header}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => (
-            <tr
-              key={rowKey(row)}
-              onClick={onRowClick ? () => onRowClick(row) : undefined}
-              className={`border-b border-border/70 last:border-0 ${onRowClick ? 'cursor-pointer hover:bg-primary/5' : 'hover:bg-background/50'}`}
-            >
+      <div className="min-w-[720px]">
+        <Table density="balanced" hasHover verticalAlign="middle">
+          <TableHeader>
+            <TableRow>
               {columns.map((c) => (
-                <td key={c.key} className={`px-4 py-3 align-middle ${c.className ?? ''}`}>
-                  {c.render(row)}
-                </td>
+                <TableHeaderCell key={c.key} className={cellClass(c)} style={c.width ? { width: c.width, minWidth: c.width } : undefined}>
+                  {c.header}
+                </TableHeaderCell>
               ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {rows.map((row) => (
+              <TableRow
+                key={rowKey(row)}
+                onClick={onRowClick ? () => onRowClick(row) : undefined}
+                className={onRowClick ? 'cursor-pointer' : undefined}
+              >
+                {columns.map((c) => (
+                  <TableCell key={c.key} className={cellClass(c)}>
+                    {c.render(row)}
+                  </TableCell>
+                ))}
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
       {!loading && rows.length === 0 && <EmptyState title={emptyText} />}
       {loading && (
         <div className={`flex items-center justify-center ${rows.length === 0 ? 'py-16' : 'absolute inset-0 bg-surface/60'}`}>
@@ -58,39 +72,18 @@ export function DataTable<T>({ columns, rows, rowKey, loading, emptyText = 'Chư
   );
 }
 
+/** Phân trang dưới bảng: "Hiển thị x–y / N bản ghi" + điều hướng trang của Astryx. */
 export function Pagination<T>({ page, onChange }: { page: PaginatedResult<T> | null; onChange: (pageIndex: number) => void }) {
   if (!page || page.totalCount === 0) return null;
   const from = (page.pageIndex - 1) * page.pageSize + 1;
   const to = Math.min(page.pageIndex * page.pageSize, page.totalCount);
 
   return (
-    <div className="flex items-center justify-between border-t border-border px-4 py-3 text-xs text-muted">
-      <span>
-        Hiển thị <b className="text-foreground">{from}–{to}</b> / {page.totalCount} bản ghi
-      </span>
-      <div className="flex items-center gap-1">
-        <button
-          type="button"
-          className="rounded-md p-1.5 hover:bg-background disabled:opacity-40"
-          disabled={!page.hasPreviousPage}
-          onClick={() => onChange(page.pageIndex - 1)}
-          aria-label="Trang trước"
-        >
-          <ChevronLeft className="h-4 w-4" />
-        </button>
-        <span className="px-2">
-          Trang {page.pageIndex} / {Math.max(page.totalPages, 1)}
-        </span>
-        <button
-          type="button"
-          className="rounded-md p-1.5 hover:bg-background disabled:opacity-40"
-          disabled={!page.hasNextPage}
-          onClick={() => onChange(page.pageIndex + 1)}
-          aria-label="Trang sau"
-        >
-          <ChevronRight className="h-4 w-4" />
-        </button>
-      </div>
-    </div>
+    <HStack gap={3} wrap="wrap" vAlign="center" hAlign="between" padding={3} className="border-t border-border">
+      <Text type="supporting">
+        Hiển thị {from}–{to} / {page.totalCount} bản ghi
+      </Text>
+      <AstryxPagination page={page.pageIndex} totalItems={page.totalCount} pageSize={page.pageSize} onChange={onChange} size="sm" />
+    </HStack>
   );
 }

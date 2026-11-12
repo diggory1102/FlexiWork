@@ -2,28 +2,29 @@ import { create } from 'zustand';
 
 export type ToastType = 'success' | 'error' | 'info';
 
-export interface Toast {
+export interface PendingToast {
   id: number;
   type: ToastType;
   message: string;
 }
 
 interface ToastState {
-  toasts: Toast[];
+  /** Thông báo chờ hiển thị — ToastBridge lấy ra và chuyển cho hệ thống Toast của Astryx. */
+  pending: PendingToast[];
   show: (type: ToastType, message: string) => void;
-  dismiss: (id: number) => void;
+  take: () => PendingToast[];
 }
 
 let nextId = 1;
 
 export const useToastStore = create<ToastState>((set, get) => ({
-  toasts: [],
-  show: (type, message) => {
-    const id = nextId++;
-    set({ toasts: [...get().toasts, { id, type, message }] });
-    setTimeout(() => get().dismiss(id), type === 'error' ? 6000 : 3500);
+  pending: [],
+  show: (type, message) => set({ pending: [...get().pending, { id: nextId++, type, message }] }),
+  take: () => {
+    const items = get().pending;
+    if (items.length) set({ pending: [] });
+    return items;
   },
-  dismiss: (id) => set({ toasts: get().toasts.filter((t) => t.id !== id) }),
 }));
 
 /** Gọi nhanh từ bất kỳ đâu (kể cả ngoài component). */

@@ -1,6 +1,10 @@
-import { useEffect, type ReactNode } from 'react';
-import { AlertTriangle, X } from 'lucide-react';
-import { Button } from './Button';
+import type { ReactNode } from 'react';
+import { Button } from '@astryxdesign/core/Button';
+import { Dialog, DialogHeader } from '@astryxdesign/core/Dialog';
+import { Icon } from '@astryxdesign/core/Icon';
+import { HStack, VStack } from '@astryxdesign/core/Stack';
+import { Text } from '@astryxdesign/core/Text';
+import { AlertTriangle } from 'lucide-react';
 
 interface ModalProps {
   open: boolean;
@@ -9,37 +13,27 @@ interface ModalProps {
   onClose: () => void;
   footer?: ReactNode;
   size?: 'sm' | 'md' | 'lg';
+  /** form: chỉ đóng bằng nút/Esc sau khi đã nhập liệu (tránh mất dữ liệu khi bấm nhầm ra ngoài). */
+  purpose?: 'info' | 'form';
   children: ReactNode;
 }
 
-const widths = { sm: 'max-w-md', md: 'max-w-xl', lg: 'max-w-3xl' };
+const widths = { sm: 440, md: 600, lg: 820 };
 
-export function Modal({ open, title, description, onClose, footer, size = 'md', children }: ModalProps) {
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [open, onClose]);
-
-  if (!open) return null;
-
+/** Hộp thoại (Astryx Dialog): tiêu đề + nút đóng, nội dung cuộn, chân hộp thoại chứa nút thao tác. */
+export function Modal({ open, title, description, onClose, footer, size = 'md', purpose = 'info', children }: ModalProps) {
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-header/50 p-4 pt-[8vh]" onMouseDown={onClose}>
-      <div className={`card w-full ${widths[size]} shadow-xl`} role="dialog" aria-modal="true" onMouseDown={(e) => e.stopPropagation()}>
-        <div className="flex items-start justify-between gap-4 border-b border-border px-5 py-4">
-          <div>
-            <h2 className="text-base font-semibold text-foreground">{title}</h2>
-            {description && <p className="mt-0.5 text-xs text-muted">{description}</p>}
-          </div>
-          <button type="button" onClick={onClose} className="rounded-md p-1 text-muted hover:bg-background" aria-label="Đóng">
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-        <div className="max-h-[70vh] overflow-y-auto px-5 py-4">{children}</div>
-        {footer && <div className="flex justify-end gap-2 border-t border-border px-5 py-3">{footer}</div>}
-      </div>
-    </div>
+    <Dialog isOpen={open} onOpenChange={(isOpen) => !isOpen && onClose()} width={widths[size]} maxHeight="88dvh" purpose={purpose}>
+      <VStack gap={4}>
+        <DialogHeader title={title} subtitle={description} onOpenChange={(isOpen) => !isOpen && onClose()} />
+        <div>{children}</div>
+        {footer && (
+          <HStack gap={2} hAlign="end">
+            {footer}
+          </HStack>
+        )}
+      </VStack>
+    </Dialog>
   );
 }
 
@@ -54,6 +48,7 @@ interface ConfirmDialogProps {
   onClose: () => void;
 }
 
+/** Hộp xác nhận thao tác (xóa, khóa, cấp lại mật khẩu…). */
 export function ConfirmDialog({ open, title, message, confirmText = 'Xác nhận', tone = 'danger', loading, onConfirm, onClose }: ConfirmDialogProps) {
   return (
     <Modal
@@ -63,19 +58,17 @@ export function ConfirmDialog({ open, title, message, confirmText = 'Xác nhận
       size="sm"
       footer={
         <>
-          <Button variant="secondary" onClick={onClose} disabled={loading}>
-            Hủy
-          </Button>
-          <Button variant={tone === 'danger' ? 'danger' : 'primary'} onClick={onConfirm} loading={loading}>
-            {confirmText}
-          </Button>
+          <Button label="Hủy" variant="secondary" onClick={onClose} isDisabled={loading} />
+          <Button label={confirmText} variant={tone === 'danger' ? 'destructive' : 'primary'} onClick={onConfirm} isLoading={loading} />
         </>
       }
     >
-      <div className="flex gap-3">
-        <AlertTriangle className={`mt-0.5 h-5 w-5 shrink-0 ${tone === 'danger' ? 'text-danger' : 'text-warning'}`} />
-        <div className="text-sm text-foreground">{message}</div>
-      </div>
+      <HStack gap={3} vAlign="start">
+        <Icon icon={AlertTriangle} color={tone === 'danger' ? 'error' : 'warning'} />
+        <VStack>
+          <Text as="div">{message}</Text>
+        </VStack>
+      </HStack>
     </Modal>
   );
 }

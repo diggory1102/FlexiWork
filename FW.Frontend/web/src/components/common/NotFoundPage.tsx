@@ -1,12 +1,19 @@
-import { Link } from 'react-router-dom';
+import { Button } from '@astryxdesign/core/Button';
+import { Center } from '@astryxdesign/core/Center';
+import { EmptyState } from '@astryxdesign/core/EmptyState';
+import { Icon } from '@astryxdesign/core/Icon';
+import { SearchX } from 'lucide-react';
 
 export function NotFoundPage() {
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-2 bg-background px-4 text-center">
-      <h1 className="text-2xl font-semibold text-foreground">404 — Không tìm thấy trang</h1>
-      <Link to="/" className="text-sm text-primary hover:underline">
-        Quay về trang chủ
-      </Link>
-    </div>
+    <Center axis="both" padding={6} className="min-h-screen bg-body">
+      <EmptyState
+        icon={<Icon icon={SearchX} size="lg" color="secondary" />}
+        title="404 — Không tìm thấy trang"
+        description="Đường dẫn không tồn tại hoặc đã được thay đổi."
+        actions={<Button label="Quay về trang chủ" variant="primary" href="/" />}
+        headingLevel={1}
+      />
+    </Center>
   );
 }

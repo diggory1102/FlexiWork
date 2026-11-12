@@ -1,39 +1,44 @@
-import { useEffect, useState, type ReactNode } from 'react';
-import { initials } from '@/lib/format';
+import type { ReactNode } from 'react';
+import { Avatar as AstryxAvatar } from '@astryxdesign/core/Avatar';
+import { Heading, Text } from '@astryxdesign/core/Text';
+import { HStack, VStack } from '@astryxdesign/core/Stack';
 
-/** Tiêu đề trang + mô tả + nút thao tác. */
+/** Tiêu đề trang (h1) + mô tả + nhóm nút thao tác bên phải. */
 export function PageHeader({ title, description, actions }: { title: string; description?: string; actions?: ReactNode }) {
   return (
-    <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-      <div>
-        <h1 className="text-lg font-semibold text-foreground">{title}</h1>
-        {description && <p className="mt-0.5 text-xs text-muted">{description}</p>}
-      </div>
-      {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
-    </div>
+    <HStack gap={3} wrap="wrap" vAlign="end" hAlign="between" className="mb-5">
+      <VStack gap={1}>
+        <Heading level={1}>{title}</Heading>
+        {description && (
+          <Text type="supporting" as="p">
+            {description}
+          </Text>
+        )}
+      </VStack>
+      {actions && (
+        <HStack gap={2} wrap="wrap" vAlign="center">
+          {actions}
+        </HStack>
+      )}
+    </HStack>
   );
 }
 
-/** Thanh bộ lọc phía trên bảng. */
+/** Thanh bộ lọc phía trên bảng: tự xuống dòng trên màn hình hẹp. */
 export function Toolbar({ children }: { children: ReactNode }) {
-  return <div className="flex flex-wrap items-center gap-2 border-b border-border p-3">{children}</div>;
+  return (
+    <HStack gap={2} wrap="wrap" vAlign="end" padding={3} className="border-b border-border">
+      {children}
+    </HStack>
+  );
 }
 
-/** Ảnh đại diện; nếu chưa có ảnh hoặc ảnh lỗi thì hiển thị chữ cái đầu của họ tên. */
-export function Avatar({ name, url, size = 32 }: { name: string; url?: string | null; size?: number }) {
-  const style = { width: size, height: size };
-  const [broken, setBroken] = useState(false);
-  useEffect(() => setBroken(false), [url]);
+/** Kích thước avatar Astryx hỗ trợ — làm tròn kích thước yêu cầu về giá trị gần nhất. */
+const AVATAR_SIZES = [16, 20, 24, 32, 36, 40, 48, 60, 64, 72, 96, 128] as const;
+type AvatarSize = (typeof AVATAR_SIZES)[number];
 
-  if (url && !broken) {
-    return <img src={url} alt="" style={style} onError={() => setBroken(true)} className="shrink-0 rounded-full object-cover ring-1 ring-border" />;
-  }
-  return (
-    <span
-      style={{ ...style, fontSize: size * 0.38 }}
-      className="inline-flex shrink-0 items-center justify-center rounded-full bg-primary/15 font-semibold text-primary"
-    >
-      {initials(name)}
-    </span>
-  );
+/** Ảnh đại diện; chưa có ảnh hoặc ảnh lỗi → chữ cái đầu họ tên (Astryx tự xử lý). */
+export function Avatar({ name, url, size = 32 }: { name: string; url?: string | null; size?: number }) {
+  const nearest = AVATAR_SIZES.reduce<AvatarSize>((best, s) => (Math.abs(s - size) < Math.abs(best - size) ? s : best), 32);
+  return <AstryxAvatar name={name} src={url ?? undefined} size={nearest} tooltip={false} />;
 }

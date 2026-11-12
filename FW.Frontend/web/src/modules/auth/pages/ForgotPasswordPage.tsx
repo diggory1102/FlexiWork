@@ -1,12 +1,19 @@
-import { useState, type FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Mail } from 'lucide-react';
+import { useEffect, useState, type FormEvent } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Button } from '@astryxdesign/core/Button';
+import { Icon } from '@astryxdesign/core/Icon';
+import { Link } from '@astryxdesign/core/Link';
+import { HStack, VStack } from '@astryxdesign/core/Stack';
+import { TextInput } from '@astryxdesign/core/TextInput';
+import { ArrowLeft, KeyRound, Lock, Mail } from 'lucide-react';
 import { AuthLayout } from '@/layouts/AuthLayout';
-import { Button } from '@/components/ui/Button';
-import { Field, FormError, Input } from '@/components/ui/Form';
-import { PasswordInput, validatePassword } from '../components/PasswordInput';
+import { FormError, Notice } from '@/components/ui/Feedback';
 import { authApi } from '@/services/authApi';
 import { getErrorMessage } from '@/services/apiClient';
+import { validateNewPassword } from '@/lib/validation';
+
+/** Thời gian chờ trước khi gửi lại OTP — khớp OtpResendCooldown ở backend. */
+const RESEND_SECONDS = 60;
 
 /** Quên mật khẩu 2 bước: (1) nhập email nhận OTP → (2) nhập OTP + mật khẩu mới. */
 export function ForgotPasswordPage() {
@@ -19,15 +26,24 @@ export function ForgotPasswordPage() {
   const [info, setInfo] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
+
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const timer = setTimeout(() => setCooldown((s) => s - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [cooldown]);
 
   const requestOtp = async (e?: FormEvent) => {
     e?.preventDefault();
+    if (!email.trim()) return setError('Vui lòng nhập email.');
     setLoading(true);
     setError(null);
     try {
       const { message } = await authApi.forgotPassword(email.trim());
       setInfo(message);
       setStep(2);
+      setCooldown(RESEND_SECONDS);
     } catch (err) {
       setError(getErrorMessage(err));
     } finally {
@@ -37,13 +53,14 @@ export function ForgotPasswordPage() {
 
   const reset = async (e: FormEvent) => {
     e.preventDefault();
-    const passwordError = validatePassword(password) ?? (password !== confirm ? 'Mật khẩu xác nhận không khớp.' : null);
+    if (otp.length !== 6) return setError('Mã OTP gồm 6 chữ số.');
+    const passwordError = validateNewPassword(password, confirm);
     if (passwordError) return setError(passwordError);
 
     setLoading(true);
     setError(null);
     try {
-      const { message } = await authApi.resetPassword(email.trim(), otp.trim(), password);
+      const { message } = await authApi.resetPassword(email.trim(), otp, password);
       navigate('/login', { replace: true, state: { notice: message } });
     } catch (err) {
       setError(getErrorMessage(err));
@@ -55,51 +72,61 @@ export function ForgotPasswordPage() {
   return (
     <AuthLayout
       title="Quên mật khẩu"
-      subtitle={step === 1 ? 'Nhập email tài khoản, hệ thống sẽ gửi mã OTP gồm 6 chữ số.' : `Nhập mã OTP đã gửi tới ${email} và đặt mật khẩu mới.`}
+      subtitle={step === 1 ? 'Nhập email tài khoản, hệ thống sẽ gửi mã OTP gồm 6 chữ số (hiệu lực 5 phút).' : `Nhập mã OTP đã gửi tới ${email.trim()} và đặt mật khẩu mới.`}
     >
       {step === 1 ? (
-        <form onSubmit={requestOtp} className="space-y-4">
-          <FormError message={error} />
-          <Field label="Email" required>
-            <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="ten@congty.vn" required autoFocus />
-          </Field>
-          <Button type="submit" className="w-full" loading={loading} icon={<Mail className="h-4 w-4" />}>
-            Gửi mã OTP
-          </Button>
+        <form onSubmit={requestOtp} noValidate>
+          <VStack gap={4}>
+            <FormError message={error} />
+            <TextInput label="Email" type="email" autoComplete="email" placeholder="ten@congty.vn" startIcon={Mail} value={email} onChange={setEmail} size="lg" hasAutoFocus />
+            <Button type="submit" label="Gửi mã OTP" variant="primary" size="lg" width="100%" isLoading={loading} icon={<Icon icon={Mail} />} />
+          </VStack>
         </form>
       ) : (
-        <form onSubmit={reset} className="space-y-4">
-          {info && <div className="rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-sm text-primary">{info}</div>}
-          <FormError message={error} />
-          <Field label="Mã OTP" required>
-            <Input
-              inputMode="numeric"
-              maxLength={6}
-              value={otp}
-              onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
+        <form onSubmit={reset} noValidate>
+          <VStack gap={4}>
+            <Notice status="info" title={info} />
+            <FormError message={error} />
+            <TextInput
+              label="Mã OTP"
               placeholder="6 chữ số"
-              className="tracking-[0.4em]"
-              required
-              autoFocus
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              startIcon={KeyRound}
+              value={otp}
+              onChange={(v) => setOtp(v.replace(/\D/g, '').slice(0, 6))}
+              size="lg"
+              hasAutoFocus
             />
-          </Field>
-          <Field label="Mật khẩu mới" required hint="Tối thiểu 8 ký tự, gồm chữ cái và chữ số.">
-            <PasswordInput autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
-          </Field>
-          <Field label="Nhập lại mật khẩu mới" required>
-            <PasswordInput autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} required />
-          </Field>
-          <Button type="submit" className="w-full" loading={loading}>
-            Đặt lại mật khẩu
-          </Button>
-          <button type="button" onClick={() => requestOtp()} disabled={loading} className="w-full text-xs text-primary hover:underline disabled:opacity-50">
-            Chưa nhận được mã? Gửi lại (sau 60 giây)
-          </button>
+            <TextInput
+              label="Mật khẩu mới"
+              type="password"
+              autoComplete="new-password"
+              description="Tối thiểu 8 ký tự, gồm chữ cái và chữ số."
+              startIcon={Lock}
+              value={password}
+              onChange={setPassword}
+              size="lg"
+            />
+            <TextInput label="Nhập lại mật khẩu mới" type="password" autoComplete="new-password" startIcon={Lock} value={confirm} onChange={setConfirm} size="lg" />
+            <Button type="submit" label="Đặt lại mật khẩu" variant="primary" size="lg" width="100%" isLoading={loading} />
+            <Button
+              label={cooldown > 0 ? `Gửi lại mã sau ${cooldown} giây` : 'Chưa nhận được mã? Gửi lại'}
+              variant="ghost"
+              width="100%"
+              isDisabled={loading || cooldown > 0}
+              onClick={() => requestOtp()}
+            />
+          </VStack>
         </form>
       )}
-      <Link to="/login" className="mt-6 inline-flex items-center gap-1 text-xs text-muted hover:text-foreground">
-        <ArrowLeft className="h-3.5 w-3.5" /> Quay lại đăng nhập
-      </Link>
+      <HStack>
+        <Link href="/login" type="supporting">
+          <HStack gap={1} vAlign="center">
+            <Icon icon={ArrowLeft} size="sm" /> Quay lại đăng nhập
+          </HStack>
+        </Link>
+      </HStack>
     </AuthLayout>
   );
 }

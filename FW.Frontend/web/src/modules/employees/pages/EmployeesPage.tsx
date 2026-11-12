@@ -1,8 +1,13 @@
 import { useEffect, useState } from 'react';
-import { KeyRound, Lock, Pencil, Plus, Search, ShieldCheck, Trash2, Unlock } from 'lucide-react';
-import { PageHeader, Toolbar, Avatar } from '@/components/ui/Layout';
-import { Button, IconButton } from '@/components/ui/Button';
-import { Input, Select } from '@/components/ui/Form';
+import { Button } from '@astryxdesign/core/Button';
+import { Icon } from '@astryxdesign/core/Icon';
+import { IconButton } from '@astryxdesign/core/IconButton';
+import { Selector } from '@astryxdesign/core/Selector';
+import { HStack, VStack } from '@astryxdesign/core/Stack';
+import { Text } from '@astryxdesign/core/Text';
+import { KeyRound, Lock, Pencil, Plus, ShieldCheck, Trash2, Unlock } from 'lucide-react';
+import { Avatar, PageHeader, Toolbar } from '@/components/ui/Layout';
+import { ListCard, SearchInput } from '@/components/ui/ListCard';
 import { Badge } from '@/components/ui/Feedback';
 import { ConfirmDialog } from '@/components/ui/Modal';
 import { DataTable, Pagination, type Column } from '@/components/ui/DataTable';
@@ -26,6 +31,12 @@ const roleTone: Record<Role, 'red' | 'purple' | 'blue' | 'gray'> = {
   ROLE_MANAGER: 'blue',
   ROLE_EMPLOYEE: 'gray',
 };
+
+const roleFilterOptions = [{ value: '', label: 'Tất cả vai trò' }, ...Object.values(Roles).map((r) => ({ value: r, label: roleLabels[r] }))];
+const statusFilterOptions = [
+  { value: '', label: 'Mọi trạng thái' },
+  ...(Object.keys(userStatusLabels) as UserStatus[]).map((s) => ({ value: s, label: userStatusLabels[s] })),
+];
 
 /**
  * Danh sách nhân sự. Admin/HR: toàn công ty, đầy đủ thao tác (HR không thao tác trên tài khoản Admin).
@@ -83,147 +94,127 @@ export function EmployeesPage() {
     {
       key: 'name',
       header: 'Nhân viên',
+      width: 260,
       render: (u) => (
-        <div className="flex items-center gap-3">
-          <Avatar name={u.fullName} url={u.avatarUrl} size={34} />
-          <div className="min-w-0">
-            <p className="truncate font-medium">{u.fullName}</p>
-            <p className="truncate text-xs text-muted">
+        <HStack gap={3} vAlign="center">
+          <Avatar name={u.fullName} url={u.avatarUrl} size={36} />
+          <VStack gap={0.5} className="min-w-0">
+            <Text weight="medium" maxLines={1}>
+              {u.fullName}
+            </Text>
+            <Text type="supporting" maxLines={1}>
               <span className="font-mono">{u.employeeCode}</span> · {u.email}
-            </p>
-          </div>
-        </div>
+            </Text>
+          </VStack>
+        </HStack>
       ),
     },
-    { key: 'branch', header: 'Chi nhánh', render: (u) => <span className="whitespace-nowrap text-xs">{u.branchName ?? '—'}</span> },
+    { key: 'branch', header: 'Chi nhánh', render: (u) => <Text type="supporting">{u.branchName ?? '—'}</Text> },
     {
       key: 'org',
       header: 'Phòng ban / Chức vụ',
       render: (u) => (
-        <div className="max-w-[200px] text-xs">
-          <p className="truncate" title={u.departmentName ?? undefined}>
-            {u.departmentName ?? '—'}
-          </p>
-          <p className="truncate text-muted" title={u.positionTitle ?? undefined}>
+        <VStack gap={0.5} className="max-w-[220px]">
+          <Text maxLines={1}>{u.departmentName ?? '—'}</Text>
+          <Text type="supporting" maxLines={1}>
             {u.positionTitle ?? ''}
-          </p>
-        </div>
+          </Text>
+        </VStack>
       ),
     },
     {
       key: 'roles',
       header: 'Vai trò',
       render: (u) => (
-        <div className="flex flex-wrap gap-1">
+        <HStack gap={1} wrap="wrap">
           {u.roles.map((r) => (
             <Badge key={r} tone={roleTone[r]}>
               {roleLabels[r]}
             </Badge>
           ))}
-        </div>
+        </HStack>
       ),
     },
     {
       key: 'status',
       header: 'Trạng thái',
       render: (u) => (
-        <div className="flex flex-col items-start gap-1">
+        <VStack gap={1} hAlign="start">
           <Badge tone={statusTone(u.status)}>{userStatusLabels[u.status]}</Badge>
-          {u.mustChangePassword && <span className="text-[11px] text-warning">Chưa đổi MK tạm</span>}
-        </div>
+          {u.mustChangePassword && (
+            <Text type="supporting" color="secondary">
+              Chưa đổi MK tạm
+            </Text>
+          )}
+        </VStack>
       ),
     },
     {
       key: 'actions',
       header: '',
-      className: 'w-44 text-right',
+      width: 200,
+      align: 'end',
       render: (u) => (
-        <div className="flex justify-end gap-0.5" onClick={(e) => e.stopPropagation()}>
-          {canEditProfile(u) && (
-            <IconButton label="Sửa hồ sơ" onClick={() => setEditing(u)}>
-              <Pencil className="h-4 w-4" />
-            </IconButton>
-          )}
-          {canActOn(u) && (
-            <>
-              <IconButton label={u.status === 'active' ? 'Khóa tài khoản' : 'Mở khóa / đổi trạng thái'} onClick={() => setStatusFor(u)}>
-                {u.status === 'active' ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
-              </IconButton>
-              <IconButton label="Cấp lại mật khẩu" onClick={() => setReissueFor(u)}>
-                <KeyRound className="h-4 w-4" />
-              </IconButton>
-              {isAdmin && (
-                <IconButton label="Phân quyền" onClick={() => setRolesFor(u)}>
-                  <ShieldCheck className="h-4 w-4" />
-                </IconButton>
-              )}
-              <IconButton label="Xóa" tone="danger" onClick={() => setDeleting(u)}>
-                <Trash2 className="h-4 w-4" />
-              </IconButton>
-            </>
-          )}
+        <div onClick={(e) => e.stopPropagation()}>
+          <HStack gap={0.5} hAlign="end">
+            {canEditProfile(u) && <IconButton variant="ghost" size="sm" label="Sửa hồ sơ" tooltip="Sửa hồ sơ" icon={<Icon icon={Pencil} />} onClick={() => setEditing(u)} />}
+            {canActOn(u) && (
+              <>
+                <IconButton
+                  variant="ghost"
+                  size="sm"
+                  label={u.status === 'active' ? 'Khóa tài khoản' : 'Mở khóa / đổi trạng thái'}
+                  tooltip={u.status === 'active' ? 'Khóa tài khoản' : 'Mở khóa / đổi trạng thái'}
+                  icon={<Icon icon={u.status === 'active' ? Lock : Unlock} />}
+                  onClick={() => setStatusFor(u)}
+                />
+                <IconButton variant="ghost" size="sm" label="Cấp lại mật khẩu" tooltip="Cấp lại mật khẩu" icon={<Icon icon={KeyRound} />} onClick={() => setReissueFor(u)} />
+                {isAdmin && <IconButton variant="ghost" size="sm" label="Phân quyền" tooltip="Phân quyền" icon={<Icon icon={ShieldCheck} />} onClick={() => setRolesFor(u)} />}
+                <IconButton variant="ghost" size="sm" label="Xóa" tooltip="Xóa" icon={<Icon icon={Trash2} color="error" />} onClick={() => setDeleting(u)} />
+              </>
+            )}
+          </HStack>
         </div>
       ),
     },
   ];
 
-  const toId = (value: string) => (value === '' ? '' : Number(value));
+  const toId = (value: string | null) => (value ? Number(value) : '');
 
   return (
     <>
       <PageHeader
         title="Nhân viên"
         description={canManage ? 'Quản lý hồ sơ, tài khoản và phân quyền nhân sự toàn doanh nghiệp.' : 'Danh sách nhân sự thuộc chi nhánh bạn quản lý.'}
-        actions={
-          canManage && (
-            <Button icon={<Plus className="h-4 w-4" />} onClick={() => setEditing(null)}>
-              Thêm nhân viên
-            </Button>
-          )
-        }
+        actions={canManage && <Button label="Thêm nhân viên" variant="primary" icon={<Icon icon={Plus} />} onClick={() => setEditing(null)} />}
       />
-      <div className="card overflow-hidden">
+      <ListCard>
         <Toolbar>
-          <div className="relative w-72">
-            <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-muted" />
-            <Input className="pl-9" placeholder="Tìm mã, họ tên, email, SĐT…" value={search} onChange={(e) => setSearch(e.target.value)} />
-          </div>
+          <SearchInput placeholder="Tìm mã, họ tên, email, SĐT…" value={search} onChange={setSearch} />
           {canManage && (
-            <Select className="w-48" value={query.branchId ?? ''} onChange={(e) => setQuery({ branchId: toId(e.target.value) })}>
-              <option value="">Tất cả chi nhánh</option>
-              {branches.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.name}
-                </option>
-              ))}
-            </Select>
+            <Selector
+              label="Chi nhánh"
+              isLabelHidden
+              width={210}
+              options={[{ value: '', label: 'Tất cả chi nhánh' }, ...branches.map((b) => ({ value: String(b.id), label: b.name }))]}
+              value={String(query.branchId ?? '')}
+              onChange={(v) => setQuery({ branchId: toId(v) })}
+            />
           )}
-          <Select className="w-48" value={query.departmentId ?? ''} onChange={(e) => setQuery({ departmentId: toId(e.target.value) })}>
-            <option value="">Tất cả phòng ban</option>
-            {departments.map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.name}
-              </option>
-            ))}
-          </Select>
-          <Select className="w-40" value={query.roleName ?? ''} onChange={(e) => setQuery({ roleName: e.target.value as Role | '' })}>
-            <option value="">Tất cả vai trò</option>
-            {Object.values(Roles).map((r) => (
-              <option key={r} value={r}>
-                {roleLabels[r]}
-              </option>
-            ))}
-          </Select>
-          <Select className="w-40" value={query.status ?? ''} onChange={(e) => setQuery({ status: e.target.value as UserStatus | '' })}>
-            <option value="">Mọi trạng thái</option>
-            <option value="active">{userStatusLabels.active}</option>
-            <option value="suspended">{userStatusLabels.suspended}</option>
-            <option value="left">{userStatusLabels.left}</option>
-          </Select>
+          <Selector
+            label="Phòng ban"
+            isLabelHidden
+            width={210}
+            options={[{ value: '', label: 'Tất cả phòng ban' }, ...departments.map((d) => ({ value: String(d.id), label: d.name }))]}
+            value={String(query.departmentId ?? '')}
+            onChange={(v) => setQuery({ departmentId: toId(v) })}
+          />
+          <Selector label="Vai trò" isLabelHidden width={180} options={roleFilterOptions} value={query.roleName ?? ''} onChange={(v) => setQuery({ roleName: (v ?? '') as Role | '' })} />
+          <Selector label="Trạng thái" isLabelHidden width={180} options={statusFilterOptions} value={query.status ?? ''} onChange={(v) => setQuery({ status: (v ?? '') as UserStatus | '' })} />
         </Toolbar>
         <DataTable columns={columns} rows={rows} rowKey={(u) => u.id} loading={loading} emptyText="Không tìm thấy nhân viên" onRowClick={setViewing} />
         <Pagination page={page} onChange={(pageIndex) => setQuery({ pageIndex })} />
-      </div>
+      </ListCard>
 
       <EmployeeFormModal user={editing} roleOptions={roleOptions} onClose={() => setEditing(undefined)} onSaved={reload} />
       <EmployeeDetailModal user={viewing} onClose={() => setViewing(null)} />

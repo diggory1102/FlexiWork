@@ -1,8 +1,15 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { Pencil, Plus, Search, Trash2 } from 'lucide-react';
+import { Button } from '@astryxdesign/core/Button';
+import { Icon } from '@astryxdesign/core/Icon';
+import { IconButton } from '@astryxdesign/core/IconButton';
+import { HStack, VStack } from '@astryxdesign/core/Stack';
+import { Text } from '@astryxdesign/core/Text';
+import { TextArea } from '@astryxdesign/core/TextArea';
+import { TextInput } from '@astryxdesign/core/TextInput';
+import { Pencil, Plus, Trash2 } from 'lucide-react';
 import { PageHeader, Toolbar } from '@/components/ui/Layout';
-import { Button, IconButton } from '@/components/ui/Button';
-import { Field, FormError, Input, Textarea } from '@/components/ui/Form';
+import { ListCard, SearchInput } from '@/components/ui/ListCard';
+import { FormError } from '@/components/ui/Feedback';
 import { ConfirmDialog, Modal } from '@/components/ui/Modal';
 import { DataTable, Pagination, type Column } from '@/components/ui/DataTable';
 import { usePagedList } from '@/hooks/usePagedList';
@@ -53,24 +60,21 @@ export function DepartmentsPage() {
   };
 
   const columns: Column<Department>[] = [
-    { key: 'code', header: 'Mã', className: 'w-36', render: (d) => <span className="font-mono text-xs font-semibold">{d.code}</span> },
-    { key: 'name', header: 'Tên phòng ban', render: (d) => <span className="font-medium">{d.name}</span> },
-    { key: 'desc', header: 'Mô tả', render: (d) => <span className="text-xs text-muted">{d.description ?? '—'}</span> },
-    { key: 'created', header: 'Ngày tạo', className: 'w-28', render: (d) => <span className="text-xs text-muted">{formatDate(d.createdAt)}</span> },
+    { key: 'code', header: 'Mã', width: 140, render: (d) => <span className="font-mono text-sm font-medium">{d.code}</span> },
+    { key: 'name', header: 'Tên phòng ban', render: (d) => <Text weight="medium">{d.name}</Text> },
+    { key: 'desc', header: 'Mô tả', render: (d) => <Text type="supporting">{d.description ?? '—'}</Text> },
+    { key: 'created', header: 'Ngày tạo', width: 130, render: (d) => <Text type="supporting">{formatDate(d.createdAt)}</Text> },
     {
       key: 'actions',
       header: '',
-      className: 'w-24 text-right',
+      width: 110,
+      align: 'end',
       render: (d) =>
         canEdit && (
-          <div className="flex justify-end gap-0.5">
-            <IconButton label="Sửa" onClick={() => setEditing(d)}>
-              <Pencil className="h-4 w-4" />
-            </IconButton>
-            <IconButton label="Xóa" tone="danger" onClick={() => setDeleting(d)}>
-              <Trash2 className="h-4 w-4" />
-            </IconButton>
-          </div>
+          <HStack gap={0.5} hAlign="end">
+            <IconButton variant="ghost" size="sm" label="Sửa" tooltip="Sửa" icon={<Icon icon={Pencil} />} onClick={() => setEditing(d)} />
+            <IconButton variant="ghost" size="sm" label="Xóa" tooltip="Xóa" icon={<Icon icon={Trash2} color="error" />} onClick={() => setDeleting(d)} />
+          </HStack>
         ),
     },
   ];
@@ -80,24 +84,15 @@ export function DepartmentsPage() {
       <PageHeader
         title="Phòng ban"
         description="Cơ cấu tổ chức của doanh nghiệp."
-        actions={
-          canEdit && (
-            <Button icon={<Plus className="h-4 w-4" />} onClick={() => setEditing(null)}>
-              Thêm phòng ban
-            </Button>
-          )
-        }
+        actions={canEdit && <Button label="Thêm phòng ban" variant="primary" icon={<Icon icon={Plus} />} onClick={() => setEditing(null)} />}
       />
-      <div className="card overflow-hidden">
+      <ListCard>
         <Toolbar>
-          <div className="relative w-72">
-            <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-muted" />
-            <Input className="pl-9" placeholder="Tìm theo mã, tên…" value={search} onChange={(e) => setSearch(e.target.value)} />
-          </div>
+          <SearchInput placeholder="Tìm theo mã, tên…" value={search} onChange={setSearch} />
         </Toolbar>
         <DataTable columns={columns} rows={rows} rowKey={(d) => d.id} loading={loading} emptyText="Không có phòng ban nào" />
         <Pagination page={page} onChange={(pageIndex) => setQuery({ pageIndex })} />
-      </div>
+      </ListCard>
 
       <DepartmentFormModal department={editing} onClose={() => setEditing(undefined)} onSaved={afterChange} />
       <ConfirmDialog
@@ -130,6 +125,7 @@ function DepartmentFormModal({ department, onClose, onSaved }: { department: Dep
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
+    if (!form.code.trim() || !form.name.trim()) return setError('Vui lòng nhập mã và tên phòng ban.');
     setSaving(true);
     setError(null);
     try {
@@ -150,29 +146,29 @@ function DepartmentFormModal({ department, onClose, onSaved }: { department: Dep
       open={department !== undefined}
       onClose={onClose}
       size="sm"
+      purpose="form"
       title={department ? 'Sửa phòng ban' : 'Thêm phòng ban'}
       footer={
         <>
-          <Button variant="secondary" onClick={onClose}>
-            Hủy
-          </Button>
-          <Button type="submit" form="department-form" loading={saving}>
-            Lưu
-          </Button>
+          <Button label="Hủy" variant="secondary" onClick={onClose} />
+          <Button label="Lưu" type="submit" form="department-form" variant="primary" isLoading={saving} />
         </>
       }
     >
-      <form id="department-form" onSubmit={submit} className="space-y-4">
-        <FormError message={error} />
-        <Field label="Mã phòng ban" required hint="VD: DEP-OPS — tự chuyển chữ hoa, không trùng.">
-          <Input value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} maxLength={20} required autoFocus />
-        </Field>
-        <Field label="Tên phòng ban" required>
-          <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} maxLength={100} required />
-        </Field>
-        <Field label="Mô tả">
-          <Textarea value={form.description ?? ''} onChange={(e) => setForm({ ...form, description: e.target.value })} maxLength={255} />
-        </Field>
+      <form id="department-form" onSubmit={submit} noValidate>
+        <VStack gap={4}>
+          <FormError message={error} />
+          <TextInput
+            label="Mã phòng ban"
+            isRequired
+            description="VD: DEP-OPS — tự chuyển chữ hoa, không trùng."
+            value={form.code}
+            onChange={(code) => setForm({ ...form, code })}
+            hasAutoFocus
+          />
+          <TextInput label="Tên phòng ban" isRequired value={form.name} onChange={(name) => setForm({ ...form, name })} />
+          <TextArea label="Mô tả" value={form.description ?? ''} onChange={(description) => setForm({ ...form, description })} maxLength={255} />
+        </VStack>
       </form>
     </Modal>
   );

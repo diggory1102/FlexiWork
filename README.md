@@ -17,7 +17,7 @@ FlexiWork/
 │   └── Dockerfile
 ├── FW.AiService/               # Python FastAPI + InsightFace — trích xuất & đối soát khuôn mặt
 ├── FW.Frontend/
-│   ├── web/                    # Web Admin: React 18 + TypeScript + Vite + Tailwind + Zustand + Axios + SignalR
+│   ├── web/                    # Web Admin: React 19 + TypeScript + Vite + Astryx (Meta) + Tailwind 4 + Zustand + Axios + SignalR
 │   └── mobile/                 # Mobile App: Expo (React Native) + TypeScript + Expo Router
 ├── docs/                       # PROGRESS.md (tiến độ, phân quyền), UML.md (use case)
 └── docker-compose.yml          # MySQL + Redis + AI Service + API cho môi trường cục bộ
@@ -29,7 +29,7 @@ FlexiWork/
 |---|---|
 | Backend | .NET 8, ASP.NET Core Web API, Dapper, MySQL 8, JWT Bearer, SignalR, Redis, MailKit (SMTP), Cloudinary, Swagger |
 | AI Service | Python 3.10, FastAPI, InsightFace (ArcFace 512D), OpenCV |
-| Web Admin | React 18, TypeScript, Vite, Tailwind CSS, Zustand, Axios, React Router, @microsoft/signalr |
+| Web Admin | React 19, TypeScript, Vite, **Astryx** design system (Meta, theme FlexiWork kế thừa neutral, tiếng Việt, sáng/tối), Tailwind CSS v4, Zustand, Axios, React Router, @microsoft/signalr |
 | Mobile | Expo SDK 58, React Native, Expo Router, expo-camera, expo-location, NetInfo (BSSID), expo-secure-store |
 | Triển khai | Docker, Vercel (web), Render (backend), Aiven (MySQL) |
 

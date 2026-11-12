@@ -253,6 +253,7 @@ flowchart TD
 | Chống giả mạo khuôn mặt (liveness) | Task 6.2 | `[Tùy chọn]` |
 | Phát hiện "trùng thiết bị" (1 điện thoại chấm công cho nhiều người) | Task 3.2 | Có — lưu mã thiết bị khi check-in, cảnh báo trên Dashboard |
 | ~~Giao diện Web Admin~~ | Task 1.6 trở đi | ✅ **Đã chốt:** tham khảo bố cục HRM iPOS, thương hiệu & hình ảnh riêng FlexiWork, bỏ Tuyển dụng/Bảng giá, Hợp đồng gộp vào hồ sơ NV, Lương → Bảng công (lương tạm tính) |
+| ~~Thư viện giao diện Web Admin~~ | Toàn bộ Web | ✅ **Đã chốt (12/11/2026):** nâng **React 18 → 19**, **Tailwind 3 → 4**, dùng hệ thống thiết kế **Astryx** của Meta (`@astryxdesign/core` 0.7.14, đang beta — ghim cố định phiên bản). Theme `flexiwork` kế thừa `neutral`: màu nhấn xanh `#2563EB`, font **Be Vietnam Pro** (Figtree gốc thiếu dấu tiếng Việt), gói ngôn ngữ `vi-VN`, chế độ sáng/tối. Mobile giữ React Native (Astryx chỉ cho web) |
 | ~~Phân hệ Bảng lương rút gọn (UML Phân hệ 8)~~ | Task 5.4, 5.5 | ✅ **Đã chốt (12/11/2026):** đưa vào phạm vi, không gồm thuế TNCN/BHXH |
 | Cách tính lương | Task 5.4, 5.5 | Toàn thời gian: `lương tháng ÷ công chuẩn × ngày công`; bán thời gian: `giờ công × đơn giá giờ` (chức vụ, ghi đè được theo NV); OT ngày thường × 1,5; phạt theo quy tắc vi phạm (Task 2.2) |
 | Vai trò HR (UML UC 1.6 mới ghi 3 vai trò) | Task K.2 | Giữ 4 vai trò; sửa UC 1.6 trong UML/Chương 3 thêm HR |
@@ -320,6 +321,7 @@ flowchart TD
   - Trang: Tổng quan (khung số liệu, chờ dữ liệu Cấp 3/5), Nhân viên (lọc chi nhánh/phòng ban/vai trò/trạng thái; thêm kèm vai trò; sửa; khóa/mở; cấp lại mật khẩu; phân quyền; xóa; xem chi tiết), Chi nhánh (Geofence: lấy vị trí hiện tại, xem bản đồ; quản lý Wi-Fi BSSID), Phòng ban, Chức vụ & đơn giá, Hồ sơ cá nhân (SĐT, ảnh đại diện).
   - Hiển thị theo vai trò: Admin đầy đủ; HR không gán Admin/HR, không thao tác tài khoản Admin, không phân quyền; Manager chỉ xem chi nhánh mình; Employee thấy trang hướng dẫn dùng app di động.
   - Kỹ thuật: MVVM (hook `usePagedList` làm ViewModel), Zustand (`authStore`, `lookupStore`, `toastStore`), Axios client chuẩn hóa `ApiError`, bộ component UI dùng chung (Button, Form, Modal, DataTable, Badge, Toaster), icon `lucide-react`.
+  - **Làm lại giao diện bằng Astryx (12/11/2026):** React 19 + Tailwind 4; khung `AppShell` + `TopNav` + `SideNav` thu gọn được; form/bảng/hộp thoại/toast/phân trang dùng component Astryx; lớp mỏng `components/ui` (PageHeader, DataTable, Modal/ConfirmDialog, Badge, ListCard) giữ API cũ cho các trang; `LinkProvider` nối react-router; `ToastBridge` chuyển `toast.*` sang Astryx; nút chuyển giao diện sáng/tối (lưu theo người dùng). Kiểm thử lại bằng Chrome: tạo NV, xem chi tiết, Wi-Fi, sửa chi nhánh, chế độ tối, buộc đổi mật khẩu tạm, phân quyền hiển thị Manager/HR, menu tài khoản — không lỗi console.
   - Kiểm thử bằng trình duyệt thật (Chrome headless, playwright-core): 18 màn hình, luồng tạo NV → mật khẩu tạm → buộc đổi mật khẩu, phân quyền hiển thị theo Admin/HR/Manager/Employee.
 - [x] **Task 1.7:** Mobile App: đăng nhập, lưu phiên bảo mật (SecureStore), khung điều hướng tab, màn hình hồ sơ cá nhân.
   - Định tuyến theo phiên bằng `Stack.Protected` (Expo Router): chưa đăng nhập → Đăng nhập / Quên mật khẩu; đang dùng **mật khẩu tạm** → chỉ màn hình đổi mật khẩu (không vào được tab, có nút đăng xuất); đã đăng nhập → 5 tab: Trang chủ, Lịch ca, Chấm công, Đơn từ, Cá nhân (+ màn hình Công việc, Tin nhắn chờ Cấp 4–5).
@@ -400,6 +402,7 @@ flowchart TD
   - Loại bỏ nội dung còn sót từ dự án SOSMap: `Post`, `RescueTask`, `Comment`, "mạng xã hội cứu trợ", "SosReport", feed bài đăng, Flat Threading bình luận, FilterJson, Optimistic UI; Google Maps "tính thời gian đến điểm cứu hộ" → Leaflet/OpenStreetMap chọn tâm geofence.
   - Điền chỗ trống "mô hình (…)"; thống nhất Clean Architecture; chỉ dùng **SignalR** (bỏ Socket.io).
   - Bổ sung công nghệ đang dùng: Mobile (Expo, expo-camera/location, NetInfo, SecureStore), `FW.AiService` (FastAPI + InsightFace), xUnit, ClosedXML/QuestPDF, Recharts, Expo Push.
+  - Mục Frontend: **React 18 → React 19**; **Tailwind CSS v4** (cascade layers, cấu hình bằng CSS); thêm **hệ thống thiết kế Astryx** (Meta): component có trợ năng (accessibility), design token qua CSS variables (Dynamic Theming), chế độ sáng/tối, đa ngôn ngữ; giải thích vì sao chọn design system thay vì tự viết component.
   - Mục 1.4.2: thêm phân hệ Bảng lương rút gọn cho khớp `docs/UML.md`.
 - [ ] **Task K.2:** Chương 3: quy trình TO-BE, biểu đồ Use Case (theo `docs/UML.md`, UC 1.6 thêm vai trò HR), BFD, ERD, biểu đồ tuần tự (chấm công 3 lớp, duyệt đơn, tính lương), thiết kế kiến trúc & CSDL. Công cụ vẽ: draw.io / StarUML.
 - [ ] **Task K.3:** Chương 4: môi trường cài đặt, giao diện Web Admin & Mobile App, kết quả thực nghiệm (từ Task 6.5).

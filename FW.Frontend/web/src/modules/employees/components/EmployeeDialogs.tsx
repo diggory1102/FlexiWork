@@ -1,9 +1,13 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useState } from 'react';
+import { Button } from '@astryxdesign/core/Button';
+import { CheckboxInput } from '@astryxdesign/core/CheckboxInput';
+import { MetadataList, MetadataListItem } from '@astryxdesign/core/MetadataList';
+import { Selector } from '@astryxdesign/core/Selector';
+import { HStack, VStack } from '@astryxdesign/core/Stack';
+import { Heading } from '@astryxdesign/core/Text';
 import { Modal } from '@/components/ui/Modal';
-import { Button } from '@/components/ui/Button';
-import { Checkbox, Field, FormError, Select } from '@/components/ui/Form';
 import { Avatar } from '@/components/ui/Layout';
-import { Badge } from '@/components/ui/Feedback';
+import { Badge, FormError } from '@/components/ui/Feedback';
 import { userApi } from '@/services/userApi';
 import { getErrorMessage } from '@/services/apiClient';
 import { toast } from '@/stores/toastStore';
@@ -47,30 +51,28 @@ export function EmployeeRolesModal({ user, roleOptions, onClose, onSaved }: { us
       description={user ? `${user.fullName} (${user.employeeCode})` : undefined}
       footer={
         <>
-          <Button variant="secondary" onClick={onClose}>
-            Hủy
-          </Button>
-          <Button onClick={save} loading={saving} disabled={roles.length === 0}>
-            Lưu
-          </Button>
+          <Button label="Hủy" variant="secondary" onClick={onClose} />
+          <Button label="Lưu" variant="primary" onClick={save} isLoading={saving} isDisabled={roles.length === 0} />
         </>
       }
     >
-      <div className="space-y-3">
+      <VStack gap={3}>
         <FormError message={error} />
         {roleOptions.map((r) => (
-          <Checkbox
+          <CheckboxInput
             key={r.id}
             label={roleLabels[r.roleName]}
             description={r.description ?? undefined}
-            checked={roles.includes(r.roleName)}
+            value={roles.includes(r.roleName)}
             onChange={() => setRoles((cur) => (cur.includes(r.roleName) ? cur.filter((x) => x !== r.roleName) : [...cur, r.roleName]))}
           />
         ))}
-      </div>
+      </VStack>
     </Modal>
   );
 }
+
+const statusOptions = (Object.keys(userStatusLabels) as UserStatus[]).map((value) => ({ value, label: userStatusLabels[value] }));
 
 /** Khóa / mở khóa / đánh dấu nghỉ việc. */
 export function EmployeeStatusModal({ user, onClose, onSaved }: { user: User | null; onClose: () => void; onSaved: () => void }) {
@@ -107,25 +109,27 @@ export function EmployeeStatusModal({ user, onClose, onSaved }: { user: User | n
       description={user ? `${user.fullName} — hiện tại: ${userStatusLabels[user.status]}` : undefined}
       footer={
         <>
-          <Button variant="secondary" onClick={onClose}>
-            Hủy
-          </Button>
-          <Button onClick={save} loading={saving} variant={status === 'active' ? 'primary' : 'danger'} disabled={status === user?.status}>
-            Cập nhật
-          </Button>
+          <Button label="Hủy" variant="secondary" onClick={onClose} />
+          <Button
+            label="Cập nhật"
+            onClick={save}
+            isLoading={saving}
+            variant={status === 'active' ? 'primary' : 'destructive'}
+            isDisabled={status === user?.status}
+          />
         </>
       }
     >
-      <div className="space-y-3">
+      <VStack gap={3}>
         <FormError message={error} />
-        <Field label="Trạng thái mới" hint="Tài khoản bị khóa hoặc đã nghỉ việc sẽ không đăng nhập được.">
-          <Select value={status} onChange={(e) => setStatus(e.target.value as UserStatus)}>
-            <option value="active">{userStatusLabels.active}</option>
-            <option value="suspended">{userStatusLabels.suspended}</option>
-            <option value="left">{userStatusLabels.left}</option>
-          </Select>
-        </Field>
-      </div>
+        <Selector
+          label="Trạng thái mới"
+          description="Tài khoản bị khóa hoặc đã nghỉ việc sẽ không đăng nhập được."
+          options={statusOptions}
+          value={status}
+          onChange={(v) => v && setStatus(v as UserStatus)}
+        />
+      </VStack>
     </Modal>
   );
 }
@@ -133,39 +137,34 @@ export function EmployeeStatusModal({ user, onClose, onSaved }: { user: User | n
 /** Xem chi tiết hồ sơ. */
 export function EmployeeDetailModal({ user, onClose }: { user: User | null; onClose: () => void }) {
   if (!user) return null;
-  const rows: [string, ReactNode][] = [
-    ['Mã nhân viên', <span className="font-mono">{user.employeeCode}</span>],
-    ['Email', user.email],
-    ['Số điện thoại', user.phoneNumber ?? '—'],
-    ['Chi nhánh', user.branchName ?? '—'],
-    ['Phòng ban', user.departmentName ?? '—'],
-    ['Chức vụ', user.positionTitle ?? '—'],
-    ['Loại hợp đồng', employmentTypeLabels[user.employmentType]],
-    ['Ngày vào làm', formatDate(user.hireDate)],
-    ['Vai trò', user.roles.map((r) => roleLabels[r]).join(', ')],
-    ['Ngày tạo', formatDateTime(user.createdAt)],
-  ];
-
   return (
     <Modal open onClose={onClose} title="Hồ sơ nhân viên" size="md">
-      <div className="mb-4 flex items-center gap-3">
-        <Avatar name={user.fullName} url={user.avatarUrl} size={56} />
-        <div>
-          <p className="text-base font-semibold">{user.fullName}</p>
-          <div className="mt-1 flex gap-1.5">
-            <Badge tone={statusTone(user.status)}>{userStatusLabels[user.status]}</Badge>
-            {user.mustChangePassword && <Badge tone="amber">Chưa đổi mật khẩu tạm</Badge>}
-          </div>
-        </div>
-      </div>
-      <dl className="grid grid-cols-[140px_1fr] gap-x-4 gap-y-2.5 text-sm">
-        {rows.map(([label, value]) => (
-          <div key={label} className="contents">
-            <dt className="text-muted">{label}</dt>
-            <dd className="text-foreground">{value}</dd>
-          </div>
-        ))}
-      </dl>
+      <VStack gap={5}>
+        <HStack gap={3} vAlign="center">
+          <Avatar name={user.fullName} url={user.avatarUrl} size={60} />
+          <VStack gap={1}>
+            <Heading level={3}>{user.fullName}</Heading>
+            <HStack gap={1.5} wrap="wrap">
+              <Badge tone={statusTone(user.status)}>{userStatusLabels[user.status]}</Badge>
+              {user.mustChangePassword && <Badge tone="amber">Chưa đổi mật khẩu tạm</Badge>}
+            </HStack>
+          </VStack>
+        </HStack>
+        <MetadataList label={{ position: 'start', width: 140 }}>
+          <MetadataListItem label="Mã nhân viên">
+            <span className="font-mono">{user.employeeCode}</span>
+          </MetadataListItem>
+          <MetadataListItem label="Email">{user.email}</MetadataListItem>
+          <MetadataListItem label="Số điện thoại">{user.phoneNumber ?? '—'}</MetadataListItem>
+          <MetadataListItem label="Chi nhánh">{user.branchName ?? '—'}</MetadataListItem>
+          <MetadataListItem label="Phòng ban">{user.departmentName ?? '—'}</MetadataListItem>
+          <MetadataListItem label="Chức vụ">{user.positionTitle ?? '—'}</MetadataListItem>
+          <MetadataListItem label="Loại hợp đồng">{employmentTypeLabels[user.employmentType]}</MetadataListItem>
+          <MetadataListItem label="Ngày vào làm">{formatDate(user.hireDate)}</MetadataListItem>
+          <MetadataListItem label="Vai trò">{user.roles.map((r) => roleLabels[r]).join(', ')}</MetadataListItem>
+          <MetadataListItem label="Ngày tạo">{formatDateTime(user.createdAt)}</MetadataListItem>
+        </MetadataList>
+      </VStack>
     </Modal>
   );
 }

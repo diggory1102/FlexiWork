@@ -1,4 +1,5 @@
-import { createBrowserRouter, Outlet, RouterProvider } from 'react-router-dom';
+import { createBrowserRouter, RouterProvider } from 'react-router-dom';
+import { RouterRoot } from '@/app/RouterBridges';
 import { AdminLayout } from '@/layouts/AdminLayout';
 import { ProtectedRoute } from '@/routes/ProtectedRoute';
 import { LoginPage } from '@/modules/auth/pages/LoginPage';
@@ -12,7 +13,6 @@ import { EmployeesPage } from '@/modules/employees/pages/EmployeesPage';
 import { ProfilePage } from '@/modules/profile/pages/ProfilePage';
 import { ComingSoonPage } from '@/components/common/ComingSoonPage';
 import { NotFoundPage } from '@/components/common/NotFoundPage';
-import { Toaster } from '@/components/ui/Feedback';
 import { useAuthStore } from '@/stores/authStore';
 import { RoleGroups } from '@/types/auth';
 
@@ -32,12 +32,7 @@ const comingSoon = (path: string, title: string, stage: string) => ({ path, elem
 
 const router = createBrowserRouter([
   {
-    element: (
-      <>
-        <Outlet />
-        <Toaster />
-      </>
-    ),
+    element: <RouterRoot />,
     children: [
       { path: '/login', element: <LoginPage /> },
       { path: '/forgot-password', element: <ForgotPasswordPage /> },

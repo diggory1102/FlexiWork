@@ -1,21 +1,21 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/*
+ * Giao diện Web Admin: hệ thống thiết kế Astryx (Meta) + Tailwind CSS v4.
+ * Thứ tự @layer bắt buộc giữ nguyên: nếu sai, style của component Astryx sẽ đè lên class Tailwind.
+ * Màu/khoảng cách/bo góc đều lấy từ design token của theme (CSS variables) → đổi theme hoặc chế độ
+ * sáng/tối không phải sửa từng trang (Dynamic Theming).
+ */
+@layer reset, theme, base, astryx-base, astryx-theme, components, utilities;
 
-/* Dynamic Theming: màu dạng "R G B" để Tailwind hỗ trợ độ trong suốt (bg-primary/10) */
-:root {
-  --color-primary: 37 99 235;
-  --color-primary-dark: 29 78 216;
-  --color-header: 24 29 49;
-  --color-surface: 255 255 255;
-  --color-background: 244 246 250;
-  --color-foreground: 15 23 42;
-  --color-muted: 100 116 139;
-  --color-border: 226 232 240;
-  --color-success: 22 163 74;
-  --color-warning: 217 119 6;
-  --color-danger: 220 38 38;
-}
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/preflight.css' layer(base);
+@import '@astryxdesign/core/reset.css';
+@import '@astryxdesign/core/astryx.css';
+@import '@astryxdesign/theme-neutral/theme.css';
+@import '@astryxdesign/core/tailwind-theme.css';
+@import 'tailwindcss/utilities.css' layer(utilities);
+
+/* Tailwind v4 tự quét mã nguồn trong thư mục dự án */
+@source './';
 
 html,
 body,
@@ -24,16 +24,6 @@ body,
 }
 
 body {
-  @apply bg-background font-sans text-sm text-foreground antialiased;
-}
-
-@layer components {
-  .input {
-    @apply h-9 w-full rounded-md border border-border bg-surface px-3 text-sm text-foreground outline-none transition
-      placeholder:text-muted/70 focus:border-primary focus:ring-2 focus:ring-primary/20
-      disabled:cursor-not-allowed disabled:bg-background disabled:text-muted;
-  }
-  .card {
-    @apply rounded-xl border border-border bg-surface shadow-sm;
-  }
+  background-color: var(--color-background-body);
+  color: var(--color-text-primary);
 }

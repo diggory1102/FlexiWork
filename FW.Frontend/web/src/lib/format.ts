@@ -1,6 +1,9 @@
 import type { Role } from '@/types/auth';
 import type { EmploymentType, UserStatus } from '@/types/user';
 import type { BranchStatus } from '@/types/organization';
+import type { ISODateString } from '@astryxdesign/core/Calendar';
+
+export type { ISODateString };
 
 const currency = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 });
 
@@ -19,11 +22,15 @@ export function formatDateTime(value: string | null | undefined): string {
 }
 
 /** Ngày hôm nay dạng yyyy-MM-dd theo giờ máy người dùng. */
-export function todayIso(): string {
+export function todayIso(): ISODateString {
   const now = new Date();
   const local = new Date(now.getTime() - now.getTimezoneOffset() * 60_000);
-  return local.toISOString().slice(0, 10);
+  return local.toISOString().slice(0, 10) as ISODateString;
 }
+
+/** Chuỗi ngày yyyy-MM-dd (từ API) → kiểu ngày của DateInput Astryx; rỗng → undefined. */
+export const toIsoDate = (value: string | null | undefined): ISODateString | undefined =>
+  value ? (value.slice(0, 10) as ISODateString) : undefined;
 
 export const roleLabels: Record<Role, string> = {
   ROLE_ADMIN: 'Quản trị viên',

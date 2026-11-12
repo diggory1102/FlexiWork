@@ -1,8 +1,13 @@
 import { useEffect, useState } from 'react';
-import { MapPin, Pencil, Plus, Search, Trash2, Wifi } from 'lucide-react';
+import { Button } from '@astryxdesign/core/Button';
+import { Icon } from '@astryxdesign/core/Icon';
+import { IconButton } from '@astryxdesign/core/IconButton';
+import { Selector } from '@astryxdesign/core/Selector';
+import { HStack, VStack } from '@astryxdesign/core/Stack';
+import { Text } from '@astryxdesign/core/Text';
+import { MapPin, Pencil, Plus, Trash2, Wifi } from 'lucide-react';
 import { PageHeader, Toolbar } from '@/components/ui/Layout';
-import { Button, IconButton } from '@/components/ui/Button';
-import { Input, Select } from '@/components/ui/Form';
+import { ListCard, SearchInput } from '@/components/ui/ListCard';
 import { Badge } from '@/components/ui/Feedback';
 import { ConfirmDialog } from '@/components/ui/Modal';
 import { DataTable, Pagination, type Column } from '@/components/ui/DataTable';
@@ -18,6 +23,12 @@ import { Roles } from '@/types/auth';
 import type { Branch, BranchFilter, BranchStatus } from '@/types/organization';
 import { BranchFormModal } from '../components/BranchFormModal';
 import { BranchWifiModal } from '../components/BranchWifiModal';
+
+const statusOptions = [
+  { value: '', label: 'Tất cả trạng thái' },
+  { value: 'active', label: branchStatusLabels.active },
+  { value: 'inactive', label: branchStatusLabels.inactive },
+];
 
 /** Quản lý chi nhánh: Admin thêm/sửa/xóa; HR xem toàn bộ; Manager chỉ thấy chi nhánh của mình. */
 export function BranchesPage() {
@@ -58,15 +69,17 @@ export function BranchesPage() {
   };
 
   const columns: Column<Branch>[] = [
-    { key: 'code', header: 'Mã', render: (b) => <span className="font-mono text-xs font-semibold">{b.branchCode}</span> },
+    { key: 'code', header: 'Mã', width: 120, render: (b) => <span className="font-mono text-sm font-medium">{b.branchCode}</span> },
     {
       key: 'name',
       header: 'Chi nhánh',
       render: (b) => (
-        <div className="min-w-0">
-          <p className="font-medium">{b.name}</p>
-          <p className="truncate text-xs text-muted">{b.address}</p>
-        </div>
+        <VStack gap={0.5}>
+          <Text weight="medium">{b.name}</Text>
+          <Text type="supporting" maxLines={1}>
+            {b.address}
+          </Text>
+        </VStack>
       ),
     },
     {
@@ -78,14 +91,14 @@ export function BranchesPage() {
           target="_blank"
           rel="noreferrer"
           onClick={(e) => e.stopPropagation()}
-          className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+          className="inline-flex items-center gap-1 whitespace-nowrap text-xs text-accent hover:underline"
         >
           <MapPin className="h-3.5 w-3.5" />
           {b.latitude.toFixed(5)}, {b.longitude.toFixed(5)} · {b.radius} m
         </a>
       ),
     },
-    { key: 'contact', header: 'Liên hệ', render: (b) => <span className="text-xs text-muted">{b.phone ?? '—'}</span> },
+    { key: 'contact', header: 'Liên hệ', render: (b) => <Text type="supporting">{b.phone ?? '—'}</Text> },
     {
       key: 'status',
       header: 'Trạng thái',
@@ -94,22 +107,19 @@ export function BranchesPage() {
     {
       key: 'actions',
       header: '',
-      className: 'w-32 text-right',
+      width: 150,
+      align: 'end',
       render: (b) => (
-        <div className="flex justify-end gap-0.5" onClick={(e) => e.stopPropagation()}>
-          <IconButton label="Wi-Fi nội bộ" onClick={() => setWifiBranch(b)}>
-            <Wifi className="h-4 w-4" />
-          </IconButton>
-          {isAdmin && (
-            <>
-              <IconButton label="Sửa" onClick={() => setEditing(b)}>
-                <Pencil className="h-4 w-4" />
-              </IconButton>
-              <IconButton label="Xóa" tone="danger" onClick={() => setDeleting(b)}>
-                <Trash2 className="h-4 w-4" />
-              </IconButton>
-            </>
-          )}
+        <div onClick={(e) => e.stopPropagation()}>
+          <HStack gap={0.5} hAlign="end">
+            <IconButton variant="ghost" size="sm" label="Wi-Fi nội bộ" tooltip="Wi-Fi nội bộ" icon={<Icon icon={Wifi} />} onClick={() => setWifiBranch(b)} />
+            {isAdmin && (
+              <>
+                <IconButton variant="ghost" size="sm" label="Sửa" tooltip="Sửa" icon={<Icon icon={Pencil} />} onClick={() => setEditing(b)} />
+                <IconButton variant="ghost" size="sm" label="Xóa" tooltip="Xóa" icon={<Icon icon={Trash2} color="error" />} onClick={() => setDeleting(b)} />
+              </>
+            )}
+          </HStack>
         </div>
       ),
     },
@@ -120,29 +130,23 @@ export function BranchesPage() {
       <PageHeader
         title="Chi nhánh & Wi-Fi"
         description="Cấu hình tọa độ Geofence và danh sách Wi-Fi BSSID hợp lệ để chấm công tại từng chi nhánh."
-        actions={
-          isAdmin && (
-            <Button icon={<Plus className="h-4 w-4" />} onClick={() => setEditing(null)}>
-              Thêm chi nhánh
-            </Button>
-          )
-        }
+        actions={isAdmin && <Button label="Thêm chi nhánh" variant="primary" icon={<Icon icon={Plus} />} onClick={() => setEditing(null)} />}
       />
-      <div className="card overflow-hidden">
+      <ListCard>
         <Toolbar>
-          <div className="relative w-72">
-            <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-muted" />
-            <Input className="pl-9" placeholder="Tìm theo mã, tên, địa chỉ…" value={search} onChange={(e) => setSearch(e.target.value)} />
-          </div>
-          <Select className="w-48" value={query.status ?? ''} onChange={(e) => setQuery({ status: e.target.value as BranchStatus | '' })}>
-            <option value="">Tất cả trạng thái</option>
-            <option value="active">Đang hoạt động</option>
-            <option value="inactive">Ngừng hoạt động</option>
-          </Select>
+          <SearchInput placeholder="Tìm theo mã, tên, địa chỉ…" value={search} onChange={setSearch} />
+          <Selector
+            label="Trạng thái"
+            isLabelHidden
+            width={200}
+            options={statusOptions}
+            value={query.status ?? ''}
+            onChange={(v) => setQuery({ status: (v ?? '') as BranchStatus | '' })}
+          />
         </Toolbar>
         <DataTable columns={columns} rows={rows} rowKey={(b) => b.id} loading={loading} emptyText="Không có chi nhánh nào" onRowClick={setWifiBranch} />
         <Pagination page={page} onChange={(pageIndex) => setQuery({ pageIndex })} />
-      </div>
+      </ListCard>
 
       <BranchFormModal open={editing !== undefined} branch={editing ?? null} onClose={() => setEditing(undefined)} onSaved={afterChange} />
       <BranchWifiModal branch={wifiBranch} canEdit={isAdmin} onClose={() => setWifiBranch(null)} />

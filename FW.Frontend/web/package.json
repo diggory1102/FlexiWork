@@ -7,25 +7,29 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "typecheck": "tsc -b --noEmit"
+    "typecheck": "tsc -b --noEmit",
+    "astryx": "node node_modules/@astryxdesign/cli/clients/cli/bin/astryx.mjs"
   },
   "dependencies": {
+    "@astryxdesign/core": "0.7.14",
+    "@astryxdesign/theme-neutral": "0.7.14",
     "@microsoft/signalr": "^8.0.7",
+    "@stylexjs/stylex": "^0.19.1",
     "axios": "^1.21.1",
     "lucide-react": "^1.70.0",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
     "react-router-dom": "^6.30.6",
     "zustand": "^5.1.0"
   },
   "devDependencies": {
+    "@astryxdesign/cli": "0.7.14",
+    "@tailwindcss/vite": "^4.3.5",
     "@types/node": "^22.10.0",
-    "@types/react": "^18.3.31",
-    "@types/react-dom": "^18.3.7",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^4.7.0",
-    "autoprefixer": "^10.4.20",
-    "postcss": "^8.5.0",
-    "tailwindcss": "^3.4.19",
+    "tailwindcss": "^4.3.5",
     "typescript": "~5.9.3",
     "vite": "^5.4.21"
   }
