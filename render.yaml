@@ -1,0 +1,66 @@
+# =============================================================================
+# Render Blueprint — triển khai Backend FlexiWork (hướng dẫn: docs/DEPLOY.md)
+# Render Dashboard → New → Blueprint → chọn repo này. Các biến "sync: false" là bí mật:
+# Render sẽ hỏi giá trị khi tạo Blueprint (KHÔNG ghi bí mật vào file này — repo công khai).
+# AI Service (InsightFace) sẽ bổ sung ở Task 2.4 sau khi kiểm tra RAM gói miễn phí.
+# =============================================================================
+services:
+  - type: web
+    name: flexiwork-api
+    runtime: docker
+    plan: free
+    region: singapore
+    dockerContext: ./FW.Backend
+    dockerfilePath: ./FW.Backend/Dockerfile
+    healthCheckPath: /api/healthcheck
+    autoDeploy: true
+    buildFilter:
+      paths:
+        - FW.Backend/**
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: PORT
+        value: "8080"
+      # MySQL trên Aiven — VD: Server=...aivencloud.com;Port=12345;Database=flexiwork_db;User=avnadmin;Password=...;SslMode=Required;AllowUserVariables=True;CharSet=utf8mb4;
+      - key: ConnectionStrings__DefaultConnection
+        sync: false
+      - key: JwtSettings__Secret
+        generateValue: true
+      # Redis: Key Value nội bộ của Render (khai báo bên dưới)
+      - key: Redis__ConnectionString
+        fromService:
+          type: keyvalue
+          name: flexiwork-cache
+          property: connectionString
+      # Domain Web Admin trên Vercel, VD: https://flexiwork.vercel.app
+      - key: Cors__AllowedOrigins__0
+        sync: false
+      # Email qua Brevo HTTP API (Render gói free chặn cổng SMTP)
+      - key: Brevo__ApiKey
+        sync: false
+      - key: Brevo__SenderEmail
+        sync: false
+      # Ảnh đại diện / minh chứng (ổ đĩa của Render bị xóa mỗi lần deploy)
+      - key: Cloudinary__CloudName
+        sync: false
+      - key: Cloudinary__ApiKey
+        sync: false
+      - key: Cloudinary__ApiSecret
+        sync: false
+      # Quản trị viên đầu tiên — backend tự tạo khi khởi động nếu CSDL chưa có Admin
+      - key: Bootstrap__AdminEmail
+        sync: false
+      - key: Bootstrap__AdminPassword
+        sync: false
+      # Bật Swagger để demo API (tắt bằng false khi không cần)
+      - key: Swagger__Enabled
+        value: "true"
+
+  - type: keyvalue
+    name: flexiwork-cache
+    plan: free
+    region: singapore
+    maxmemoryPolicy: allkeys-lru
+    # Chỉ cho dịch vụ trong cùng tài khoản Render kết nối (không mở ra Internet)
+    ipAllowList: []

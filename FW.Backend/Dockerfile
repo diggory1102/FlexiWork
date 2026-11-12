@@ -8,7 +8,7 @@ FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
 # Copy file project trước để tận dụng cache khi restore
-COPY global.json FW.Backend.sln ./
+COPY FW.Backend.sln ./
 COPY FW.Domain/FW.Domain.csproj FW.Domain/
 COPY FW.Application/FW.Application.csproj FW.Application/
 COPY FW.Infrastructure/FW.Infrastructure.csproj FW.Infrastructure/

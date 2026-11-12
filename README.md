@@ -121,6 +121,12 @@ npx expo start                  # quét QR bằng Expo Go; nhấn "w" để xem 
 docker compose up -d --build
 ```
 
+## Triển khai lên cloud
+
+Aiven (MySQL) + Render (API Docker, Redis) + Vercel (Web) + Brevo (email) + Cloudinary (ảnh) — làm theo từng bước trong **[docs/DEPLOY.md](docs/DEPLOY.md)**. Cấu hình Render nằm ở `render.yaml`, bản build app di động ở `FW.Frontend/mobile/eas.json`.
+
+Trên cloud **không** dùng tài khoản mẫu `Admin@123`: chạy `flexiwork_seed_production.sql` (chỉ vai trò, loại đơn) và đặt `Bootstrap__AdminEmail` / `Bootstrap__AdminPassword` — backend tự tạo Quản trị viên đầu tiên khi khởi động.
+
 ## Bảo mật cấu hình
 
 Không commit thông tin bí mật. Các file sau đã nằm trong `.gitignore`:

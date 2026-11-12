@@ -28,6 +28,7 @@ public static class DependencyInjection
     {
         // 1. Cấu hình (Options pattern)
         services.Configure<SmtpSettings>(configuration.GetSection(SmtpSettings.SectionName));
+        services.Configure<BrevoSettings>(configuration.GetSection(BrevoSettings.SectionName));
         services.Configure<RedisSettings>(configuration.GetSection(RedisSettings.SectionName));
         services.Configure<CloudinarySettings>(configuration.GetSection(CloudinarySettings.SectionName));
         services.Configure<AiServiceSettings>(configuration.GetSection(AiServiceSettings.SectionName));
@@ -53,24 +54,34 @@ public static class DependencyInjection
         else
         {
             // Chỉ kết nối khi được dùng lần đầu; không chặn khởi động nếu Redis tạm thời chưa sẵn sàng
-            services.AddSingleton<IConnectionMultiplexer>(_ =>
-            {
-                var options = ConfigurationOptions.Parse(redisConnection);
-                options.AbortOnConnectFail = false;
-                return ConnectionMultiplexer.Connect(options);
-            });
+            services.AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer.Connect(RedisConnectionParser.Parse(redisConnection)));
             services.AddSingleton<ICacheService, RedisCacheService>();
         }
 
-        // 4. Email: MailKit + SMTP; khi phát triển mà chưa cấu hình SMTP thì ghi email ra log
+        // 4. Email — thứ tự ưu tiên: Brevo HTTP API (cloud chặn SMTP) → MailKit + SMTP → ghi log (chỉ khi phát triển)
+        var brevoApiKey = configuration[$"{BrevoSettings.SectionName}:ApiKey"];
         var smtpHost = configuration[$"{SmtpSettings.SectionName}:Host"];
-        if (string.IsNullOrWhiteSpace(smtpHost) && isDevelopment)
+        if (!string.IsNullOrWhiteSpace(brevoApiKey))
+        {
+            services.AddHttpClient<IEmailService, BrevoEmailService>((sp, client) =>
+            {
+                var settings = sp.GetRequiredService<IOptions<BrevoSettings>>().Value;
+                client.BaseAddress = new Uri(settings.BaseUrl.TrimEnd('/') + "/");
+                client.DefaultRequestHeaders.Add("api-key", settings.ApiKey);
+                client.Timeout = TimeSpan.FromSeconds(20);
+            });
+        }
+        else if (!string.IsNullOrWhiteSpace(smtpHost))
+        {
+            services.AddTransient<IEmailService, SmtpEmailService>();
+        }
+        else if (isDevelopment)
         {
             services.AddTransient<IEmailService, LoggingEmailService>();
         }
         else
         {
-            services.AddTransient<IEmailService, SmtpEmailService>();
+            throw new InvalidOperationException("Chưa cấu hình gửi email: đặt Brevo:ApiKey (khuyên dùng trên Render) hoặc Smtp:Host.");
         }
 
         // 5. Bảo mật: băm mật khẩu & phát hành JWT (JwtSettings được bind ở tầng API)

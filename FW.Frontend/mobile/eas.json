@@ -1,0 +1,28 @@
+{
+  "cli": {
+    "version": ">= 16.0.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "preview": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_BASE_URL": "https://flexiwork-api.onrender.com/api",
+        "EXPO_PUBLIC_HUB_BASE_URL": "https://flexiwork-api.onrender.com/hubs"
+      }
+    },
+    "production": {
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_API_BASE_URL": "https://flexiwork-api.onrender.com/api",
+        "EXPO_PUBLIC_HUB_BASE_URL": "https://flexiwork-api.onrender.com/hubs"
+      }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}

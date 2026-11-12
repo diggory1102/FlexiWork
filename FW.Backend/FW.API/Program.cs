@@ -3,6 +3,8 @@ using FW.API.Middlewares;
 using FW.API.Services;
 using FW.Application;
 using FW.Application.Common.Interfaces;
+using FW.Application.Features.Setup;
+using Microsoft.AspNetCore.HttpOverrides;
 using FW.Infrastructure;
 using FW.Infrastructure.Services.Storage;
 using Microsoft.Extensions.FileProviders;
@@ -18,6 +20,15 @@ builder.Services.AddControllers()
 // 2. Tầng Application & Infrastructure
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration, builder.Environment.IsDevelopment());
+builder.Services.Configure<BootstrapSettings>(builder.Configuration.GetSection(BootstrapSettings.SectionName));
+
+// Chạy sau reverse proxy (Render, Docker): tin header X-Forwarded-* để biết request gốc là HTTPS
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
+});
 
 // 3. Người dùng hiện tại (đọc từ JWT claims)
 builder.Services.AddHttpContextAccessor();
@@ -35,10 +46,13 @@ builder.Services.AddSignalR();
 
 var app = builder.Build();
 
+app.UseForwardedHeaders();
+
 // Global Exception Middleware phải đặt ở đầu pipeline
 app.UseMiddleware<GlobalExceptionMiddleware>();
 
-if (app.Environment.IsDevelopment())
+// Swagger: luôn bật khi phát triển; trên cloud chỉ bật khi Swagger:Enabled=true (VD: để demo API)
+if (app.Environment.IsDevelopment() || app.Configuration.GetValue<bool>("Swagger:Enabled"))
 {
     app.UseSwagger();
     app.UseSwaggerUI(c =>
@@ -47,9 +61,23 @@ if (app.Environment.IsDevelopment())
         c.RoutePrefix = string.Empty; // Swagger hiển thị tại URL gốc (/)
     });
 }
-else
+
+if (!app.Environment.IsDevelopment())
 {
     app.UseHttpsRedirection();
+}
+
+// Tạo Quản trị viên đầu tiên từ biến môi trường Bootstrap__AdminEmail / Bootstrap__AdminPassword (nếu chưa có Admin)
+await using (var scope = app.Services.CreateAsyncScope())
+{
+    try
+    {
+        await scope.ServiceProvider.GetRequiredService<IBootstrapAdminService>().EnsureAdminAsync();
+    }
+    catch (Exception ex)
+    {
+        app.Logger.LogError(ex, "Không khởi tạo được tài khoản Quản trị viên đầu tiên.");
+    }
 }
 
 // Khi phát triển chưa có Cloudinary: phục vụ ảnh đã tải lên từ thư mục cục bộ tại /uploads

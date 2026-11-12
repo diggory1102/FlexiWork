@@ -6,3 +6,5 @@
 **/appsettings.Production.json
 FW.UnitTests/
 FW.IntegrationTests/
+# global.json ghim SDK cho máy dev; trong Docker dùng SDK có sẵn của image dotnet/sdk:8.0
+global.json
