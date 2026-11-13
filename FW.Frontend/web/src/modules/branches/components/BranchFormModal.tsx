@@ -100,7 +100,15 @@ export function BranchFormModal({ open, branch, onClose, onSaved }: Props) {
         <VStack gap={4}>
           <FormError message={error} />
           <Grid columns={{ minWidth: 240, max: 2 }} gap={4}>
-            <TextInput label="Mã chi nhánh" isRequired description="Tự chuyển thành chữ hoa, không trùng." value={form.branchCode} onChange={(v) => set('branchCode', v)} />
+            {/* Gợi ý đặt ở labelTooltip (không dùng description) để ô nhập thẳng hàng với ô bên cạnh */}
+            <TextInput
+              label="Mã chi nhánh"
+              isRequired
+              labelTooltip="Tự chuyển thành chữ hoa, không được trùng với chi nhánh khác."
+              placeholder="VD: CG01"
+              value={form.branchCode}
+              onChange={(v) => set('branchCode', v)}
+            />
             <TextInput label="Tên chi nhánh" isRequired value={form.name} onChange={(v) => set('name', v)} />
             <GridSpan columns="full">
               <TextInput label="Địa chỉ" isRequired value={form.address} onChange={(v) => set('address', v)} />
@@ -131,7 +139,7 @@ export function BranchFormModal({ open, branch, onClose, onSaved }: Props) {
                   min={10}
                   max={5000}
                   isIntegerOnly
-                  description="Từ 10 đến 5000 m."
+                  labelTooltip="Từ 10 đến 5000 m. Nên đặt 50–100 m vì GPS điện thoại thường sai lệch 10–30 m."
                   value={form.radius}
                   onChange={(v) => set('radius', v ?? 50)}
                 />
