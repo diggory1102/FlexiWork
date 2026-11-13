@@ -2,7 +2,7 @@
 
 | Thành phần | Nền tảng | Gói |
 |---|---|---|
-| CSDL MySQL | **Aiven** | Free |
+| CSDL MySQL | **TiDB Cloud** (tương thích MySQL 8) | Starter (free) — 5 GiB, 50 triệu RU/tháng |
 | Backend API (Docker) + Redis | **Render** (Blueprint `render.yaml`) | Free |
 | Web Admin | **Vercel** | Hobby (free) |
 | Gửi email | **Brevo** (HTTP API) | Free — 300 email/ngày |
@@ -16,28 +16,37 @@ Làm lần lượt theo thứ tự dưới đây (bước sau cần thông tin c
 
 ---
 
-## Bước 1 — CSDL MySQL trên Aiven
+## Bước 1 — CSDL MySQL trên TiDB Cloud
 
-1. Đăng ký tại <https://console.aiven.io> (có thể đăng nhập bằng GitHub/Google).
-2. **Create service → MySQL → Free plan**, chọn vùng gần Việt Nam nhất (Singapore nếu có). Đặt tên `flexiwork-mysql`, chờ trạng thái **Running**.
-3. Trong trang service, mục **Connection information** ghi lại: `Host`, `Port`, `User` (`avnadmin`), `Password`.
-4. Tab **Databases → Create database** tên `flexiwork_db`.
-5. Khởi tạo bảng bằng MySQL client trên máy (PowerShell, đứng ở thư mục gốc repo). Thay `<HOST>`, `<PORT>`:
+> Aiven đã ngừng gói MySQL miễn phí (11/2026). **TiDB Cloud Starter** dùng giao thức MySQL 8 nên backend giữ nguyên `MySqlConnector` và các câu SQL — bộ test tích hợp (33/33) đã chạy đạt trên TiDB v8.5.
+
+1. Đăng ký <https://tidbcloud.com> (đăng nhập bằng GitHub/Google).
+2. **Create Instance** (một số giao diện ghi *Create Cluster*) → chọn gói **Starter** (Free) → Cloud Provider **AWS**, Region **Singapore (ap-southeast-1)** → tên `flexiwork` → **Create**. Chờ trạng thái **Available** (vài chục giây).
+3. Trong trang instance bấm **Connect** (góc trên bên phải):
+   - Connection Type: **Public**, Connect With: **General**.
+   - Bấm **Generate Password** → ghi lại ngay `HOST` (dạng `gateway01.ap-southeast-1.prod.aws.tidbcloud.com`), `PORT` (**4000**), `USERNAME` (dạng `xxxxxxxx.root` — **có cả phần tiền tố trước `.root`**) và `PASSWORD`. Mật khẩu **chỉ hiện một lần**; quên thì bấm *Reset Password*.
+4. Khởi tạo bảng bằng MySQL client trên máy (PowerShell, đứng ở thư mục gốc repo). Thay `<HOST>`, `<USERNAME>`:
 
    ```powershell
    $mysql = "C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe"
    cd FW.Backend\FW.Infrastructure\Database
-   & $mysql --host=<HOST> --port=<PORT> --user=avnadmin -p --ssl-mode=REQUIRED --default-character-set=utf8mb4 `
+   & $mysql --host=<HOST> --port=4000 --user=<USERNAME> -p --ssl-mode=REQUIRED --default-character-set=utf8mb4 `
        -e "source flexiwork_schema.sql; source flexiwork_seed_production.sql;"
    ```
-   Nhập mật khẩu Aiven khi được hỏi. (Hoặc dùng MySQL Workbench: tạo kết nối với SSL = *Require*, mở và chạy lần lượt 2 file.)
+   Nhập mật khẩu TiDB khi được hỏi. Script tự tạo database `flexiwork_db`. Kiểm tra:
+   ```powershell
+   & $mysql --host=<HOST> --port=4000 --user=<USERNAME> -p --ssl-mode=REQUIRED -e "USE flexiwork_db; SHOW TABLES; SELECT role_name FROM roles;"
+   ```
+   *Cách khác — MySQL Workbench:* **+** tạo kết nối mới → Hostname `<HOST>`, Port `4000`, Username `<USERNAME>` → tab **SSL**: *Use SSL* = **Require** → **Test Connection** → mở (File → Open SQL Script) và chạy (⚡) lần lượt `flexiwork_schema.sql`, `flexiwork_seed_production.sql`.
 
    > ⚠️ `flexiwork_schema.sql` **xóa và tạo lại toàn bộ bảng** — chỉ chạy **một lần** lúc khởi tạo. `flexiwork_seed_production.sql` chỉ thêm vai trò và loại đơn, **không có tài khoản mẫu** (tài khoản `Admin@123` của `flexiwork_seed.sql` chỉ dùng trên máy dev).
 
-6. Chuỗi kết nối cho Render (Bước 4):
+5. Chuỗi kết nối cho Render (Bước 4):
    ```
-   Server=<HOST>;Port=<PORT>;Database=flexiwork_db;User=avnadmin;Password=<PASSWORD>;SslMode=Required;AllowUserVariables=True;CharSet=utf8mb4;
+   Server=<HOST>;Port=4000;Database=flexiwork_db;User=<USERNAME>;Password=<PASSWORD>;SslMode=Required;AllowUserVariables=True;CharSet=utf8mb4;
    ```
+
+   Khác biệt nhỏ so với MySQL cần biết: TiDB **bắt buộc SSL** (thiếu `SslMode=Required` sẽ bị từ chối); ID tự tăng có thể **nhảy cóc** (1, 2, 30001…) — đúng thiết kế phân tán của TiDB, không phải lỗi, nên không dùng ID để sinh mã hiển thị.
 
 ## Bước 2 — Email trên Brevo
 
@@ -60,7 +69,7 @@ Render gói miễn phí chặn cổng SMTP, nên backend gửi email qua HTTP AP
 
    | Biến | Giá trị |
    |---|---|
-   | `ConnectionStrings__DefaultConnection` | Chuỗi kết nối ở Bước 1.6 |
+   | `ConnectionStrings__DefaultConnection` | Chuỗi kết nối ở Bước 1.5 |
    | `Cors__AllowedOrigins__0` | Tạm điền `https://flexiwork.vercel.app` — sửa lại sau Bước 5 nếu Vercel cấp domain khác |
    | `Brevo__ApiKey` | Khóa API Bước 2.3 |
    | `Brevo__SenderEmail` | Email người gửi đã xác minh ở Bước 2.2 |
@@ -112,7 +121,7 @@ URL API cho bản build nằm trong `FW.Frontend/mobile/eas.json` — sửa nế
 
 ## Khi cập nhật CSDL về sau
 
-Không có migration tự động (theo thiết kế Chương 2). Mỗi thay đổi schema ở các task sau sẽ kèm một file `migrations/NNN_*.sql` chỉ chứa `ALTER TABLE`/`CREATE TABLE` — chạy file đó lên Aiven giống Bước 1.5, **không** chạy lại `flexiwork_schema.sql`.
+Không có migration tự động (theo thiết kế Chương 2). Mỗi thay đổi schema ở các task sau sẽ kèm một file `migrations/NNN_*.sql` chỉ chứa `ALTER TABLE`/`CREATE TABLE` — chạy file đó lên TiDB giống Bước 1.4, **không** chạy lại `flexiwork_schema.sql`.
 
 ## Xử lý sự cố
 
@@ -121,6 +130,6 @@ Không có migration tự động (theo thiết kế Chương 2). Mỗi thay đ�
 | Web báo "Không thể kết nối tới máy chủ" | Backend đang ngủ (chờ 1 phút) hoặc sai `VITE_API_BASE_URL` (phải kết thúc bằng `/api`) |
 | Trình duyệt báo lỗi CORS | `Cors__AllowedOrigins__0` chưa đúng domain Vercel (không có `/` ở cuối) |
 | Render Logs: `Chưa cấu hình gửi email` | Thiếu `Brevo__ApiKey` |
-| Render Logs: lỗi kết nối MySQL | Thiếu `SslMode=Required` hoặc sai host/port/mật khẩu Aiven |
+| Render Logs: lỗi kết nối MySQL | Thiếu `SslMode=Required`, sai cổng (TiDB là `4000`), hoặc username thiếu phần tiền tố `xxxxxxxx.root` |
 | Không tạo được Admin đầu tiên | Mật khẩu Bootstrap không đạt quy tắc, hoặc chưa chạy `flexiwork_seed_production.sql` (thiếu bảng vai trò) |
 | Email không tới | Email người gửi chưa được xác minh trên Brevo; kiểm tra thư mục Spam |

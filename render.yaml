@@ -22,7 +22,7 @@ services:
         value: Production
       - key: PORT
         value: "8080"
-      # MySQL trên Aiven — VD: Server=...aivencloud.com;Port=12345;Database=flexiwork_db;User=avnadmin;Password=...;SslMode=Required;AllowUserVariables=True;CharSet=utf8mb4;
+      # MySQL trên TiDB Cloud — VD: Server=gateway01.ap-southeast-1.prod.aws.tidbcloud.com;Port=4000;Database=flexiwork_db;User=xxxxxxxx.root;Password=...;SslMode=Required;AllowUserVariables=True;CharSet=utf8mb4;
       - key: ConnectionStrings__DefaultConnection
         sync: false
       - key: JwtSettings__Secret

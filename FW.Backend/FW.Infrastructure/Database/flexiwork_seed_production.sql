@@ -1,5 +1,5 @@
 -- =============================================================================
--- SEED TỐI THIỂU CHO MÔI TRƯỜNG TRIỂN KHAI (Aiven / cloud)
+-- SEED TỐI THIỂU CHO MÔI TRƯỜNG TRIỂN KHAI (TiDB Cloud / cloud)
 -- Chỉ gồm danh mục hệ thống bắt buộc. KHÔNG có tài khoản người dùng:
 -- Quản trị viên đầu tiên được backend tự tạo khi khởi động từ biến môi trường
 --   Bootstrap__AdminEmail / Bootstrap__AdminPassword

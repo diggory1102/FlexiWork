@@ -31,7 +31,7 @@ FlexiWork/
 | AI Service | Python 3.10, FastAPI, InsightFace (ArcFace 512D), OpenCV |
 | Web Admin | React 19, TypeScript, Vite, **Astryx** design system (Meta, theme FlexiWork kế thừa neutral, tiếng Việt, sáng/tối), Tailwind CSS v4, Zustand, Axios, React Router, @microsoft/signalr |
 | Mobile | Expo SDK 58, React Native, Expo Router, expo-camera, expo-location, NetInfo (BSSID), expo-secure-store |
-| Triển khai | Docker, Vercel (web), Render (backend), Aiven (MySQL) |
+| Triển khai | Docker, Vercel (web), Render (backend), TiDB Cloud (CSDL tương thích MySQL) |
 
 ## Chạy dự án cục bộ
 
@@ -123,7 +123,7 @@ docker compose up -d --build
 
 ## Triển khai lên cloud
 
-Aiven (MySQL) + Render (API Docker, Redis) + Vercel (Web) + Brevo (email) + Cloudinary (ảnh) — làm theo từng bước trong **[docs/DEPLOY.md](docs/DEPLOY.md)**. Cấu hình Render nằm ở `render.yaml`, bản build app di động ở `FW.Frontend/mobile/eas.json`.
+TiDB Cloud (MySQL) + Render (API Docker, Redis) + Vercel (Web) + Brevo (email) + Cloudinary (ảnh) — làm theo từng bước trong **[docs/DEPLOY.md](docs/DEPLOY.md)**. Cấu hình Render nằm ở `render.yaml`, bản build app di động ở `FW.Frontend/mobile/eas.json`.
 
 Trên cloud **không** dùng tài khoản mẫu `Admin@123`: chạy `flexiwork_seed_production.sql` (chỉ vai trò, loại đơn) và đặt `Bootstrap__AdminEmail` / `Bootstrap__AdminPassword` — backend tự tạo Quản trị viên đầu tiên khi khởi động.
 
