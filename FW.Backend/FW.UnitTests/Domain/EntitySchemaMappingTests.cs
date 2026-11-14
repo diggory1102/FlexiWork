@@ -22,6 +22,9 @@ public class EntitySchemaMappingTests
         { typeof(User), "users" },
         { typeof(Role), "roles" },
         { typeof(UserRole), "user_roles" },
+        { typeof(Shift), "shifts" },
+        { typeof(Schedule), "schedules" },
+        { typeof(FaceProfile), "face_profiles" },
     };
 
     [Theory]

@@ -150,8 +150,11 @@ CREATE TABLE user_roles (
 CREATE TABLE face_profiles (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL UNIQUE,
-    face_encoding JSON NOT NULL COMMENT 'Mảng vector 128 hoặc 512 chiều nhận diện khuôn mặt',
+    face_encoding JSON NOT NULL COMMENT 'Vector đặc trưng khuôn mặt 512 chiều (InsightFace buffalo_l)',
     sample_image_url VARCHAR(255) NOT NULL COMMENT 'Ảnh gốc dùng để trích xuất vector',
+    sample_image_public_id VARCHAR(255) NULL COMMENT 'Mã ảnh trên Cloudinary — xóa ảnh cũ khi đăng ký lại',
+    model_name VARCHAR(50) NOT NULL DEFAULT 'buffalo_l' COMMENT 'Mô hình trích xuất vector (vector khác mô hình không so khớp được)',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB COMMENT='Hồ sơ sinh trắc học Face ID phục vụ đối soát chấm công';
@@ -165,14 +168,20 @@ CREATE TABLE shifts (
     id INT AUTO_INCREMENT PRIMARY KEY,
     shift_code VARCHAR(20) NOT NULL UNIQUE,
     name VARCHAR(100) NOT NULL,
+    branch_id INT NULL COMMENT 'Chi nhánh sở hữu ca; NULL = ca dùng chung mọi chi nhánh',
     start_time TIME NOT NULL,
     end_time TIME NOT NULL,
     break_minutes INT NOT NULL DEFAULT 0,
     work_units DECIMAL(3, 2) NOT NULL DEFAULT 1.00 COMMENT 'Hệ số công quy đổi (1.00, 0.50...)',
     is_night_shift TINYINT(1) NOT NULL DEFAULT 0 COMMENT '1: Ca đêm, có tính phụ cấp',
-    is_cross_day TINYINT(1) NOT NULL DEFAULT 0 COMMENT '1: Ca kết thúc vào ngày hôm sau (start_time > end_time)',
+    is_cross_day TINYINT(1) NOT NULL DEFAULT 0 COMMENT '1: Ca kết thúc vào ngày hôm sau (end_time <= start_time)',
+    late_grace_minutes INT NOT NULL DEFAULT 5 COMMENT 'Số phút check-in trễ được phép, chưa tính đi muộn',
+    early_leave_grace_minutes INT NOT NULL DEFAULT 5 COMMENT 'Số phút check-out sớm được phép, chưa tính về sớm',
     is_deleted TINYINT(1) NOT NULL DEFAULT 0,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NULL ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (branch_id) REFERENCES branches(id) ON DELETE RESTRICT,
+    INDEX idx_shifts_branch (branch_id)
 ) ENGINE=InnoDB COMMENT='Khai báo khung ca làm việc';
 
 -- 3.2. Lịch phân ca chi tiết (Schedules)
@@ -183,11 +192,15 @@ CREATE TABLE schedules (
     branch_id INT NOT NULL,
     work_date DATE NOT NULL,
     status VARCHAR(20) NOT NULL DEFAULT 'scheduled' COMMENT 'scheduled, in_progress, completed, absent, cancelled',
-    is_deleted TINYINT(1) NOT NULL DEFAULT 0,
+    is_published TINYINT(1) NOT NULL DEFAULT 0 COMMENT '0: Lịch nháp (nhân viên chưa thấy), 1: Đã công bố',
+    published_at DATETIME NULL,
+    created_by INT NULL COMMENT 'Người xếp lịch (Quản lý / HR)',
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NULL ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (shift_id) REFERENCES shifts(id) ON DELETE RESTRICT,
     FOREIGN KEY (branch_id) REFERENCES branches(id) ON DELETE RESTRICT,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
     UNIQUE KEY uq_user_shift_date (user_id, shift_id, work_date),
     INDEX idx_schedule_lookup (work_date, branch_id),
     INDEX idx_schedule_user_date (user_id, work_date)

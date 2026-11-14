@@ -128,12 +128,13 @@ Không có migration tự động (theo thiết kế Chương 2). Mỗi thay đ�
 ```powershell
 $mysql = "C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe"
 cd FW.Backend\FW.Infrastructure\Database\migrations
-& $mysql --host=<HOST> --port=4000 --user=<USERNAME> -p --ssl-mode=REQUIRED --default-character-set=utf8mb4 -e "source 001_users_password_changed_at.sql;"
+& $mysql --host=<HOST> --port=4000 --user=<USERNAME> -p --ssl-mode=REQUIRED --default-character-set=utf8mb4 -e "source 002_shifts_schedules_face_profiles.sql;"   # thay bằng tên file cần chạy
 ```
 
 | File | Nội dung | TiDB |
 |---|---|---|
-| `001_users_password_changed_at.sql` | Cột `users.password_changed_at` — đổi mật khẩu thì đăng xuất các thiết bị khác | ☐ |
+| `001_users_password_changed_at.sql` | Cột `users.password_changed_at` — đổi mật khẩu thì đăng xuất các thiết bị khác | ✅ |
+| `002_shifts_schedules_face_profiles.sql` | Khung ca theo chi nhánh + số phút cho phép đi muộn/về sớm; lịch nháp/công bố; Face ID lưu mã ảnh & tên mô hình | ☐ |
 
 ## Xử lý sự cố
 

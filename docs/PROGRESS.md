@@ -250,8 +250,8 @@ flowchart TD
 
 > **Tổng quan Tiến độ Hiện tại:**
 > * **Giai đoạn đang thực hiện:** CẤP BẬC 2 - Khung ca, Xếp lịch & Dữ liệu Face ID
-> * **Tiến độ tổng thể:** `12 / 47` Nhiệm vụ hoàn thành (`26%`)
-> * **Hành động tiếp theo:** Thực hiện **Task 2.1** (Entities & Repository `Shift`, `Schedule`, `FaceProfile`; bổ sung schema ca/lịch). Việc nhỏ đang chờ: bản đồ chọn tâm geofence trên form chi nhánh (Leaflet + OpenStreetMap).
+> * **Tiến độ tổng thể:** `13 / 47` Nhiệm vụ hoàn thành (`28%`)
+> * **Hành động tiếp theo:** Thực hiện **Task 2.2** (API Khung ca & Quy tắc vi phạm). Việc nhỏ đang chờ: bản đồ chọn tâm geofence trên form chi nhánh (Leaflet + OpenStreetMap).
 
 ### Các quyết định cần chốt
 
@@ -348,10 +348,13 @@ flowchart TD
 
 ---
 
-### 📌 CẤP BẬC 2: Khung ca, Xếp lịch & Dữ liệu Face ID `[0/6]`
+### 📌 CẤP BẬC 2: Khung ca, Xếp lịch & Dữ liệu Face ID `[1/6]`
 > 🎯 **Demo:** Quản lý xếp và công bố lịch tuần trên Web; nhân viên xem lịch và đăng ký khuôn mặt trên Mobile.
 
-- [ ] **Task 2.1:** Entities & Repository `Shift`, `Schedule`, `FaceProfile`. Bổ sung schema: `shifts.branch_id` (NULL = ca dùng chung), số phút cho phép đi muộn/về sớm, trạng thái nháp/công bố của lịch (`schedules`).
+- [x] **Task 2.1:** Entities & Repository `Shift`, `Schedule`, `FaceProfile`. Bổ sung schema: `shifts.branch_id` (NULL = ca dùng chung), số phút cho phép đi muộn/về sớm, trạng thái nháp/công bố của lịch (`schedules`).
+  - *Đã làm (14/11/2026):* migration `002_shifts_schedules_face_profiles.sql` — `shifts`: `branch_id`, `late_grace_minutes`, `early_leave_grace_minutes` (mặc định 5), `updated_at`; `schedules`: `is_published`, `published_at`, `created_by`, `updated_at`, **bỏ xóa mềm** (lịch nháp xóa hẳn, lịch đã công bố chuyển `cancelled` — `ScheduleStatus`); `face_profiles`: `sample_image_public_id` (xóa ảnh cũ trên Cloudinary), `model_name` (`buffalo_l`), `created_at`.
+  - Domain `Shift`: `Duration`, `WorkingMinutes`, `StartAt/EndAt` theo ngày (ca qua đêm), `OverlapsWith` (ca nối tiếp không tính chồng giờ) — nền cho kiểm tra chồng ca (Task 2.3) và tính đi muộn (Task 3.2). `FaceProfile.EmbeddingSize = 512`, vector `float[]` ↔ cột JSON qua `FloatArrayJsonTypeHandler`.
+  - Repository: `ShiftRepository` (lọc theo chi nhánh ± ca dùng chung, trùng mã, ca đang được dùng), `ScheduleRepository` (lưới lịch JOIN nhân viên + ca, INSERT nhiều dòng, công bố theo khoảng ngày, lịch hiệu lực của nhân viên), `FaceProfileRepository` (upsert theo `user_id`, danh sách đã đăng ký). Test: 87 unit + 37 tích hợp đạt; migration chạy trên schema cũ cho kết quả trùng khớp schema mới.
 - [ ] **Task 2.2:** API Khung ca & Quy tắc vi phạm: ca hành chính, ca xoay, ca gãy, ca đêm qua ngày, giờ nghỉ, hệ số công; cấu hình mức trừ công/phạt khi đi muộn, về sớm.
 - [ ] **Task 2.3:** API Phân ca & Xếp lịch: xếp theo tuần/tháng, chống trùng và chồng giờ giữa các ca, chuyển nháp → công bố, xem lịch cá nhân / chi nhánh.
 - [ ] **Task 2.4:** Đăng ký Face ID: nhận ảnh mẫu → lưu Cloudinary → `FW.AiService` trích xuất vector 512 chiều → lưu `face_profiles`; sửa vector mẫu trong seed cho đủ 512 chiều.
