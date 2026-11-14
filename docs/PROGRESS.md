@@ -75,6 +75,7 @@
 flowchart TD
     ROOT["Hệ thống Quản lý Chấm công & Phân ca FlexiWork"]
 
+    ROOT --> M0["0. Xác thực & Tài khoản (Web & Mobile)"]
     ROOT --> M1["1. Quản lý Hồ sơ & Tổ chức (Web Admin)"]
     ROOT --> M2["2. Quản lý Ca kíp & Chấm công (Web & Mobile)"]
     ROOT --> M3["3. Quản lý Đơn từ & Phê duyệt (Web & Mobile)"]
@@ -82,6 +83,11 @@ flowchart TD
     ROOT --> M5["5. Trao đổi Thời gian thực (Web & Mobile)"]
     ROOT --> M6["6. Báo cáo & Bảng công (Web Admin)"]
     ROOT --> M7["7. Bảng lương Rút gọn (Web & Mobile)"]
+
+    %% Module 0
+    M0 --> M0_1["0.1 Đăng nhập / Đăng xuất (khóa tạm khi sai nhiều lần)"]
+    M0 --> M0_2["0.2 Đổi mật khẩu (thu hồi phiên thiết bị khác)"]
+    M0 --> M0_3["0.3 Quên mật khẩu bằng OTP qua email"]
 
     %% Module 1
     M1 --> M1_1["1.1 Quản lý Chi nhánh & Geofencing / Wi-Fi"]
@@ -147,6 +153,9 @@ flowchart TD
 
 | Phân hệ & Chức năng chi tiết | Nền tảng | Admin | HR | Manager | Employee |
 | :--- | :---: | :---: | :---: | :---: | :---: |
+| **0. Xác thực & Tài khoản** | | | | | |
+| - Đăng nhập, đăng xuất, đổi mật khẩu, quên mật khẩu (OTP) | Mobile/Web | `E` | `E` | `E` | `E` *(Cá nhân)* |
+| - Cấp lại mật khẩu tạm cho nhân viên | Web | `E` | `E` | `-` | `-` |
 | **1. Quản lý Hồ sơ & Tổ chức** | | | | | |
 | - Quản lý Chi nhánh, GPS Geofence, Wi-Fi BSSID | Web | `CRUD` | `R` | `R` *(theo CN)* | `-` |
 | - Quản lý Phòng ban, Chức danh & Đơn giá công | Web | `CRUD` | `CRUD` | `R` | `-` |
@@ -162,10 +171,12 @@ flowchart TD
 | - Chấm công 3 lớp (GPS + Wi-Fi + Face ID) | Mobile | `-` | `-` | `E` *(nếu có ca)* | `E` |
 | - Tra cứu Nhật ký chấm công chi tiết (Ảnh, GPS, MAC) | Web | `R` | `R` | `R` *(theo CN)* | `R` *(Cá nhân)* |
 | - Quản lý & Khóa bảng công chi nhánh | Web | `CRUD` | `CRUD` | `U` *(Xác nhận)* | `-` |
+| - Duyệt bản ghi chấm công chờ xác nhận | Web | `A` | `A` | `A` *(theo CN)* | `-` |
 | **3. Quản lý Đơn từ & Phê duyệt** | | | | | |
 | - Khởi tạo Đơn (Nghỉ phép, Đổi ca, OT, Giải trình) | Mobile/Web | `C` | `C` | `C` | `C` *(Cá nhân)* |
 | - Theo dõi tiến trình xử lý đơn cá nhân | Mobile/Web | `R` | `R` | `R` | `R` *(Cá nhân)* |
 | - Phê duyệt / Từ chối đơn từ | Web/Mobile | `A` | `A` | `A` *(theo CN)* | `-` |
+| - Đồng ý / Từ chối đề nghị đổi ca của đồng nghiệp | Mobile | `-` | `-` | `A` | `A` *(Cá nhân)* |
 | - Cấu hình Danh mục đơn & Quy trình duyệt | Web | `CRUD` | `CRUD` | `-` | `-` |
 | - Quản lý & Điều chỉnh Quỹ phép nhân viên | Web | `CRUD` | `CRUD` | `R` *(theo CN)* | `R` *(Cá nhân)* |
 | **4. Quản lý Công việc theo ca (Shift Tasks)** | | | | | |
@@ -179,6 +190,7 @@ flowchart TD
 | - Tạo và quản lý Nhóm chat tùy chỉnh | Mobile/Web | `CRUD` | `CRUD` | `CRUD` | `CRUD` |
 | - Nhóm chat tự động theo Chi nhánh / Phòng ban | Mobile/Web | `R` | `R` | `R` | `R` |
 | - Tiếp nhận thông báo đẩy tức thì (SignalR) | Mobile/Web | `R` | `R` | `R` | `R` |
+| - Xem danh sách thông báo & đánh dấu đã đọc | Mobile/Web | `RU` | `RU` | `RU` | `RU` *(Cá nhân)* |
 | **6. Báo cáo & Tổng hợp Bảng công** | | | | | |
 | - Dashboard giám sát quân số Realtime | Web | `R` | `R` | `R` *(theo CN)* | `-` |
 | - Báo cáo vi phạm (Đi muộn, về sớm, vắng) | Web | `R` | `R` | `R` *(theo CN)* | `-` |
@@ -408,6 +420,10 @@ flowchart TD
   - Bổ sung công nghệ đang dùng: Mobile (Expo, expo-camera/location, NetInfo, SecureStore), `FW.AiService` (FastAPI + InsightFace), xUnit, ClosedXML/QuestPDF, Recharts, Expo Push.
   - Mục Frontend: **React 18 → React 19**; **Tailwind CSS v4** (cascade layers, cấu hình bằng CSS); thêm **hệ thống thiết kế Astryx** (Meta): component có trợ năng (accessibility), design token qua CSS variables (Dynamic Theming), chế độ sáng/tối, đa ngôn ngữ; giải thích vì sao chọn design system thay vì tự viết component.
   - Mục 1.4.2: thêm phân hệ Bảng lương rút gọn cho khớp `docs/UML.md`.
-- [ ] **Task K.2:** Chương 3: quy trình TO-BE, biểu đồ Use Case (theo `docs/UML.md`, UC 1.6 thêm vai trò HR), BFD, ERD, biểu đồ tuần tự (chấm công 3 lớp, duyệt đơn, tính lương), thiết kế kiến trúc & CSDL. Công cụ vẽ: draw.io / StarUML.
+- [ ] **Task K.2:** Chương 3 — **làm một lần sau khi hoàn thiện sản phẩm** (đã chốt 14/11/2026) để biểu đồ khớp code thật:
+  - Quy trình TO-BE; danh sách tác nhân; biểu đồ UC tổng quát + UC phân rã 10 phân hệ theo `docs/UML.md` (đã bổ sung Phân hệ 0 và các UC ★ — 50 UC); BFD.
+  - Đặc tả UC dạng bảng ngắn cho mọi UC; đặc tả đầy đủ + **biểu đồ hoạt động** + **biểu đồ tuần tự** cho ~12–15 UC cốt lõi (đăng nhập, quên mật khẩu OTP, đổi mật khẩu, mời nhân viên, cấu hình geofence, xếp & công bố lịch, đăng ký Face ID, **chấm công 3 lớp**, duyệt chấm công chờ xác nhận, lập & duyệt đơn, tổng hợp bảng công, tính & chốt lương).
+  - Biểu đồ lớp (theo entity/service thật), ERD & mô tả bảng (theo `flexiwork_schema.sql`), kiến trúc Clean Architecture & triển khai cloud.
+  - Công cụ: **PlantUML** (`docs/diagrams/*.puml`, render PNG bằng Java có sẵn trên máy) — sửa được bằng code, tuần tự đi đúng lớp `Controller → Service → Repository`. Đầu ra: ảnh PNG + nội dung chương (đặc tả, lời dẫn hình) để chép vào Word; không sửa trực tiếp file `.docx`.
 - [ ] **Task K.3:** Chương 4: môi trường cài đặt, giao diện Web Admin & Mobile App, kết quả thực nghiệm (từ Task 6.5).
 - [ ] **Task K.4:** Chương 5 & phần đầu: kết luận, hạn chế, hướng phát triển; cập nhật tóm tắt, mục lục, danh mục viết tắt/hình/bảng; sửa lời cam đoan ("nhóm tác giả" → cá nhân).
