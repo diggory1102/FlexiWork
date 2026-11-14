@@ -2,6 +2,7 @@ using System.Text;
 using FW.Application.Common.Models;
 using FW.Application.Common.Security;
 using FW.Application.Common.Settings;
+using FW.Application.Features.Auth;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
@@ -66,12 +67,32 @@ public static class ServiceCollectionExtensions
                         }
                         return Task.CompletedTask;
                     },
+                    // Thu hồi phiên: token phát hành trước lần đổi mật khẩu gần nhất (dấu phiên không khớp) bị từ chối.
+                    // Token cũ chưa có claim pwd_stamp được coi là 0 — vẫn hợp lệ nếu người dùng chưa từng đổi mật khẩu.
+                    OnTokenValidated = async context =>
+                    {
+                        var principal = context.Principal!;
+                        if (!int.TryParse(principal.FindFirst(AppClaimTypes.UserId)?.Value, out var userId))
+                        {
+                            context.Fail("Token thiếu mã người dùng.");
+                            return;
+                        }
+                        _ = long.TryParse(principal.FindFirst(AppClaimTypes.SessionStamp)?.Value, out var stamp);
+
+                        var sessions = context.HttpContext.RequestServices.GetRequiredService<ISessionStampService>();
+                        if (!await sessions.IsCurrentAsync(userId, stamp, context.HttpContext.RequestAborted))
+                        {
+                            context.Fail(new SessionRevokedException());
+                        }
+                    },
                     // Trả lỗi 401/403 theo định dạng ApiResponse thống nhất thay vì body rỗng
                     OnChallenge = async context =>
                     {
                         context.HandleResponse();
                         await WriteApiErrorAsync(context.Response, StatusCodes.Status401Unauthorized,
-                            "Bạn chưa đăng nhập hoặc phiên đăng nhập đã hết hạn.");
+                            context.AuthenticateFailure is SessionRevokedException
+                                ? "Mật khẩu tài khoản đã được thay đổi. Vui lòng đăng nhập lại."
+                                : "Bạn chưa đăng nhập hoặc phiên đăng nhập đã hết hạn.");
                     },
                     OnForbidden = context =>
                         WriteApiErrorAsync(context.Response, StatusCodes.Status403Forbidden,
@@ -140,6 +161,12 @@ public static class ServiceCollectionExtensions
         }
 
         return string.IsNullOrWhiteSpace(message) ? "Giá trị không hợp lệ." : message;
+    }
+
+    /// <summary>Token hợp lệ về chữ ký/thời hạn nhưng đã bị thu hồi do đổi mật khẩu.</summary>
+    private sealed class SessionRevokedException : SecurityTokenException
+    {
+        public SessionRevokedException() : base("Phiên đăng nhập đã bị thu hồi do đổi mật khẩu.") { }
     }
 
     private static Task WriteApiErrorAsync(HttpResponse response, int statusCode, string message)

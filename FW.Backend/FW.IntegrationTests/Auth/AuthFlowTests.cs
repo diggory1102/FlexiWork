@@ -1,6 +1,7 @@
 using System.Text.RegularExpressions;
 using FW.Application.Common.Exceptions;
 using FW.Application.Common.Interfaces;
+using FW.Application.Common.Security;
 using FW.Application.Common.Settings;
 using FW.Application.Features.Auth;
 using FW.Domain.Entities;
@@ -11,6 +12,7 @@ using FW.Infrastructure.Security;
 using FW.Infrastructure.Services;
 using FW.Infrastructure.Services.Caching;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
 namespace FW.IntegrationTests.Auth;
@@ -52,13 +54,16 @@ public class AuthFlowTests
             ExpiryMinutes = 60
         });
 
+        var cache = new MemoryCacheService(new MemoryCache(new MemoryCacheOptions()));
         return new AuthService(
             new UserRepository(session),
             new BCryptPasswordHasher(),
             new JwtTokenGenerator(jwt, clock),
-            new MemoryCacheService(new MemoryCache(new MemoryCacheOptions())),
+            cache,
             email,
-            clock);
+            clock,
+            new SessionStampService(new UserRepository(session), cache, clock),
+            NullLogger<AuthService>.Instance);
     }
 
     [SkippableTheory]
@@ -109,4 +114,36 @@ public class AuthFlowTests
             service.LoginAsync(new LoginRequest { Email = address, Password = "OldPass123" }));
         Assert.NotNull(await service.LoginAsync(new LoginRequest { Email = address, Password = "NewPass456" }));
     }
+
+    [SkippableFact]
+    public async Task Change_password_stores_session_stamp_that_matches_new_token_and_revokes_old_one()
+    {
+        Skip.IfNot(_db.IsAvailable, _db.SkipReason);
+        await using var session = _db.CreateSession();
+        var users = new UserRepository(session);
+        var service = CreateService(session, new CapturingEmail());
+
+        var code = $"S{Guid.NewGuid():N}"[..20];
+        var address = $"{code}@test.local";
+        await users.AddAsync(new User
+        {
+            EmployeeCode = code, Email = address, FullName = "Thu hồi phiên", PasswordHash = new BCryptPasswordHasher().Hash("OldPass123")
+        });
+        var oldToken = await service.LoginAsync(new LoginRequest { Email = address, Password = "OldPass123" });
+
+        var newSession = await service.ChangePasswordAsync(oldToken.User.Id,
+            new ChangePasswordRequest { CurrentPassword = "OldPass123", NewPassword = "NewPass456" });
+
+        // Kiểm tra bằng phiên CSDL mới và cache rỗng → dấu phiên phải đọc lại đúng từ cột DATETIME
+        await using var verify = _db.CreateSession();
+        var stamps = new SessionStampService(new UserRepository(verify),
+            new MemoryCacheService(new MemoryCache(new MemoryCacheOptions())), new DateTimeProvider());
+
+        Assert.False(await stamps.IsCurrentAsync(oldToken.User.Id, StampIn(oldToken.AccessToken)));
+        Assert.True(await stamps.IsCurrentAsync(oldToken.User.Id, StampIn(newSession.AccessToken)));
+        Assert.NotEqual(0, StampIn(newSession.AccessToken));
+    }
+
+    private static long StampIn(string jwt) =>
+        long.Parse(new Microsoft.IdentityModel.JsonWebTokens.JsonWebToken(jwt).GetClaim(AppClaimTypes.SessionStamp).Value);
 }

@@ -72,7 +72,11 @@ public class UserServiceTests
 
     private static UserService Users(DbSession s, ICurrentUserService user, IEmailService email) => new(
         new UserRepository(s), new RoleRepository(s), new BranchRepository(s), new DepartmentRepository(s),
-        new PositionRepository(s), s, new BCryptPasswordHasher(), email, user, NullLogger<UserService>.Instance);
+        new PositionRepository(s), s, new BCryptPasswordHasher(), email, user,
+        Sessions(s, new MemoryCacheService(new MemoryCache(new MemoryCacheOptions()))), NullLogger<UserService>.Instance);
+
+    private static SessionStampService Sessions(DbSession s, ICacheService cache) =>
+        new(new UserRepository(s), cache, new DateTimeProvider());
 
     private static AuthService Auth(DbSession s)
     {
@@ -81,8 +85,9 @@ public class UserServiceTests
         {
             Secret = "integration-test-secret-key-at-least-32-chars", Issuer = "i", Audience = "a", ExpiryMinutes = 60
         });
+        var cache = new MemoryCacheService(new MemoryCache(new MemoryCacheOptions()));
         return new AuthService(new UserRepository(s), new BCryptPasswordHasher(), new JwtTokenGenerator(jwt, clock),
-            new MemoryCacheService(new MemoryCache(new MemoryCacheOptions())), new CapturingEmail(), clock);
+            cache, new CapturingEmail(), clock, Sessions(s, cache), NullLogger<AuthService>.Instance);
     }
 
     private static CreateUserRequest NewEmployee(string? code = null, int? branchId = 1, params string[] roles)

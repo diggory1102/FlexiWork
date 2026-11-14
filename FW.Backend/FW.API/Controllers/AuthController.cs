@@ -38,12 +38,14 @@ public class AuthController : ApiControllerBase
         return Success(profile);
     }
 
+    /// <summary>Đổi mật khẩu; trả về token mới cho thiết bị hiện tại, các phiên khác bị đăng xuất.</summary>
     [Authorize]
     [HttpPost("change-password")]
     public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest request, CancellationToken cancellationToken)
     {
-        await _authService.ChangePasswordAsync(RequireUserId(), request, cancellationToken);
-        return Success("Đổi mật khẩu thành công.");
+        // Trả phiên mới: token cũ đã bị thu hồi cùng với các thiết bị khác
+        var session = await _authService.ChangePasswordAsync(RequireUserId(), request, cancellationToken);
+        return Success(session, "Đổi mật khẩu thành công. Các thiết bị khác đã được đăng xuất.");
     }
 
     /// <summary>Gửi OTP đặt lại mật khẩu về email (luôn trả thành công để không lộ email nào tồn tại).</summary>

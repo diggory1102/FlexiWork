@@ -35,5 +35,11 @@ public class User : BaseAuditableEntity
     /// <summary>Đang dùng mật khẩu tạm do hệ thống cấp — bắt buộc đổi ở lần đăng nhập tới.</summary>
     public bool MustChangePassword { get; set; }
 
+    /// <summary>
+    /// Thời điểm (UTC, làm tròn tới giây) mật khẩu được đổi gần nhất; null nếu chưa từng đổi.
+    /// JWT phát hành trước thời điểm này bị từ chối — đổi mật khẩu sẽ đăng xuất các thiết bị khác.
+    /// </summary>
+    public DateTime? PasswordChangedAt { get; set; }
+
     public bool IsActive => Status == UserStatus.Active && !IsDeleted;
 }

@@ -6,11 +6,13 @@ using FW.Application.Common.Interfaces.Persistence;
 using FW.Application.Common.Security;
 using FW.Domain.Entities;
 using FW.Domain.Enums;
+using Microsoft.Extensions.Logging;
 
 namespace FW.Application.Features.Auth;
 
 /// <summary>
 /// Nghiệp vụ xác thực: đăng nhập (chống dò mật khẩu), đổi mật khẩu, quên mật khẩu bằng OTP qua email.
+/// Mỗi lần mật khẩu đổi: các phiên cũ bị thu hồi (<see cref="ISessionStampService"/>) và chủ tài khoản nhận email thông báo.
 /// </summary>
 public class AuthService : IAuthService
 {
@@ -30,6 +32,8 @@ public class AuthService : IAuthService
     private readonly ICacheService _cache;
     private readonly IEmailService _email;
     private readonly IDateTimeProvider _clock;
+    private readonly ISessionStampService _sessions;
+    private readonly ILogger<AuthService> _logger;
 
     public AuthService(
         IUserRepository users,
@@ -37,7 +41,9 @@ public class AuthService : IAuthService
         IJwtTokenGenerator tokenGenerator,
         ICacheService cache,
         IEmailService email,
-        IDateTimeProvider clock)
+        IDateTimeProvider clock,
+        ISessionStampService sessions,
+        ILogger<AuthService> logger)
     {
         _users = users;
         _passwordHasher = passwordHasher;
@@ -45,6 +51,8 @@ public class AuthService : IAuthService
         _cache = cache;
         _email = email;
         _clock = clock;
+        _sessions = sessions;
+        _logger = logger;
     }
 
     // ------------------------------------------------------------------
@@ -91,7 +99,7 @@ public class AuthService : IAuthService
     // Đổi mật khẩu (đã đăng nhập)
     // ------------------------------------------------------------------
 
-    public async Task ChangePasswordAsync(int userId, ChangePasswordRequest request, CancellationToken cancellationToken = default)
+    public async Task<LoginResponse> ChangePasswordAsync(int userId, ChangePasswordRequest request, CancellationToken cancellationToken = default)
     {
         var user = await GetActiveUserAsync(userId, cancellationToken);
 
@@ -105,6 +113,11 @@ public class AuthService : IAuthService
         }
 
         await SetPasswordAsync(user, request.NewPassword, cancellationToken);
+
+        // Token cũ (kể cả của thiết bị đang dùng) đã mất hiệu lực → cấp token mới để thiết bị này không bị đăng xuất
+        var roles = await _users.GetRoleNamesAsync(user.Id, cancellationToken);
+        var token = _tokenGenerator.Generate(user, roles);
+        return new LoginResponse(token.Token, token.ExpiresAtUtc, ToDto(user, roles));
     }
 
     // ------------------------------------------------------------------
@@ -186,7 +199,31 @@ public class AuthService : IAuthService
 
         user.PasswordHash = _passwordHasher.Hash(newPassword);
         user.MustChangePassword = false; // người dùng đã tự đặt mật khẩu, không còn dùng mật khẩu tạm
+        _sessions.MarkPasswordChanged(user); // đăng xuất mọi phiên đang mở
         await _users.UpdateAsync(user, cancellationToken);
+        await _sessions.InvalidateAsync(user.Id, cancellationToken);
+
+        await SendPasswordChangedNoticeAsync(user, cancellationToken);
+    }
+
+    /// <summary>
+    /// Báo cho chủ tài khoản biết mật khẩu vừa đổi (phát hiện kẻ gian đổi mật khẩu).
+    /// Mật khẩu đã lưu xong nên lỗi gửi email chỉ ghi log, không làm hỏng thao tác đổi mật khẩu.
+    /// </summary>
+    private async Task SendPasswordChangedNoticeAsync(User user, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _email.SendAsync(
+                user.Email,
+                "[FlexiWork] Mật khẩu của bạn vừa được thay đổi",
+                AuthEmailTemplates.PasswordChanged(user.FullName, _clock.Now),
+                cancellationToken);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogError(ex, "Gửi email thông báo đổi mật khẩu tới {Email} thất bại", user.Email);
+        }
     }
 
     private async Task<User> GetActiveUserAsync(int userId, CancellationToken cancellationToken)

@@ -17,6 +17,7 @@ export function LoginPage() {
   const location = useLocation();
   const setSession = useAuthStore((s) => s.setSession);
   const isSessionValid = useAuthStore((s) => s.isSessionValid);
+  const signOutNotice = useAuthStore((s) => s.signOutNotice);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -47,6 +48,7 @@ export function LoginPage() {
       <form onSubmit={submit} noValidate>
         <VStack gap={4}>
           <Notice status="success" title={notice} />
+          <Notice status="warning" title={signOutNotice} />
           <FormError message={error} />
           <TextInput
             label="Email"

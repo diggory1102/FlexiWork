@@ -19,7 +19,7 @@ import { colors } from '@/theme';
 export function ChangePasswordScreen() {
   const forced = useAuthStore((s) => s.user?.mustChangePassword ?? false);
   const fullName = useAuthStore((s) => s.user?.fullName ?? '');
-  const updateUser = useAuthStore((s) => s.updateUser);
+  const setSession = useAuthStore((s) => s.setSession);
   const logout = useAuthStore((s) => s.logout);
 
   const [current, setCurrent] = useState('');
@@ -43,11 +43,11 @@ export function ChangePasswordScreen() {
     setLoading(true);
     setError(null);
     try {
-      const { message } = await authApi.changePassword(current, password);
-      if (forced) {
-        // Gỡ cờ → layout gốc mở khóa các tab; effect bên dưới chuyển về trang chủ.
-        updateUser({ mustChangePassword: false });
-      } else {
+      // Máy chủ thu hồi mọi token cũ (các thiết bị khác bị đăng xuất) và cấp phiên mới cho thiết bị này.
+      // Phiên mới có mustChangePassword = false → layout gốc mở khóa các tab; effect phía trên chuyển về trang chủ.
+      const { data, message } = await authApi.changePassword(current, password);
+      setSession(data);
+      if (!forced) {
         notify(message, 'Thành công');
         router.back();
       }

@@ -21,7 +21,7 @@ import { validateNewPassword } from '@/lib/validation';
 export function ChangePasswordPage() {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
-  const updateUser = useAuthStore((s) => s.updateUser);
+  const setSession = useAuthStore((s) => s.setSession);
   const logout = useAuthStore((s) => s.logout);
   const forced = !!user?.mustChangePassword;
 
@@ -40,8 +40,9 @@ export function ChangePasswordPage() {
     setLoading(true);
     setError(null);
     try {
-      const { message } = await authApi.changePassword(current, password);
-      updateUser({ mustChangePassword: false });
+      // Máy chủ thu hồi mọi token cũ (các thiết bị khác bị đăng xuất) và cấp phiên mới cho thiết bị này
+      const { data, message } = await authApi.changePassword(current, password);
+      setSession(data);
       toast.success(message);
       navigate('/', { replace: true });
     } catch (err) {
@@ -98,7 +99,10 @@ export function ChangePasswordPage() {
 
   return (
     <VStack maxWidth={480}>
-      <PageHeader title="Đổi mật khẩu" description="Mật khẩu mới có hiệu lực cho cả Web Admin và ứng dụng di động." />
+      <PageHeader
+        title="Đổi mật khẩu"
+        description="Mật khẩu mới có hiệu lực cho cả Web Admin và ứng dụng di động. Sau khi đổi, các thiết bị khác sẽ bị đăng xuất và bạn nhận email thông báo."
+      />
       <Card padding={6}>{form}</Card>
     </VStack>
   );

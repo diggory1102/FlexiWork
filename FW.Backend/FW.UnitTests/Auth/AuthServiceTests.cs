@@ -4,6 +4,7 @@ using FW.Application.Features.Auth;
 using FW.Domain.Entities;
 using FW.Domain.Enums;
 using FW.UnitTests.Fakes;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace FW.UnitTests.Auth;
 
@@ -16,13 +17,16 @@ public class AuthServiceTests
     private readonly FakePasswordHasher _hasher = new();
     private readonly FakeEmailService _email = new();
     private readonly FakeCache _cache;
+    private readonly SessionStampService _sessions;
     private readonly AuthService _service;
     private readonly User _employee;
 
     public AuthServiceTests()
     {
         _cache = new FakeCache(_clock);
-        _service = new AuthService(_users, _hasher, new FakeTokenGenerator(), _cache, _email, _clock);
+        _sessions = new SessionStampService(_users, _cache, _clock);
+        _service = new AuthService(_users, _hasher, new FakeTokenGenerator(), _cache, _email, _clock,
+            _sessions, NullLogger<AuthService>.Instance);
         _employee = _users.Add(NewUser("nv@flexiwork.vn"), RoleNames.Employee);
     }
 
@@ -132,6 +136,70 @@ public class AuthServiceTests
 
         Assert.False(_employee.MustChangePassword);
         Assert.False((await Login("nv@flexiwork.vn", "NewPass123")).User.MustChangePassword);
+    }
+
+    // ---------------- Thu hồi phiên & thông báo khi đổi mật khẩu ----------------
+
+    [Fact]
+    public async Task Change_password_revokes_old_sessions_returns_new_session_and_notifies_owner()
+    {
+        var oldStamp = SessionStampService.StampOf(_employee);
+        Assert.True(await _sessions.IsCurrentAsync(_employee.Id, oldStamp)); // nạp dấu phiên vào cache
+
+        _clock.Advance(TimeSpan.FromMinutes(1));
+        var session = await _service.ChangePasswordAsync(_employee.Id,
+            new ChangePasswordRequest { CurrentPassword = Password, NewPassword = "NewPass123" });
+
+        // Token cũ bị từ chối dù dấu phiên cũ đang nằm trong cache; dấu phiên mới (của token vừa cấp) hợp lệ
+        Assert.False(await _sessions.IsCurrentAsync(_employee.Id, oldStamp));
+        Assert.True(await _sessions.IsCurrentAsync(_employee.Id, SessionStampService.StampOf(_employee)));
+        Assert.Equal(new DateTimeOffset(_clock.UtcNow).ToUnixTimeSeconds(), SessionStampService.StampOf(_employee));
+
+        Assert.Equal($"token-for-{_employee.Id}", session.AccessToken);
+        Assert.False(session.User.MustChangePassword);
+
+        var notice = Assert.Single(_email.Sent);
+        Assert.Equal("nv@flexiwork.vn", notice.To);
+        Assert.Contains("vừa được thay đổi", notice.Subject);
+        Assert.Contains("09:01 ngày 10/11/2026", notice.Body); // giờ Việt Nam
+    }
+
+    [Fact]
+    public async Task Reset_password_by_otp_also_revokes_sessions_and_notifies_owner()
+    {
+        var oldStamp = SessionStampService.StampOf(_employee);
+        var otp = await RequestOtp();
+
+        await Reset(otp);
+
+        Assert.False(await _sessions.IsCurrentAsync(_employee.Id, oldStamp));
+        Assert.Equal(2, _email.Sent.Count);
+        Assert.Contains("vừa được thay đổi", _email.Sent.Last().Subject);
+    }
+
+    [Fact]
+    public async Task Notice_email_failure_does_not_undo_password_change()
+    {
+        var failing = new AuthService(_users, _hasher, new FakeTokenGenerator(), _cache, new FailingEmailService(), _clock,
+            _sessions, NullLogger<AuthService>.Instance);
+
+        await failing.ChangePasswordAsync(_employee.Id,
+            new ChangePasswordRequest { CurrentPassword = Password, NewPassword = "NewPass123" });
+
+        Assert.NotNull(await Login("nv@flexiwork.vn", "NewPass123"));
+    }
+
+    [Fact]
+    public async Task Session_stamp_rejects_deleted_user_and_accepts_tokens_of_user_who_never_changed_password()
+    {
+        Assert.True(await _sessions.IsCurrentAsync(_employee.Id, 0)); // token cũ chưa có claim pwd_stamp
+        Assert.False(await _sessions.IsCurrentAsync(999, 0));
+    }
+
+    private sealed class FailingEmailService : FW.Application.Common.Interfaces.IEmailService
+    {
+        public Task SendAsync(string toEmail, string subject, string htmlBody, CancellationToken cancellationToken = default) =>
+            throw new InvalidOperationException("Brevo không phản hồi");
     }
 
     // ---------------- Quên mật khẩu (OTP) ----------------

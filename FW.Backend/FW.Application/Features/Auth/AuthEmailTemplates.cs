@@ -17,4 +17,16 @@ public static class AuthEmailTemplates
           <p style="color:#64748b;font-size:13px">Nếu bạn không yêu cầu, hãy bỏ qua email này — mật khẩu của bạn vẫn an toàn.</p>
         </div>
         """;
+
+    /// <param name="changedAtLocal">Thời điểm đổi theo giờ Việt Nam.</param>
+    public static string PasswordChanged(string fullName, DateTime changedAtLocal) => $"""
+        <div style="font-family:Arial,sans-serif;max-width:480px;margin:auto;color:#0f172a">
+          <h2 style="color:#2563eb">FlexiWork</h2>
+          <p>Xin chào <strong>{WebUtility.HtmlEncode(fullName)}</strong>,</p>
+          <p>Mật khẩu tài khoản FlexiWork của bạn vừa được thay đổi lúc <strong>{changedAtLocal:HH:mm 'ngày' dd/MM/yyyy}</strong>.</p>
+          <p>Để bảo mật, tài khoản đã được <strong>đăng xuất khỏi các thiết bị khác</strong>.</p>
+          <p style="color:#b91c1c">Nếu <strong>không phải bạn</strong> thực hiện, hãy dùng chức năng <strong>Quên mật khẩu</strong> ngay để lấy lại tài khoản và báo cho bộ phận Nhân sự.</p>
+          <p style="color:#64748b;font-size:13px">Nếu đúng là bạn, có thể bỏ qua email này.</p>
+        </div>
+        """;
 }

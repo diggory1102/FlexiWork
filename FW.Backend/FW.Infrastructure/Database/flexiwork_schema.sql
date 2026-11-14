@@ -118,6 +118,7 @@ CREATE TABLE users (
     hire_date DATE NULL COMMENT 'Ngày vào làm',
     status VARCHAR(20) NOT NULL DEFAULT 'active' COMMENT 'active, suspended, left',
     must_change_password TINYINT(1) NOT NULL DEFAULT 0 COMMENT '1: Bắt buộc đổi mật khẩu tạm ở lần đăng nhập tới',
+    password_changed_at DATETIME NULL COMMENT 'Lần đổi mật khẩu gần nhất (UTC) — JWT cấp trước thời điểm này bị thu hồi',
     is_deleted TINYINT(1) NOT NULL DEFAULT 0,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NULL ON UPDATE CURRENT_TIMESTAMP,

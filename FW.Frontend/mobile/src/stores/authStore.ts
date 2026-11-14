@@ -26,9 +26,11 @@ interface AuthState {
   accessToken: string | null;
   expiresAtUtc: string | null;
   user: AuthUser | null;
+  /** Lý do phiên bị kết thúc từ phía máy chủ (VD: mật khẩu đã đổi trên thiết bị khác) — hiện ở trang đăng nhập. */
+  signOutNotice: string | null;
   setSession: (session: LoginResponse) => void;
   updateUser: (changes: Partial<AuthUser>) => void;
-  logout: () => void;
+  logout: (notice?: string) => void;
   isSessionValid: () => boolean;
 }
 
@@ -38,12 +40,13 @@ export const useAuthStore = create<AuthState>()(
       accessToken: null,
       expiresAtUtc: null,
       user: null,
-      setSession: ({ accessToken, expiresAtUtc, user }) => set({ accessToken, expiresAtUtc, user }),
+      signOutNotice: null,
+      setSession: ({ accessToken, expiresAtUtc, user }) => set({ accessToken, expiresAtUtc, user, signOutNotice: null }),
       updateUser: (changes) => {
         const user = get().user;
         if (user) set({ user: { ...user, ...changes } });
       },
-      logout: () => set({ accessToken: null, expiresAtUtc: null, user: null }),
+      logout: (notice) => set({ accessToken: null, expiresAtUtc: null, user: null, signOutNotice: notice ?? null }),
       isSessionValid: () => {
         const { accessToken, expiresAtUtc } = get();
         return !!accessToken && (!expiresAtUtc || new Date(expiresAtUtc).getTime() > Date.now());

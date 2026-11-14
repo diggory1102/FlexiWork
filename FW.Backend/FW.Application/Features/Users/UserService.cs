@@ -3,6 +3,7 @@ using FW.Application.Common.Interfaces;
 using FW.Application.Common.Interfaces.Persistence;
 using FW.Application.Common.Models;
 using FW.Application.Common.Security;
+using FW.Application.Features.Auth;
 using FW.Domain.Entities;
 using FW.Domain.Enums;
 using Microsoft.Extensions.Logging;
@@ -40,6 +41,7 @@ public class UserService : IUserService
     private readonly IPasswordHasher _passwordHasher;
     private readonly IEmailService _email;
     private readonly ICurrentUserService _currentUser;
+    private readonly ISessionStampService _sessions;
     private readonly ILogger<UserService> _logger;
 
     public UserService(
@@ -52,6 +54,7 @@ public class UserService : IUserService
         IPasswordHasher passwordHasher,
         IEmailService email,
         ICurrentUserService currentUser,
+        ISessionStampService sessions,
         ILogger<UserService> logger)
     {
         _users = users;
@@ -63,6 +66,7 @@ public class UserService : IUserService
         _passwordHasher = passwordHasher;
         _email = email;
         _currentUser = currentUser;
+        _sessions = sessions;
         _logger = logger;
     }
 
@@ -175,7 +179,9 @@ public class UserService : IUserService
         var temporaryPassword = PasswordGenerator.Generate();
         user.PasswordHash = _passwordHasher.Hash(temporaryPassword);
         user.MustChangePassword = true;
+        _sessions.MarkPasswordChanged(user); // đăng xuất mọi thiết bị đang dùng mật khẩu cũ
         await _users.UpdateAsync(user, cancellationToken);
+        await _sessions.InvalidateAsync(user.Id, cancellationToken);
 
         return await TrySendAsync(user, "[FlexiWork] Cấp lại mật khẩu",
             UserEmailTemplates.PasswordReissued(user.FullName, user.Email, temporaryPassword), cancellationToken);

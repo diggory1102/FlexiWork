@@ -19,6 +19,7 @@ import { colors } from '@/theme';
 export function LoginScreen() {
   const { notice } = useLocalSearchParams<{ notice?: string }>();
   const setSession = useAuthStore((s) => s.setSession);
+  const signOutNotice = useAuthStore((s) => s.signOutNotice);
   const passwordRef = useRef<TextInputInstance>(null);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -52,6 +53,7 @@ export function LoginScreen() {
 
       <View style={styles.form}>
         <Notice tone="success" message={notice} />
+        <Notice tone="warning" message={signOutNotice} />
         <Notice tone="danger" message={error} />
         <TextField
           testID="login-email"

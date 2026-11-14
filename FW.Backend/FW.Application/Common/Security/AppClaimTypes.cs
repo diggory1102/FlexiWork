@@ -12,4 +12,7 @@ public static class AppClaimTypes
     public const string Role = "role";
     public const string BranchId = "branch_id";
     public const string EmployeeCode = "employee_code";
+
+    /// <summary>Dấu phiên: giây Unix của lần đổi mật khẩu gần nhất (0 nếu chưa đổi) — xem SessionStampService.</summary>
+    public const string SessionStamp = "pwd_stamp";
 }

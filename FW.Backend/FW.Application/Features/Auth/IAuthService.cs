@@ -6,7 +6,11 @@ public interface IAuthService
 
     Task<AuthUserDto> GetProfileAsync(int userId, CancellationToken cancellationToken = default);
 
-    Task ChangePasswordAsync(int userId, ChangePasswordRequest request, CancellationToken cancellationToken = default);
+    /// <summary>
+    /// Đổi mật khẩu khi đã đăng nhập. Mọi token cũ bị thu hồi (các thiết bị khác bị đăng xuất),
+    /// nên trả về phiên mới cho thiết bị đang thao tác.
+    /// </summary>
+    Task<LoginResponse> ChangePasswordAsync(int userId, ChangePasswordRequest request, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Gửi OTP đặt lại mật khẩu qua email. Luôn kết thúc "thành công" kể cả khi email không tồn tại,

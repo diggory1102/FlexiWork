@@ -36,8 +36,10 @@ apiClient.interceptors.response.use(
     const body = error.response?.data;
 
     // Phiên hết hạn / bị thu hồi khi đang dùng (không áp dụng cho chính request đăng nhập)
+    // VD: mật khẩu vừa được đổi trên thiết bị khác → máy chủ thu hồi token, trang đăng nhập hiện lý do
     if (status === 401 && !error.config?.url?.includes('/auth/login')) {
-      useAuthStore.getState().logout();
+      const { accessToken, logout } = useAuthStore.getState();
+      if (accessToken) logout(body?.message);
     }
 
     const message =

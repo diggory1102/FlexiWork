@@ -121,7 +121,19 @@ URL API cho bản build nằm trong `FW.Frontend/mobile/eas.json` — sửa nế
 
 ## Khi cập nhật CSDL về sau
 
-Không có migration tự động (theo thiết kế Chương 2). Mỗi thay đổi schema ở các task sau sẽ kèm một file `migrations/NNN_*.sql` chỉ chứa `ALTER TABLE`/`CREATE TABLE` — chạy file đó lên TiDB giống Bước 1.4, **không** chạy lại `flexiwork_schema.sql`.
+Không có migration tự động (theo thiết kế Chương 2). Mỗi thay đổi schema kèm một file `FW.Backend/FW.Infrastructure/Database/migrations/NNN_*.sql` chỉ chứa `ALTER TABLE`/`CREATE TABLE` — chạy file đó lên TiDB giống Bước 1.4, **không** chạy lại `flexiwork_schema.sql`. CSDL tạo mới từ `flexiwork_schema.sql` đã có sẵn mọi thay đổi nên không cần chạy migration.
+
+**Chạy migration *trước* khi `git push`** — code mới trên Render đọc cột mới ngay khi khởi động:
+
+```powershell
+$mysql = "C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe"
+cd FW.Backend\FW.Infrastructure\Database\migrations
+& $mysql --host=<HOST> --port=4000 --user=<USERNAME> -p --ssl-mode=REQUIRED --default-character-set=utf8mb4 -e "source 001_users_password_changed_at.sql;"
+```
+
+| File | Nội dung | TiDB |
+|---|---|---|
+| `001_users_password_changed_at.sql` | Cột `users.password_changed_at` — đổi mật khẩu thì đăng xuất các thiết bị khác | ☐ |
 
 ## Xử lý sự cố
 
