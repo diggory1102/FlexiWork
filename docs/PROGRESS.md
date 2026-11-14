@@ -164,7 +164,8 @@ flowchart TD
 | - Cấu hình vai trò & Phân quyền (RBAC) | Web | `CRUD` | `R` | `-` | `-` |
 | - Cập nhật thông tin cá nhân & Ảnh mẫu Face ID | Mobile/Web | `RU` | `RU` | `RU` | `RU` *(Cá nhân)* |
 | **2. Quản lý Ca kíp & Chấm công** | | | | | |
-| - Cấu hình Khung giờ ca làm việc & Quy tắc phạt | Web | `CRUD` | `CRUD` | `R` | `-` |
+| - Cấu hình Khung giờ ca làm việc | Web | `CRUD` | `CRUD` | `CRUD` *(ca riêng của CN; ca dùng chung chỉ `R`)* | `-` |
+| - Cấu hình Số công chuẩn & Quy tắc phạt | Web | `CRUD` | `CRUD` | `R` | `-` |
 | - Phân ca & Xếp lịch làm việc (Tuần/Tháng) | Web | `CRUD` | `CRUD` | `CRUD` *(theo CN)* | `-` |
 | - Xuất bản (Publish) Lịch làm việc | Web | `CRUD` | `CRUD` | `CRUD` *(theo CN)* | `-` |
 | - Tra cứu Lịch làm việc cá nhân & chi nhánh | Mobile/Web | `R` | `R` | `R` *(theo CN)* | `R` *(Cá nhân)* |
@@ -250,8 +251,8 @@ flowchart TD
 
 > **Tổng quan Tiến độ Hiện tại:**
 > * **Giai đoạn đang thực hiện:** CẤP BẬC 2 - Khung ca, Xếp lịch & Dữ liệu Face ID
-> * **Tiến độ tổng thể:** `13 / 47` Nhiệm vụ hoàn thành (`28%`)
-> * **Hành động tiếp theo:** Thực hiện **Task 2.2** (API Khung ca & Quy tắc vi phạm). Việc nhỏ đang chờ: bản đồ chọn tâm geofence trên form chi nhánh (Leaflet + OpenStreetMap).
+> * **Tiến độ tổng thể:** `14 / 47` Nhiệm vụ hoàn thành (`30%`)
+> * **Hành động tiếp theo:** Thực hiện **Task 2.3** (API Phân ca & Xếp lịch). Việc nhỏ đang chờ: bản đồ chọn tâm geofence trên form chi nhánh (Leaflet + OpenStreetMap).
 
 ### Các quyết định cần chốt
 
@@ -260,7 +261,9 @@ flowchart TD
 | Manager phụ trách 1 hay nhiều chi nhánh | Task 1.3, 1.5 | 1 chi nhánh (`users.branch_id`) |
 | ~~Múi giờ lưu trữ~~ | Task 1.2, 3.2, 5.3 | ✅ **Đã chốt:** giờ Việt Nam (UTC+7) — `SET time_zone` mỗi kết nối + `IDateTimeProvider` |
 | Xử lý khi 1 lớp chấm công không đạt | Task 3.2 | GPS + Face bắt buộc; sai Wi-Fi → `pending_approval` |
-| Ca gãy | Task 2.2 | Tách thành 2 ca trong cùng ngày |
+| ~~Ca gãy~~ | Task 2.2 | ✅ **Đã chốt:** tách thành 2 ca trong cùng ngày (ca nối tiếp không tính chồng giờ). Ca xoay là cách xếp lịch (Task 2.3), không phải thuộc tính của ca |
+| ~~Quyền khai báo khung ca~~ | Task 2.2 | ✅ **Đã chốt (14/11/2026):** Admin/HR quản lý mọi ca (dùng chung + ca riêng của chi nhánh); Quản lý chi nhánh thêm/sửa/xóa ca riêng của chi nhánh mình (UC 3.1), chỉ xem ca dùng chung. Ca đã được xếp lịch không đổi được giờ, giờ nghỉ, hệ số công, ca đêm, chi nhánh — tạo ca mới thay thế; còn lịch từ hôm nay trở đi thì không xóa được. Ca dài tối đa 16 giờ |
+| ~~Quy tắc vi phạm~~ | Task 2.2 | ✅ **Đã chốt (14/11/2026):** áp dụng toàn công ty, **theo bậc** (`violation_rules`: từ X phút → trừ Y công / phạt Z đồng, chỉ áp dụng bậc cao nhất thỏa mãn, bậc sau không nhẹ hơn bậc trước). Vượt số phút cho phép của ca thì tính **toàn bộ** số phút muộn/sớm. Số công chuẩn tháng ở `system_settings.standard_work_days` (mặc định 26). Mặc định: muộn/sớm từ 1' phạt 20.000đ, từ 15' phạt 50.000đ, từ 60' trừ 0,5 công + 50.000đ |
 | Đơn đổi ca cần đồng nghiệp đồng ý trước | Task 4.2 | Có |
 | Chống giả mạo khuôn mặt (liveness) | Task 6.2 | `[Tùy chọn]` |
 | Phát hiện "trùng thiết bị" (1 điện thoại chấm công cho nhiều người) | Task 3.2 | Có — lưu mã thiết bị khi check-in, cảnh báo trên Dashboard |
@@ -348,14 +351,15 @@ flowchart TD
 
 ---
 
-### 📌 CẤP BẬC 2: Khung ca, Xếp lịch & Dữ liệu Face ID `[1/6]`
+### 📌 CẤP BẬC 2: Khung ca, Xếp lịch & Dữ liệu Face ID `[2/6]`
 > 🎯 **Demo:** Quản lý xếp và công bố lịch tuần trên Web; nhân viên xem lịch và đăng ký khuôn mặt trên Mobile.
 
 - [x] **Task 2.1:** Entities & Repository `Shift`, `Schedule`, `FaceProfile`. Bổ sung schema: `shifts.branch_id` (NULL = ca dùng chung), số phút cho phép đi muộn/về sớm, trạng thái nháp/công bố của lịch (`schedules`).
   - *Đã làm (14/11/2026):* migration `002_shifts_schedules_face_profiles.sql` — `shifts`: `branch_id`, `late_grace_minutes`, `early_leave_grace_minutes` (mặc định 5), `updated_at`; `schedules`: `is_published`, `published_at`, `created_by`, `updated_at`, **bỏ xóa mềm** (lịch nháp xóa hẳn, lịch đã công bố chuyển `cancelled` — `ScheduleStatus`); `face_profiles`: `sample_image_public_id` (xóa ảnh cũ trên Cloudinary), `model_name` (`buffalo_l`), `created_at`.
   - Domain `Shift`: `Duration`, `WorkingMinutes`, `StartAt/EndAt` theo ngày (ca qua đêm), `OverlapsWith` (ca nối tiếp không tính chồng giờ) — nền cho kiểm tra chồng ca (Task 2.3) và tính đi muộn (Task 3.2). `FaceProfile.EmbeddingSize = 512`, vector `float[]` ↔ cột JSON qua `FloatArrayJsonTypeHandler`.
   - Repository: `ShiftRepository` (lọc theo chi nhánh ± ca dùng chung, trùng mã, ca đang được dùng), `ScheduleRepository` (lưới lịch JOIN nhân viên + ca, INSERT nhiều dòng, công bố theo khoảng ngày, lịch hiệu lực của nhân viên), `FaceProfileRepository` (upsert theo `user_id`, danh sách đã đăng ký). Test: 87 unit + 37 tích hợp đạt; migration chạy trên schema cũ cho kết quả trùng khớp schema mới.
-- [ ] **Task 2.2:** API Khung ca & Quy tắc vi phạm: ca hành chính, ca xoay, ca gãy, ca đêm qua ngày, giờ nghỉ, hệ số công; cấu hình mức trừ công/phạt khi đi muộn, về sớm.
+- [x] **Task 2.2:** API Khung ca & Quy tắc vi phạm: ca hành chính, ca xoay, ca gãy, ca đêm qua ngày, giờ nghỉ, hệ số công; cấu hình mức trừ công/phạt khi đi muộn, về sớm.
+  - *Đã làm (14/11/2026):* API `/api/shifts` (danh sách lọc chi nhánh ± ca dùng chung, chi tiết kèm `isInUse`, `available/{branchId}` cho xếp lịch, thêm/sửa/xóa; giờ dạng `HH:mm`, tự tính ca qua đêm & số phút làm việc, cờ `canEdit` theo quyền) và `/api/attendance-policy` (GET: Admin/HR/Quản lý; PUT: Admin/HR — lưu số công chuẩn + thay toàn bộ bậc trong một transaction). Migration `003_violation_rules_system_settings.sql` (kèm dữ liệu mặc định). Domain `ViolationPolicy` (phút muộn/sớm làm tròn xuống, so với số phút cho phép, chọn bậc) dùng lại ở Task 3.2 / 5.3. Test: 102 unit + 41 tích hợp; thử API thật bằng tài khoản Quản lý / HR / Nhân viên.
 - [ ] **Task 2.3:** API Phân ca & Xếp lịch: xếp theo tuần/tháng, chống trùng và chồng giờ giữa các ca, chuyển nháp → công bố, xem lịch cá nhân / chi nhánh.
 - [ ] **Task 2.4:** Đăng ký Face ID: nhận ảnh mẫu → lưu Cloudinary → `FW.AiService` trích xuất vector 512 chiều → lưu `face_profiles`; sửa vector mẫu trong seed cho đủ 512 chiều.
 - [ ] **Task 2.5:** Web Admin: quản lý khung ca & quy tắc; lưới xếp lịch theo tuần cho từng chi nhánh; công bố lịch.

@@ -1,5 +1,6 @@
 using FW.Application.Features.Auth;
 using FW.Application.Features.Organization;
+using FW.Application.Features.Scheduling;
 using FW.Application.Features.Setup;
 using FW.Application.Features.Users;
 using Microsoft.Extensions.DependencyInjection;
@@ -19,6 +20,9 @@ public static class DependencyInjection
         services.AddScoped<IBranchService, BranchService>();
         services.AddScoped<IDepartmentService, DepartmentService>();
         services.AddScoped<IPositionService, PositionService>();
+
+        services.AddScoped<IShiftService, ShiftService>();
+        services.AddScoped<IAttendancePolicyService, AttendancePolicyService>();
 
         services.AddScoped<IUserService, UserService>();
         services.AddScoped<IProfileService, ProfileService>();

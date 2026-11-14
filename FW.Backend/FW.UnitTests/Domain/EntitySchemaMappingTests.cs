@@ -25,6 +25,7 @@ public class EntitySchemaMappingTests
         { typeof(Shift), "shifts" },
         { typeof(Schedule), "schedules" },
         { typeof(FaceProfile), "face_profiles" },
+        { typeof(ViolationRule), "violation_rules" },
     };
 
     [Theory]

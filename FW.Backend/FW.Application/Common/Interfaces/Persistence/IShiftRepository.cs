@@ -28,6 +28,9 @@ public interface IShiftRepository : IGenericRepository<Shift>
     /// <summary>Kiểm tra trùng mã ca trên TẤT CẢ bản ghi (kể cả đã xóa mềm) vì cột shift_code có ràng buộc UNIQUE.</summary>
     Task<bool> ExistsByCodeAsync(string shiftCode, int? excludeId = null, CancellationToken cancellationToken = default);
 
-    /// <summary>Ca đã được xếp vào lịch nào chưa (đang dùng thì không cho sửa giờ / xóa).</summary>
+    /// <summary>Ca đã được xếp vào lịch nào chưa (đã dùng thì không cho sửa giờ, giờ nghỉ, hệ số công).</summary>
     Task<bool> IsInUseAsync(int shiftId, CancellationToken cancellationToken = default);
+
+    /// <summary>Ca còn lịch (chưa hủy) từ ngày <paramref name="fromDate"/> trở đi không — còn thì không cho xóa.</summary>
+    Task<bool> HasActiveSchedulesFromAsync(int shiftId, DateTime fromDate, CancellationToken cancellationToken = default);
 }

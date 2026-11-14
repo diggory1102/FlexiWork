@@ -66,4 +66,9 @@ public class ShiftRepository : BaseRepository<Shift>, IShiftRepository
     public Task<bool> IsInUseAsync(int shiftId, CancellationToken cancellationToken = default) =>
         ExecuteScalarAsync<bool>("SELECT EXISTS(SELECT 1 FROM `schedules` WHERE `shift_id` = @ShiftId)",
             new { ShiftId = shiftId }, cancellationToken);
+
+    public Task<bool> HasActiveSchedulesFromAsync(int shiftId, DateTime fromDate, CancellationToken cancellationToken = default) =>
+        ExecuteScalarAsync<bool>(
+            "SELECT EXISTS(SELECT 1 FROM `schedules` WHERE `shift_id` = @ShiftId AND `work_date` >= @FromDate AND `status` <> @Cancelled)",
+            new { ShiftId = shiftId, FromDate = fromDate.Date, Cancelled = FW.Domain.Enums.ScheduleStatus.Cancelled }, cancellationToken);
 }

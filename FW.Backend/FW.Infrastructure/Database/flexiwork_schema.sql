@@ -27,6 +27,8 @@ DROP TABLE IF EXISTS leave_requests;
 DROP TABLE IF EXISTS leave_types;
 DROP TABLE IF EXISTS attendance_logs;
 DROP TABLE IF EXISTS schedules;
+DROP TABLE IF EXISTS violation_rules;
+DROP TABLE IF EXISTS system_settings;
 DROP TABLE IF EXISTS shifts;
 DROP TABLE IF EXISTS face_profiles;
 DROP TABLE IF EXISTS user_roles;
@@ -183,6 +185,27 @@ CREATE TABLE shifts (
     FOREIGN KEY (branch_id) REFERENCES branches(id) ON DELETE RESTRICT,
     INDEX idx_shifts_branch (branch_id)
 ) ENGINE=InnoDB COMMENT='Khai báo khung ca làm việc';
+
+-- 3.3. Quy tắc xử lý vi phạm giờ giấc (Violation Rules) — theo bậc, áp dụng toàn công ty
+CREATE TABLE violation_rules (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    violation_type VARCHAR(20) NOT NULL COMMENT 'late, early_leave',
+    min_minutes INT NOT NULL COMMENT 'Áp dụng khi số phút vi phạm từ mức này trở lên (chọn bậc cao nhất thỏa mãn)',
+    deduct_work_units DECIMAL(4, 2) NOT NULL DEFAULT 0.00 COMMENT 'Số công bị trừ',
+    penalty_amount DECIMAL(12, 0) NOT NULL DEFAULT 0 COMMENT 'Tiền phạt (VNĐ)',
+    description VARCHAR(255) NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NULL ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_violation_tier (violation_type, min_minutes)
+) ENGINE=InnoDB COMMENT='Bậc trừ công / phạt tiền khi đi muộn, về sớm';
+
+-- 3.4. Tham số hệ thống dạng khóa - giá trị (System Settings)
+CREATE TABLE system_settings (
+    setting_key VARCHAR(50) PRIMARY KEY,
+    setting_value VARCHAR(255) NOT NULL,
+    description VARCHAR(255) NULL,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB COMMENT='Tham số cấu hình toàn hệ thống (VD: standard_work_days = số công chuẩn tháng)';
 
 -- 3.2. Lịch phân ca chi tiết (Schedules)
 CREATE TABLE schedules (
