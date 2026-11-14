@@ -21,6 +21,9 @@ public interface IUserRepository : IGenericRepository<User>
 {
     Task<User?> GetByEmailAsync(string email, CancellationToken cancellationToken = default);
 
+    /// <summary>Lấy nhiều người dùng theo Id (bỏ qua bản ghi đã xóa).</summary>
+    Task<IReadOnlyList<User>> GetByIdsAsync(IEnumerable<int> ids, CancellationToken cancellationToken = default);
+
     Task<PaginatedResult<User>> GetPagedAsync(UserFilter filter, CancellationToken cancellationToken = default);
 
     /// <summary>Kiểm tra trùng email trên tất cả bản ghi (cột email có ràng buộc UNIQUE).</summary>

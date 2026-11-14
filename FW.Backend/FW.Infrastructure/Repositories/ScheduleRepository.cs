@@ -66,6 +66,26 @@ public class ScheduleRepository : BaseRepository<Schedule, long>, IScheduleRepos
             cancellationToken);
     }
 
+    public async Task<IReadOnlyList<Schedule>> GetActiveByUsersAsync(IEnumerable<int> userIds, DateTime fromDate, DateTime toDate, CancellationToken cancellationToken = default)
+    {
+        var ids = userIds.Distinct().ToArray();
+        if (ids.Length == 0) return Array.Empty<Schedule>();
+
+        var sql = $"""
+            {SelectFrom}
+            WHERE `user_id` IN @UserIds AND `work_date` BETWEEN @FromDate AND @ToDate AND `status` <> @Cancelled
+            ORDER BY {DefaultOrderBy}
+            """;
+        return await QueryAsync<Schedule>(sql,
+            new { UserIds = ids, FromDate = fromDate.Date, ToDate = toDate.Date, Cancelled = ScheduleStatus.Cancelled },
+            cancellationToken);
+    }
+
+    public Task<int> DeleteDraftsAsync(int branchId, DateTime fromDate, DateTime toDate, CancellationToken cancellationToken = default) =>
+        ExecuteAsync(
+            "DELETE FROM `schedules` WHERE `branch_id` = @BranchId AND `work_date` BETWEEN @FromDate AND @ToDate AND `is_published` = 0",
+            new { BranchId = branchId, FromDate = fromDate.Date, ToDate = toDate.Date }, cancellationToken);
+
     public Task<bool> ExistsAsync(int userId, int shiftId, DateTime workDate, CancellationToken cancellationToken = default) =>
         ExecuteScalarAsync<bool>(
             "SELECT EXISTS(SELECT 1 FROM `schedules` WHERE `user_id` = @UserId AND `shift_id` = @ShiftId AND `work_date` = @WorkDate)",

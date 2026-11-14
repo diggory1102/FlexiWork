@@ -115,6 +115,9 @@ public class FakeUserRepository : IUserRepository
     public Task<User?> GetByIdAsync(int id, CancellationToken cancellationToken = default) =>
         Task.FromResult(Users.FirstOrDefault(u => !u.IsDeleted && u.Id == id));
 
+    public Task<IReadOnlyList<User>> GetByIdsAsync(IEnumerable<int> ids, CancellationToken cancellationToken = default) =>
+        Task.FromResult<IReadOnlyList<User>>(Users.Where(u => !u.IsDeleted && ids.Contains(u.Id)).ToList());
+
     public Task<IReadOnlyList<string>> GetRoleNamesAsync(int userId, CancellationToken cancellationToken = default) =>
         Task.FromResult<IReadOnlyList<string>>(Roles.GetValueOrDefault(userId) ?? new List<string>());
 

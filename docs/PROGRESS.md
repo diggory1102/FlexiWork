@@ -251,8 +251,8 @@ flowchart TD
 
 > **Tổng quan Tiến độ Hiện tại:**
 > * **Giai đoạn đang thực hiện:** CẤP BẬC 2 - Khung ca, Xếp lịch & Dữ liệu Face ID
-> * **Tiến độ tổng thể:** `14 / 47` Nhiệm vụ hoàn thành (`30%`)
-> * **Hành động tiếp theo:** Thực hiện **Task 2.3** (API Phân ca & Xếp lịch). Việc nhỏ đang chờ: bản đồ chọn tâm geofence trên form chi nhánh (Leaflet + OpenStreetMap).
+> * **Tiến độ tổng thể:** `15 / 47` Nhiệm vụ hoàn thành (`32%`)
+> * **Hành động tiếp theo:** Thực hiện **Task 2.4** (Đăng ký Face ID qua `FW.AiService`) hoặc **Task 2.5** (Web Admin: khung ca, quy tắc, lưới xếp lịch). Việc nhỏ đang chờ: bản đồ chọn tâm geofence trên form chi nhánh (Leaflet + OpenStreetMap).
 
 ### Các quyết định cần chốt
 
@@ -351,7 +351,7 @@ flowchart TD
 
 ---
 
-### 📌 CẤP BẬC 2: Khung ca, Xếp lịch & Dữ liệu Face ID `[2/6]`
+### 📌 CẤP BẬC 2: Khung ca, Xếp lịch & Dữ liệu Face ID `[3/6]`
 > 🎯 **Demo:** Quản lý xếp và công bố lịch tuần trên Web; nhân viên xem lịch và đăng ký khuôn mặt trên Mobile.
 
 - [x] **Task 2.1:** Entities & Repository `Shift`, `Schedule`, `FaceProfile`. Bổ sung schema: `shifts.branch_id` (NULL = ca dùng chung), số phút cho phép đi muộn/về sớm, trạng thái nháp/công bố của lịch (`schedules`).
@@ -360,7 +360,8 @@ flowchart TD
   - Repository: `ShiftRepository` (lọc theo chi nhánh ± ca dùng chung, trùng mã, ca đang được dùng), `ScheduleRepository` (lưới lịch JOIN nhân viên + ca, INSERT nhiều dòng, công bố theo khoảng ngày, lịch hiệu lực của nhân viên), `FaceProfileRepository` (upsert theo `user_id`, danh sách đã đăng ký). Test: 87 unit + 37 tích hợp đạt; migration chạy trên schema cũ cho kết quả trùng khớp schema mới.
 - [x] **Task 2.2:** API Khung ca & Quy tắc vi phạm: ca hành chính, ca xoay, ca gãy, ca đêm qua ngày, giờ nghỉ, hệ số công; cấu hình mức trừ công/phạt khi đi muộn, về sớm.
   - *Đã làm (14/11/2026):* API `/api/shifts` (danh sách lọc chi nhánh ± ca dùng chung, chi tiết kèm `isInUse`, `available/{branchId}` cho xếp lịch, thêm/sửa/xóa; giờ dạng `HH:mm`, tự tính ca qua đêm & số phút làm việc, cờ `canEdit` theo quyền) và `/api/attendance-policy` (GET: Admin/HR/Quản lý; PUT: Admin/HR — lưu số công chuẩn + thay toàn bộ bậc trong một transaction). Migration `003_violation_rules_system_settings.sql` (kèm dữ liệu mặc định). Domain `ViolationPolicy` (phút muộn/sớm làm tròn xuống, so với số phút cho phép, chọn bậc) dùng lại ở Task 3.2 / 5.3. Test: 102 unit + 41 tích hợp; thử API thật bằng tài khoản Quản lý / HR / Nhân viên.
-- [ ] **Task 2.3:** API Phân ca & Xếp lịch: xếp theo tuần/tháng, chống trùng và chồng giờ giữa các ca, chuyển nháp → công bố, xem lịch cá nhân / chi nhánh.
+- [x] **Task 2.3:** API Phân ca & Xếp lịch: xếp theo tuần/tháng, chống trùng và chồng giờ giữa các ca, chuyển nháp → công bố, xem lịch cá nhân / chi nhánh.
+  - *Đã làm (14/11/2026):* API `/api/schedules` — `GET` lưới lịch chi nhánh (kể cả nháp/đã hủy, tối đa 62 ngày), `GET me` lịch đã công bố của tôi (mặc định 14 ngày), `POST` xếp nhiều ca (≤ 500/lần, **có xung đột thì không lưu ca nào** và trả danh sách lý do), `POST copy` sao chép tuần/khoảng ngày (bỏ qua ca không hợp lệ/xung đột, báo lý do), `POST publish`, `DELETE drafts`, `DELETE {id}` (nháp → xóa hẳn; đã công bố & chưa tới giờ → `cancelled`). Ràng buộc: nhân viên đang hoạt động & thuộc đúng chi nhánh, ca dùng chung hoặc ca của chi nhánh, ngày từ hôm nay tới tối đa 366 ngày; Quản lý chỉ thao tác chi nhánh mình (gửi chi nhánh khác → 403). Domain `SchedulePlanner`: trùng ca, chồng giờ (kể cả ca đêm hôm trước kéo sang), ca gãy nối tiếp hợp lệ. Không cần migration. Test: 109 unit + 46 tích hợp; thử API thật bằng tài khoản Quản lý / Nhân viên.
 - [ ] **Task 2.4:** Đăng ký Face ID: nhận ảnh mẫu → lưu Cloudinary → `FW.AiService` trích xuất vector 512 chiều → lưu `face_profiles`; sửa vector mẫu trong seed cho đủ 512 chiều.
 - [ ] **Task 2.5:** Web Admin: quản lý khung ca & quy tắc; lưới xếp lịch theo tuần cho từng chi nhánh; công bố lịch.
 - [ ] **Task 2.6:** Mobile App: xem lịch ca cá nhân; chụp ảnh đăng ký Face ID.

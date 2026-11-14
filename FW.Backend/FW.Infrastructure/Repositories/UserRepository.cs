@@ -23,6 +23,13 @@ public class UserRepository : BaseRepository<User>, IUserRepository
         return QuerySingleOrDefaultAsync<User>(sql, new { Email = email.Trim() }, cancellationToken);
     }
 
+    public async Task<IReadOnlyList<User>> GetByIdsAsync(IEnumerable<int> ids, CancellationToken cancellationToken = default)
+    {
+        var distinct = ids.Distinct().ToArray();
+        if (distinct.Length == 0) return Array.Empty<User>();
+        return await QueryAsync<User>($"{SelectFrom} WHERE `id` IN @Ids AND {NotDeletedCondition}", new { Ids = distinct }, cancellationToken);
+    }
+
     public Task<PaginatedResult<User>> GetPagedAsync(UserFilter filter, CancellationToken cancellationToken = default)
     {
         var conditions = new List<string>();

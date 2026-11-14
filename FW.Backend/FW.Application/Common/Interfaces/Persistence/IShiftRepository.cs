@@ -22,8 +22,11 @@ public interface IShiftRepository : IGenericRepository<Shift>
     /// <summary>Các ca chi nhánh được phép xếp: ca dùng chung + ca riêng của chi nhánh, sắp theo giờ bắt đầu.</summary>
     Task<IReadOnlyList<Shift>> GetAvailableForBranchAsync(int branchId, CancellationToken cancellationToken = default);
 
-    /// <summary>Lấy nhiều ca theo Id (bỏ qua ca đã xóa) — dùng khi kiểm tra chồng giờ lúc xếp lịch.</summary>
-    Task<IReadOnlyList<Shift>> GetByIdsAsync(IEnumerable<int> ids, CancellationToken cancellationToken = default);
+    /// <summary>
+    /// Lấy nhiều ca theo Id — dùng khi kiểm tra chồng giờ lúc xếp lịch. <paramref name="includeDeleted"/> = true để lấy cả
+    /// ca đã xóa mềm (lịch cũ vẫn tham chiếu tới).
+    /// </summary>
+    Task<IReadOnlyList<Shift>> GetByIdsAsync(IEnumerable<int> ids, bool includeDeleted = false, CancellationToken cancellationToken = default);
 
     /// <summary>Kiểm tra trùng mã ca trên TẤT CẢ bản ghi (kể cả đã xóa mềm) vì cột shift_code có ràng buộc UNIQUE.</summary>
     Task<bool> ExistsByCodeAsync(string shiftCode, int? excludeId = null, CancellationToken cancellationToken = default);

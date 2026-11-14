@@ -23,6 +23,7 @@ public static class DependencyInjection
 
         services.AddScoped<IShiftService, ShiftService>();
         services.AddScoped<IAttendancePolicyService, AttendancePolicyService>();
+        services.AddScoped<IScheduleService, ScheduleService>();
 
         services.AddScoped<IUserService, UserService>();
         services.AddScoped<IProfileService, ProfileService>();

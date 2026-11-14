@@ -45,12 +45,12 @@ public class ShiftRepository : BaseRepository<Shift>, IShiftRepository
         return QueryAsync<Shift>(sql, new { BranchId = branchId }, cancellationToken);
     }
 
-    public async Task<IReadOnlyList<Shift>> GetByIdsAsync(IEnumerable<int> ids, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<Shift>> GetByIdsAsync(IEnumerable<int> ids, bool includeDeleted = false, CancellationToken cancellationToken = default)
     {
         var distinct = ids.Distinct().ToArray();
         if (distinct.Length == 0) return Array.Empty<Shift>();
 
-        var sql = $"{SelectFrom} WHERE `id` IN @Ids AND {NotDeletedCondition}";
+        var sql = $"{SelectFrom} WHERE `id` IN @Ids" + (includeDeleted ? string.Empty : $" AND {NotDeletedCondition}");
         return await QueryAsync<Shift>(sql, new { Ids = distinct }, cancellationToken);
     }
 

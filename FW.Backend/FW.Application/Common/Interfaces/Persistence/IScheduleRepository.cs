@@ -49,6 +49,13 @@ public interface IScheduleRepository : IGenericRepository<Schedule, long>
     /// <summary>Lịch (chưa hủy) của một nhân viên trong khoảng ngày — dùng kiểm tra chồng giờ khi xếp ca.</summary>
     Task<IReadOnlyList<Schedule>> GetActiveByUserAsync(int userId, DateTime fromDate, DateTime toDate, CancellationToken cancellationToken = default);
 
+    /// <summary>Lịch (chưa hủy) của nhiều nhân viên trong khoảng ngày — kiểm tra chồng giờ cho cả lô trong một truy vấn.</summary>
+    Task<IReadOnlyList<Schedule>> GetActiveByUsersAsync(IEnumerable<int> userIds, DateTime fromDate, DateTime toDate, CancellationToken cancellationToken = default);
+
+    /// <summary>Xóa hẳn các lịch NHÁP của chi nhánh trong khoảng ngày.</summary>
+    /// <returns>Số lịch đã xóa.</returns>
+    Task<int> DeleteDraftsAsync(int branchId, DateTime fromDate, DateTime toDate, CancellationToken cancellationToken = default);
+
     /// <summary>Đã có lịch cùng nhân viên, cùng ca, cùng ngày chưa (ràng buộc UNIQUE uq_user_shift_date).</summary>
     Task<bool> ExistsAsync(int userId, int shiftId, DateTime workDate, CancellationToken cancellationToken = default);
 
