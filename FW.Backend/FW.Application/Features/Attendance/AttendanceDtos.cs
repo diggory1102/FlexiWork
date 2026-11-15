@@ -97,3 +97,101 @@ public record AttendanceTodayDto(
     string Message,
     AttendanceBranchDto? Branch,
     IReadOnlyList<AttendanceShiftDto> Shifts);
+
+// ---------------------------------------------------------------- Tra cứu & duyệt (Task 3.3)
+
+/// <summary>Bộ lọc nhật ký chấm công (query string). Khoảng ngày theo ngày công.</summary>
+public class AttendanceLogFilter : FW.Application.Common.Models.PagedQuery
+{
+    /// <summary>Admin/HR: bỏ trống = mọi chi nhánh; Quản lý: bỏ trống = chi nhánh của mình.</summary>
+    public int? BranchId { get; set; }
+    public int? UserId { get; set; }
+    public DateOnly? FromDate { get; set; }
+    public DateOnly? ToDate { get; set; }
+
+    /// <summary>valid, pending_approval, invalid.</summary>
+    public string? Status { get; set; }
+}
+
+/// <summary>Quản lý / HR duyệt một lượt chấm công đang chờ duyệt (UC 4.6).</summary>
+public class ReviewAttendanceRequest
+{
+    [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Vui lòng chọn chấp nhận hoặc từ chối.")]
+    public bool? Approved { get; set; }
+
+    /// <summary>Bắt buộc khi từ chối.</summary>
+    [System.ComponentModel.DataAnnotations.MaxLength(255, ErrorMessage = "Ghi chú tối đa 255 ký tự.")]
+    public string? Note { get; set; }
+}
+
+/// <summary>Minh chứng của một lượt vào hoặc ra.</summary>
+public record AttendanceEvidenceDto(
+    DateTime Time, string? ImageUrl, decimal? Latitude, decimal? Longitude, double? AccuracyMeters, double? DistanceMeters,
+    string? Bssid, bool WifiMatched, bool FaceMatched, double? FaceScore, string? DeviceId);
+
+/// <summary>Một dòng nhật ký chấm công (bảng tra cứu).</summary>
+public record AttendanceLogItemDto(
+    long Id,
+    long? ScheduleId,
+    int UserId,
+    string EmployeeCode,
+    string FullName,
+    string? AvatarUrl,
+    int BranchId,
+    string BranchName,
+    DateTime WorkDate,
+    string? ShiftCode,
+    string? ShiftName,
+    string? ShiftStartTime,
+    string? ShiftEndTime,
+    DateTime CheckinTime,
+    DateTime? CheckoutTime,
+    int LateMinutes,
+    int EarlyMinutes,
+    decimal ActualWorkHours,
+    string Status,
+    string? Note,
+    double CheckinDistance,
+    double? CheckoutDistance,
+    bool CheckinWifiMatched,
+    bool? CheckoutWifiMatched,
+    double? CheckinFaceScore,
+    double? CheckoutFaceScore,
+    string CheckinImageUrl,
+    string? CheckoutImageUrl)
+{
+    public static AttendanceLogItemDto From(FW.Application.Common.Interfaces.Persistence.AttendanceLogDetail d) => new(
+        d.Id, d.ScheduleId, d.UserId, d.EmployeeCode, d.FullName, d.AvatarUrl, d.BranchId, d.BranchName, d.WorkDate,
+        d.ShiftCode, d.ShiftName, FormatTime(d.ShiftStartTime), FormatTime(d.ShiftEndTime),
+        d.CheckinTime, d.CheckoutTime, d.LateMinutes, d.EarlyMinutes, d.ActualWorkHours, d.Status, d.Note,
+        d.CheckinDistance, d.CheckoutDistance, d.CheckinWifiMatched, d.IsCheckedOut ? d.CheckoutWifiMatched : null,
+        d.CheckinFaceScore, d.CheckoutFaceScore, d.CheckinImageUrl, d.CheckoutImageUrl);
+
+    private static string? FormatTime(TimeSpan? time) => time?.ToString(@"hh\:mm");
+}
+
+public record AttendanceGeofenceDto(int Id, string Name, decimal Latitude, decimal Longitude, int Radius);
+
+/// <summary>Chi tiết một lượt chấm công: minh chứng 3 lớp của lượt vào/ra, tâm chi nhánh, thông tin duyệt.</summary>
+public record AttendanceLogDetailDto(
+    AttendanceLogItemDto Log,
+    AttendanceEvidenceDto CheckIn,
+    AttendanceEvidenceDto? CheckOut,
+    AttendanceGeofenceDto Branch,
+    int? ReviewedBy,
+    string? ReviewerName,
+    DateTime? ReviewedAt,
+    string? ReviewNote,
+    bool CanReview)
+{
+    public static AttendanceLogDetailDto From(FW.Application.Common.Interfaces.Persistence.AttendanceLogDetail d, bool canReview) => new(
+        AttendanceLogItemDto.From(d),
+        new AttendanceEvidenceDto(d.CheckinTime, d.CheckinImageUrl, d.CheckinLat, d.CheckinLng, d.CheckinAccuracy, d.CheckinDistance,
+            d.CheckinBssid, d.CheckinWifiMatched, d.CheckinFaceMatched, d.CheckinFaceScore, d.CheckinDeviceId),
+        d.CheckoutTime is { } outTime
+            ? new AttendanceEvidenceDto(outTime, d.CheckoutImageUrl, d.CheckoutLat, d.CheckoutLng, d.CheckoutAccuracy, d.CheckoutDistance,
+                d.CheckoutBssid, d.CheckoutWifiMatched, d.CheckoutFaceMatched, d.CheckoutFaceScore, d.CheckoutDeviceId)
+            : null,
+        new AttendanceGeofenceDto(d.BranchId, d.BranchName, d.BranchLatitude, d.BranchLongitude, d.BranchRadius),
+        d.ReviewedBy, d.ReviewerName, d.ReviewedAt, d.ReviewNote, canReview);
+}

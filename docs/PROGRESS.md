@@ -266,8 +266,8 @@ flowchart TD
 
 > **Tổng quan Tiến độ Hiện tại:**
 > * **Giai đoạn đang thực hiện:** CẤP BẬC 3 - Lõi chấm công 3 lớp
-> * **Tiến độ tổng thể:** `20 / 53` Nhiệm vụ hoàn thành (`38%`)
-> * **Hành động tiếp theo:** **Task 3.3** — API tra cứu nhật ký chấm công (chạy migration `005` trước khi push Task 3.1–3.2). Việc nhỏ đang chờ: bản đồ chọn tâm geofence trên form chi nhánh (Leaflet + OpenStreetMap).
+> * **Tiến độ tổng thể:** `21 / 53` Nhiệm vụ hoàn thành (`40%`)
+> * **Hành động tiếp theo:** **Task 3.4** — màn hình chấm công trên Mobile (chạy migration `005` trước khi push Task 3.1–3.3). Việc nhỏ đang chờ: bản đồ chọn tâm geofence trên form chi nhánh (Leaflet + OpenStreetMap).
 
 ### Các quyết định cần chốt
 
@@ -388,7 +388,7 @@ flowchart TD
 
 ---
 
-### 📌 CẤP BẬC 3: LÕI CHẤM CÔNG 3 LỚP (3-Factor Attendance Engine) `[2/5]`
+### 📌 CẤP BẬC 3: LÕI CHẤM CÔNG 3 LỚP (3-Factor Attendance Engine) `[3/5]`
 > 🎯 **Demo:** Nhân viên check-in/check-out trên điện thoại thật; Quản lý xem nhật ký kèm minh chứng trên Web.
 
 - [x] **Task 3.1:** Entity `AttendanceLog`; helper tính khoảng cách Haversine và xác minh Wi-Fi BSSID (kèm unit test).
@@ -404,7 +404,10 @@ flowchart TD
   - Quy tắc thời gian (`AttendanceRules`, cấu hình mục `Attendance` trong appsettings): check-in từ 60' trước giờ vào tới trước giờ kết thúc ca (ca phải đã công bố, chưa check-in; ca gãy chọn ca bắt đầu sớm nhất còn mở); check-out tới 240' sau giờ kết thúc, quá hạn thì nhờ Quản lý (UC 4.7). Giờ làm thực tế chỉ tính phần có mặt trong khung ca, quy đổi theo tỉ lệ giờ làm/giờ có mặt để trừ giờ nghỉ (có mặt trọn ca = đúng số giờ làm của ca); đến sớm/về muộn không cộng thêm (OT đi theo đơn). Ca qua đêm check-out sáng hôm sau vẫn tính vào ngày bắt đầu ca.
   - Lịch chuyển `in_progress` khi check-in, `completed` khi check-out (cùng transaction với bản ghi chấm công); hai yêu cầu check-in đồng thời → `UNIQUE(schedule_id)` chặn, xóa ảnh thừa. Vector khuôn mặt mẫu khác mô hình / sai số chiều → yêu cầu đặt lại Face ID. Máy chủ cố định văn hóa số Invariant để đọc tọa độ dạng `21.0285` trong form-data.
   - Test: +15 unit test (`AttendanceRules`: khung giờ, ca gãy, ca đêm, giờ làm thực tế) + 6 integration test (trọn ca vào/ra, từng lớp bắt buộc từ chối, chưa có / Face ID cũ, Wi-Fi & trùng thiết bị → chờ duyệt, quá hạn check-out, ca đêm). Chạy thử API thật với ONNX: đứng cách 222 m bị từ chối, check-in đủ 3 lớp (muộn 38'), check-out Wi-Fi lạ → chờ duyệt.
-- [ ] **Task 3.3:** API Tra cứu Nhật ký Chấm công: nhân viên xem lịch sử bản thân; Quản lý / HR tra cứu theo chi nhánh kèm ảnh, tọa độ, khoảng cách, BSSID.
+- [x] **Task 3.3:** API Tra cứu Nhật ký Chấm công: nhân viên xem lịch sử bản thân; Quản lý / HR tra cứu theo chi nhánh kèm ảnh, tọa độ, khoảng cách, BSSID.
+  - *Đã làm (15/11/2026):* `GET /api/attendance/me` (lịch sử của tôi, mặc định từ đầu tháng), `GET /api/attendance/logs` (Admin/HR mọi chi nhánh, Quản lý chi nhánh mình; lọc chi nhánh, nhân viên, khoảng ngày công — mặc định 7 ngày, tối đa 366 —, trạng thái, tìm theo tên/mã nhân viên; phân trang, mới nhất trước), `GET /api/attendance/logs/{id}` (chính chủ hoặc người quản lý chi nhánh: minh chứng lượt vào/ra — ảnh, tọa độ, sai số, khoảng cách, BSSID, độ tương đồng khuôn mặt, mã thiết bị — kèm tâm & bán kính chi nhánh, thông tin duyệt, cờ `canReview`). Đọc bằng một truy vấn JOIN nhân viên – chi nhánh – lịch – ca – người duyệt.
+  - Làm luôn API duyệt cho UC 4.6 (Task 3.5 chỉ còn giao diện Web): `PUT /api/attendance/logs/{id}/review` `{approved, note}` — chỉ bản ghi `pending_approval`, trong phạm vi chi nhánh, **không tự duyệt bản ghi của mình** (bản ghi của Quản lý do HR/Admin duyệt), từ chối bắt buộc ghi lý do; chấp nhận → `valid`, từ chối → `invalid` (không tính công). Lượt ra có vấn đề Wi-Fi sau khi lượt vào đã được duyệt → về lại chờ duyệt, xóa thông tin duyệt cũ.
+  - Test: +3 integration test (phạm vi theo vai trò & bộ lọc, chi tiết minh chứng, quy tắc duyệt); gọi thử qua HTTP: 403 khi Quản lý xem chi nhánh khác / nhân viên gọi `/logs`, 400 trạng thái sai / từ chối thiếu lý do.
 - [ ] **Task 3.4:** Mobile App: màn hình chấm công (lấy GPS + BSSID + chụp selfie), hiển thị kết quả từng lớp xác minh; lịch sử chấm công cá nhân.
 - [ ] **Task 3.5:** Web Admin: nhật ký chấm công có bộ lọc; xem chi tiết minh chứng; duyệt các bản ghi `pending_approval`.
 

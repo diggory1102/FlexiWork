@@ -293,7 +293,14 @@ public class AttendanceService : IAttendanceService
         log.CheckoutDeviceId = NormalizeDeviceId(request.DeviceId);
         log.EarlyMinutes = ViolationPolicy.EarlyLeaveMinutes(item.Shift, item.Schedule.WorkDate, now);
         log.ActualWorkHours = AttendanceRules.WorkedHours(item.Shift, item.Schedule.WorkDate, log.CheckinTime, now);
-        if (warnings.Count > 0 && log.Status == AttendanceStatus.Valid) log.Status = AttendanceStatus.PendingApproval;
+        if (warnings.Count > 0 && log.Status == AttendanceStatus.Valid)
+        {
+            // Lượt vào đã hợp lệ (hoặc đã được duyệt) nhưng lượt ra có vấn đề → duyệt lại cả bản ghi
+            log.Status = AttendanceStatus.PendingApproval;
+            log.ReviewedBy = null;
+            log.ReviewedAt = null;
+            log.ReviewNote = null;
+        }
         log.Note = JoinNote(log.Note, warnings);
 
         var uploaded = await UploadAsync(photo, fileName, cancellationToken);

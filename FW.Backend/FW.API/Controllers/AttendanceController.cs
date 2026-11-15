@@ -1,5 +1,6 @@
 using FW.Application.Common.Exceptions;
 using FW.Application.Features.Attendance;
+using FW.Domain.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -7,7 +8,8 @@ namespace FW.API.Controllers;
 
 /// <summary>
 /// Chấm công 3 lớp trên điện thoại (UC 4.1, 4.2): GPS Geofence + Wi-Fi BSSID + Face ID.
-/// Mọi vai trò có lịch làm việc đều chấm công được.
+/// Mọi vai trò có lịch làm việc đều chấm công được. Tra cứu & duyệt nhật ký (UC 4.5, 4.6): Admin, HR (mọi chi nhánh),
+/// Quản lý (chi nhánh của mình); nhân viên xem lịch sử của chính mình.
 /// </summary>
 [Authorize]
 public class AttendanceController : ApiControllerBase
@@ -15,10 +17,12 @@ public class AttendanceController : ApiControllerBase
     private const long MaxRequestBytes = AttendanceService.MaxImageBytes + 64 * 1024;
 
     private readonly IAttendanceService _attendanceService;
+    private readonly IAttendanceLogService _logService;
 
-    public AttendanceController(IAttendanceService attendanceService)
+    public AttendanceController(IAttendanceService attendanceService, IAttendanceLogService logService)
     {
         _attendanceService = attendanceService;
+        _logService = logService;
     }
 
     /// <summary>Việc cần làm tiếp theo (check-in / check-out / không có), chi nhánh của ca và các ca trong ngày.</summary>
@@ -50,6 +54,36 @@ public class AttendanceController : ApiControllerBase
         await using var stream = photo.OpenReadStream();
         var result = await _attendanceService.CheckOutAsync(request, stream, photo.FileName, photo.ContentType, photo.Length, cancellationToken);
         return Success(result, result.Message);
+    }
+
+    /// <summary>Lịch sử chấm công của tôi (mặc định từ đầu tháng tới hôm nay; tối đa 366 ngày; phân trang).</summary>
+    [HttpGet("me")]
+    public async Task<IActionResult> GetMine([FromQuery] AttendanceLogFilter filter, CancellationToken cancellationToken) =>
+        Success(await _logService.GetMineAsync(filter, cancellationToken));
+
+    /// <summary>
+    /// Tra cứu nhật ký chấm công: lọc chi nhánh, nhân viên, khoảng ngày công (mặc định 7 ngày gần nhất), trạng thái, từ khóa
+    /// (tên / mã nhân viên); phân trang.
+    /// </summary>
+    [HttpGet("logs")]
+    [Authorize(Roles = RoleNames.Managers)]
+    public async Task<IActionResult> GetLogs([FromQuery] AttendanceLogFilter filter, CancellationToken cancellationToken) =>
+        Success(await _logService.GetLogsAsync(filter, cancellationToken));
+
+    /// <summary>Chi tiết minh chứng của một lượt chấm công (chính chủ hoặc người quản lý chi nhánh).</summary>
+    [HttpGet("logs/{id:long}")]
+    public async Task<IActionResult> GetLog(long id, CancellationToken cancellationToken) =>
+        Success(await _logService.GetByIdAsync(id, cancellationToken));
+
+    /// <summary>Chấp nhận / từ chối lượt chấm công đang chờ duyệt (từ chối phải ghi lý do).</summary>
+    [HttpPut("logs/{id:long}/review")]
+    [Authorize(Roles = RoleNames.Managers)]
+    public async Task<IActionResult> Review(long id, [FromBody] ReviewAttendanceRequest request, CancellationToken cancellationToken)
+    {
+        var result = await _logService.ReviewAsync(id, request, cancellationToken);
+        return Success(result, result.Log.Status == AttendanceStatus.Valid
+            ? "Đã chấp nhận lượt chấm công."
+            : "Đã từ chối lượt chấm công — lượt này không được tính công.");
     }
 
     private static IFormFile RequirePhoto(IFormFile? file) =>

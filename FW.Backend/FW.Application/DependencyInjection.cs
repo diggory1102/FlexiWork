@@ -27,6 +27,7 @@ public static class DependencyInjection
         services.AddScoped<IAttendancePolicyService, AttendancePolicyService>();
         services.AddScoped<IScheduleService, ScheduleService>();
         services.AddScoped<IAttendanceService, AttendanceService>();
+        services.AddScoped<IAttendanceLogService, AttendanceLogService>();
 
         services.AddScoped<IUserService, UserService>();
         services.AddScoped<IProfileService, ProfileService>();
