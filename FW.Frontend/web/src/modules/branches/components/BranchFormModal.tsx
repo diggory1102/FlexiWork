@@ -127,6 +127,8 @@ export function BranchFormModal({ open, branch, onClose, onSaved }: Props) {
   /** Chọn một gợi ý ở ô "Tìm địa điểm" → điền tâm và hiện tên vị trí đã chọn. */
   const pickPlace = (place: GeocodeCandidate) => {
     applyCandidate(place);
+    // Chưa nhập địa chỉ → dùng luôn địa chỉ của địa điểm vừa chọn (bỏ đuôi ", Việt Nam")
+    setForm((f) => (f.address.trim() ? f : { ...f, address: place.displayName.replace(/,\s*Việt Nam$/i, '') }));
     setLookup({
       loading: false,
       result: { query: place.displayName, matchedQuery: place.displayName, approximate: false, candidates: [place] },
@@ -217,24 +219,27 @@ export function BranchFormModal({ open, branch, onClose, onSaved }: Props) {
                   <Button label="Xem trên bản đồ" size="sm" icon={<Icon icon={ExternalLink} />} href={mapUrl} target="_blank" rel="noreferrer" />
                 </HStack>
               </HStack>
-              <PlaceSearch near={{ latitude: form.latitude, longitude: form.longitude }} onPick={pickPlace} />
+              <PlaceSearch key={open ? `place-${branch?.id ?? 'new'}` : 'closed'} near={{ latitude: form.latitude, longitude: form.longitude }} onPick={pickPlace} />
               <LookupResult lookup={lookup} onChoose={chooseCandidate} />
-              <Grid columns={{ minWidth: 160, max: 3 }} gap={4}>
-                <NumberInput label="Vĩ độ" isRequired min={-90} max={90} step={0.000001} value={form.latitude} onChange={(v) => set('latitude', v ?? 0)} />
-                <NumberInput label="Kinh độ" isRequired min={-180} max={180} step={0.000001} value={form.longitude} onChange={(v) => set('longitude', v ?? 0)} />
-                <NumberInput
-                  label="Bán kính"
-                  isRequired
-                  units="m"
-                  min={10}
-                  max={5000}
-                  isIntegerOnly
-                  labelTooltip="Từ 10 đến 5000 m. Nên đặt 50–100 m vì GPS điện thoại thường sai lệch 10–30 m."
-                  value={form.radius}
-                  onChange={(v) => set('radius', v ?? 50)}
-                />
+              {/* Tọa độ bên trái, bản đồ bên phải (màn hình hẹp thì xuống dòng) */}
+              <Grid columns={{ minWidth: 260, max: 2 }} gap={4}>
+                <VStack gap={3}>
+                  <NumberInput label="Vĩ độ" isRequired min={-90} max={90} step={0.000001} value={form.latitude} onChange={(v) => set('latitude', v ?? 0)} />
+                  <NumberInput label="Kinh độ" isRequired min={-180} max={180} step={0.000001} value={form.longitude} onChange={(v) => set('longitude', v ?? 0)} />
+                  <NumberInput
+                    label="Bán kính"
+                    isRequired
+                    units="m"
+                    min={10}
+                    max={5000}
+                    isIntegerOnly
+                    labelTooltip="Từ 10 đến 5000 m. Nên đặt 50–100 m vì GPS điện thoại thường sai lệch 10–30 m."
+                    value={form.radius}
+                    onChange={(v) => set('radius', v ?? 50)}
+                  />
+                </VStack>
+                <GeofenceMapPreview latitude={form.latitude} longitude={form.longitude} />
               </Grid>
-              <GeofenceMapPreview latitude={form.latitude} longitude={form.longitude} />
             </VStack>
           </Card>
 

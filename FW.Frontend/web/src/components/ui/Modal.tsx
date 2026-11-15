@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { Button } from '@astryxdesign/core/Button';
 import { Dialog, DialogHeader } from '@astryxdesign/core/Dialog';
 import { Icon } from '@astryxdesign/core/Icon';
+import { Layout, LayoutContent, LayoutFooter } from '@astryxdesign/core/Layout';
 import { HStack, VStack } from '@astryxdesign/core/Stack';
 import { Text } from '@astryxdesign/core/Text';
 import { AlertTriangle } from 'lucide-react';
@@ -20,19 +21,26 @@ interface ModalProps {
 
 const widths = { sm: 440, md: 600, lg: 820 };
 
-/** Hộp thoại (Astryx Dialog): tiêu đề + nút đóng, nội dung cuộn, chân hộp thoại chứa nút thao tác. */
+/**
+ * Hộp thoại (Astryx Dialog + Layout): tiêu đề và chân hộp thoại (nút thao tác) luôn hiển thị, chỉ phần nội dung ở giữa
+ * cuộn khi dài hơn màn hình.
+ */
 export function Modal({ open, title, description, onClose, footer, size = 'md', purpose = 'info', children }: ModalProps) {
   return (
     <Dialog isOpen={open} onOpenChange={(isOpen) => !isOpen && onClose()} width={widths[size]} maxHeight="88dvh" purpose={purpose}>
-      <VStack gap={4}>
-        <DialogHeader title={title} subtitle={description} onOpenChange={(isOpen) => !isOpen && onClose()} />
-        <div>{children}</div>
-        {footer && (
-          <HStack gap={2} hAlign="end">
-            {footer}
-          </HStack>
-        )}
-      </VStack>
+      <Layout
+        header={<DialogHeader title={title} subtitle={description} onOpenChange={(isOpen) => !isOpen && onClose()} />}
+        content={<LayoutContent>{children}</LayoutContent>}
+        footer={
+          footer && (
+            <LayoutFooter hasDivider>
+              <HStack gap={2} hAlign="end">
+                {footer}
+              </HStack>
+            </LayoutFooter>
+          )
+        }
+      />
     </Dialog>
   );
 }
