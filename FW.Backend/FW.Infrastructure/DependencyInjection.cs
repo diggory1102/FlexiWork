@@ -102,6 +102,7 @@ public static class DependencyInjection
         }
 
         // 7. Nhận diện khuôn mặt: mặc định chạy ONNX ngay trong backend; "AiService" = gọi microservice FW.AiService
+        services.Configure<AttendanceSettings>(configuration.GetSection(AttendanceSettings.SectionName));
         services.Configure<FaceRecognitionSettings>(configuration.GetSection(FaceRecognitionSettings.SectionName));
         var faceEngine = configuration[$"{FaceRecognitionSettings.SectionName}:Engine"] ?? FaceRecognitionSettings.OnnxEngine;
         if (string.Equals(faceEngine, FaceRecognitionSettings.AiServiceEngine, StringComparison.OrdinalIgnoreCase))

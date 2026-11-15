@@ -266,8 +266,8 @@ flowchart TD
 
 > **Tổng quan Tiến độ Hiện tại:**
 > * **Giai đoạn đang thực hiện:** CẤP BẬC 3 - Lõi chấm công 3 lớp
-> * **Tiến độ tổng thể:** `19 / 53` Nhiệm vụ hoàn thành (`36%`)
-> * **Hành động tiếp theo:** **Task 3.2** — engine Check-in / Check-out (chạy migration `005` trước khi push Task 3.1). Việc nhỏ đang chờ: bản đồ chọn tâm geofence trên form chi nhánh (Leaflet + OpenStreetMap).
+> * **Tiến độ tổng thể:** `20 / 53` Nhiệm vụ hoàn thành (`38%`)
+> * **Hành động tiếp theo:** **Task 3.3** — API tra cứu nhật ký chấm công (chạy migration `005` trước khi push Task 3.1–3.2). Việc nhỏ đang chờ: bản đồ chọn tâm geofence trên form chi nhánh (Leaflet + OpenStreetMap).
 
 ### Các quyết định cần chốt
 
@@ -275,13 +275,13 @@ flowchart TD
 | :--- | :--- | :--- |
 | Manager phụ trách 1 hay nhiều chi nhánh | Task 1.3, 1.5 | 1 chi nhánh (`users.branch_id`) |
 | ~~Múi giờ lưu trữ~~ | Task 1.2, 3.2, 5.3 | ✅ **Đã chốt:** giờ Việt Nam (UTC+7) — `SET time_zone` mỗi kết nối + `IDateTimeProvider` |
-| Xử lý khi 1 lớp chấm công không đạt | Task 3.2 | GPS + Face bắt buộc; sai Wi-Fi **hoặc không đọc được Wi-Fi** (tắt Wi-Fi, thiếu quyền vị trí, iOS trong Expo Go) → `pending_approval`; chi nhánh chưa khai báo Wi-Fi → bỏ qua lớp 2 |
+| ~~Xử lý khi 1 lớp chấm công không đạt~~ | Task 3.2 | ✅ **Đã chốt (15/11/2026):** GPS + khuôn mặt bắt buộc (không đạt → từ chối, không lưu bản ghi); sai Wi-Fi **hoặc không đọc được Wi-Fi** (tắt Wi-Fi, thiếu quyền vị trí, iOS trong Expo Go) → vẫn ghi nhận nhưng `pending_approval`, **không có ngoại lệ** cho iPhone; chi nhánh chưa khai báo Wi-Fi → bỏ qua lớp 2. Vị trí giả lập (cờ `mocked`) hoặc sai số GPS > 100 m → từ chối |
 | ~~Ca gãy~~ | Task 2.2 | ✅ **Đã chốt:** tách thành 2 ca trong cùng ngày (ca nối tiếp không tính chồng giờ). Ca xoay là cách xếp lịch (Task 2.3), không phải thuộc tính của ca |
 | ~~Quyền khai báo khung ca~~ | Task 2.2 | ✅ **Đã chốt (14/11/2026):** Admin/HR quản lý mọi ca (dùng chung + ca riêng của chi nhánh); Quản lý chi nhánh thêm/sửa/xóa ca riêng của chi nhánh mình (UC 3.1), chỉ xem ca dùng chung. Ca đã được xếp lịch không đổi được giờ, giờ nghỉ, hệ số công, ca đêm, chi nhánh — tạo ca mới thay thế; còn lịch từ hôm nay trở đi thì không xóa được. Ca dài tối đa 16 giờ |
 | ~~Quy tắc vi phạm~~ | Task 2.2 | ✅ **Đã chốt (14/11/2026):** áp dụng toàn công ty, **theo bậc** (`violation_rules`: từ X phút → trừ Y công / phạt Z đồng, chỉ áp dụng bậc cao nhất thỏa mãn, bậc sau không nhẹ hơn bậc trước). Vượt số phút cho phép của ca thì tính **toàn bộ** số phút muộn/sớm. Số công chuẩn tháng ở `system_settings.standard_work_days` (mặc định 26). Mặc định: muộn/sớm từ 1' phạt 20.000đ, từ 15' phạt 50.000đ, từ 60' trừ 0,5 công + 50.000đ |
 | Đơn đổi ca cần đồng nghiệp đồng ý trước | Task 4.2 | Có |
 | Chống giả mạo khuôn mặt (liveness) | Task 6.2 | `[Tùy chọn]` |
-| Phát hiện "trùng thiết bị" (1 điện thoại chấm công cho nhiều người) | Task 3.2 | Có — lưu mã thiết bị khi check-in, cảnh báo trên Dashboard |
+| ~~Phát hiện "trùng thiết bị" (1 điện thoại chấm công cho nhiều người)~~ | Task 3.2 | ✅ **Đã chốt (15/11/2026):** lưu mã thiết bị mỗi lượt; người thứ hai check-in trên cùng điện thoại trong cùng ngày công → `pending_approval`, ghi chú mã nhân viên đã dùng máy đó (Quản lý duyệt ở UC 4.6, cảnh báo trên Dashboard ở Cấp 5) |
 | ~~Giao diện Web Admin~~ | Task 1.6 trở đi | ✅ **Đã chốt:** tham khảo bố cục HRM iPOS, thương hiệu & hình ảnh riêng FlexiWork, bỏ Tuyển dụng/Bảng giá, Hợp đồng gộp vào hồ sơ NV, Lương → Bảng công (lương tạm tính) |
 | ~~Thư viện giao diện Web Admin~~ | Toàn bộ Web | ✅ **Đã chốt (12/11/2026):** nâng **React 18 → 19**, **Tailwind 3 → 4**, dùng hệ thống thiết kế **Astryx** của Meta (`@astryxdesign/core` 0.7.14, đang beta — ghim cố định phiên bản). Theme `flexiwork` kế thừa `neutral`: màu nhấn xanh `#2563EB`, font **Be Vietnam Pro** (Figtree gốc thiếu dấu tiếng Việt), gói ngôn ngữ `vi-VN`, chế độ sáng/tối. Mobile giữ React Native (Astryx chỉ cho web) |
 | ~~Phân hệ Bảng lương rút gọn (UML Phân hệ 8)~~ | Task 5.4, 5.5 | ✅ **Đã chốt (12/11/2026):** đưa vào phạm vi, không gồm thuế TNCN/BHXH |
@@ -388,7 +388,7 @@ flowchart TD
 
 ---
 
-### 📌 CẤP BẬC 3: LÕI CHẤM CÔNG 3 LỚP (3-Factor Attendance Engine) `[1/5]`
+### 📌 CẤP BẬC 3: LÕI CHẤM CÔNG 3 LỚP (3-Factor Attendance Engine) `[2/5]`
 > 🎯 **Demo:** Nhân viên check-in/check-out trên điện thoại thật; Quản lý xem nhật ký kèm minh chứng trên Web.
 
 - [x] **Task 3.1:** Entity `AttendanceLog`; helper tính khoảng cách Haversine và xác minh Wi-Fi BSSID (kèm unit test).
@@ -396,10 +396,14 @@ flowchart TD
   - Domain: `Geofence` (Haversine, R = 6.371.008,8 m; kiểm tra tọa độ hợp lệ; `GeofenceResult.IsInside` — đúng bằng bán kính vẫn tính là trong vùng); `WifiVerifier` → `Matched` / `NotMatched` / `NoWifiInfo` / `NotRequired` (chi nhánh chưa khai báo Wi-Fi), vẫn lưu BSSID lạ làm minh chứng; `BssidFormat` chuyển xuống Domain, chấp nhận BSSID iOS bỏ số 0 đầu nhóm (`0:1a:...`), nhận diện địa chỉ giả `02:00:00:00:00:00` (Android thiếu quyền vị trí) — form Wi-Fi chi nhánh cũng từ chối địa chỉ này.
   - Repository `AttendanceLogRepository`: theo ca, lượt đang mở của nhân viên, nhân viên khác đã chấm công trên cùng thiết bị trong ngày.
   - Test: +37 unit test (Haversine: 1 độ vĩ, co theo cos vĩ độ, kinh tuyến 180, Hà Nội ↔ TP.HCM ≈ 1.140 km, biên bán kính; Wi-Fi; BSSID) + 3 integration test (minh chứng vào/ra + duyệt, trùng ca bị chặn, trùng thiết bị). Đã chạy thử migration `005` trên bản sao schema cũ: cột và index khớp schema mới.
-- [ ] **Task 3.2:** Engine Check-in / Check-out:
+- [x] **Task 3.2:** Engine Check-in / Check-out:
   - Kiểm tra 3 lớp: GPS $\le$ bán kính, Wi-Fi BSSID hợp lệ, Face ID match $\ge$ ngưỡng tin cậy (qua `FaceRecognitionClient`).
   - Xử lý khi một lớp không đạt (từ chối hoặc `pending_approval`) theo quyết định đã chốt.
   - So khớp với ca (`schedules`) để tính `late_minutes`, `early_minutes`, `actual_work_hours`; lưu đầy đủ minh chứng vào `attendance_logs`.
+  - *Đã làm (15/11/2026):* API `GET /api/attendance/today` (việc cần làm tiếp theo: check-in / check-out / không có, kèm chi nhánh để app tự đo khoảng cách, các ca trong ngày + ca đêm hôm qua), `POST /api/attendance/check-in` và `check-out` (form-data: ảnh selfie, `latitude`, `longitude`, `accuracy`, `bssid`, `deviceId`, `isMocked`). Kiểm tra từ rẻ tới đắt: thời gian → GPS → khuôn mặt (ONNX) → Wi-Fi, dừng ở lớp bắt buộc đầu tiên không đạt; lượt bị từ chối không lưu gì và không tải ảnh lên.
+  - Quy tắc thời gian (`AttendanceRules`, cấu hình mục `Attendance` trong appsettings): check-in từ 60' trước giờ vào tới trước giờ kết thúc ca (ca phải đã công bố, chưa check-in; ca gãy chọn ca bắt đầu sớm nhất còn mở); check-out tới 240' sau giờ kết thúc, quá hạn thì nhờ Quản lý (UC 4.7). Giờ làm thực tế chỉ tính phần có mặt trong khung ca, quy đổi theo tỉ lệ giờ làm/giờ có mặt để trừ giờ nghỉ (có mặt trọn ca = đúng số giờ làm của ca); đến sớm/về muộn không cộng thêm (OT đi theo đơn). Ca qua đêm check-out sáng hôm sau vẫn tính vào ngày bắt đầu ca.
+  - Lịch chuyển `in_progress` khi check-in, `completed` khi check-out (cùng transaction với bản ghi chấm công); hai yêu cầu check-in đồng thời → `UNIQUE(schedule_id)` chặn, xóa ảnh thừa. Vector khuôn mặt mẫu khác mô hình / sai số chiều → yêu cầu đặt lại Face ID. Máy chủ cố định văn hóa số Invariant để đọc tọa độ dạng `21.0285` trong form-data.
+  - Test: +15 unit test (`AttendanceRules`: khung giờ, ca gãy, ca đêm, giờ làm thực tế) + 6 integration test (trọn ca vào/ra, từng lớp bắt buộc từ chối, chưa có / Face ID cũ, Wi-Fi & trùng thiết bị → chờ duyệt, quá hạn check-out, ca đêm). Chạy thử API thật với ONNX: đứng cách 222 m bị từ chối, check-in đủ 3 lớp (muộn 38'), check-out Wi-Fi lạ → chờ duyệt.
 - [ ] **Task 3.3:** API Tra cứu Nhật ký Chấm công: nhân viên xem lịch sử bản thân; Quản lý / HR tra cứu theo chi nhánh kèm ảnh, tọa độ, khoảng cách, BSSID.
 - [ ] **Task 3.4:** Mobile App: màn hình chấm công (lấy GPS + BSSID + chụp selfie), hiển thị kết quả từng lớp xác minh; lịch sử chấm công cá nhân.
 - [ ] **Task 3.5:** Web Admin: nhật ký chấm công có bộ lọc; xem chi tiết minh chứng; duyệt các bản ghi `pending_approval`.

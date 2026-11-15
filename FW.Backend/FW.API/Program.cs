@@ -8,6 +8,11 @@ using Microsoft.AspNetCore.HttpOverrides;
 using FW.Infrastructure;
 using FW.Infrastructure.Services.Storage;
 using Microsoft.Extensions.FileProviders;
+using System.Globalization;
+
+// Số trong form-data (tọa độ GPS "21.0285") và JSON luôn dùng dấu chấm thập phân, không phụ thuộc ngôn ngữ của máy chủ
+CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
+CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.InvariantCulture;
 
 var builder = WebApplication.CreateBuilder(args);
 

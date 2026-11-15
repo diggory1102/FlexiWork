@@ -1,3 +1,4 @@
+using FW.Application.Features.Attendance;
 using FW.Application.Features.Auth;
 using FW.Application.Features.FaceId;
 using FW.Application.Features.Organization;
@@ -25,6 +26,7 @@ public static class DependencyInjection
         services.AddScoped<IShiftService, ShiftService>();
         services.AddScoped<IAttendancePolicyService, AttendancePolicyService>();
         services.AddScoped<IScheduleService, ScheduleService>();
+        services.AddScoped<IAttendanceService, AttendanceService>();
 
         services.AddScoped<IUserService, UserService>();
         services.AddScoped<IProfileService, ProfileService>();

@@ -16,6 +16,13 @@ public class AttendanceLogRepository : BaseRepository<AttendanceLog, long>, IAtt
     public Task<AttendanceLog?> GetByScheduleIdAsync(long scheduleId, CancellationToken cancellationToken = default) =>
         QuerySingleOrDefaultAsync<AttendanceLog>($"{SelectFrom} WHERE `schedule_id` = @ScheduleId", new { ScheduleId = scheduleId }, cancellationToken);
 
+    public async Task<IReadOnlyList<AttendanceLog>> GetByScheduleIdsAsync(IEnumerable<long> scheduleIds, CancellationToken cancellationToken = default)
+    {
+        var ids = scheduleIds.Distinct().ToArray();
+        if (ids.Length == 0) return Array.Empty<AttendanceLog>();
+        return await QueryAsync<AttendanceLog>($"{SelectFrom} WHERE `schedule_id` IN @Ids", new { Ids = ids }, cancellationToken);
+    }
+
     public Task<AttendanceLog?> GetOpenByUserAsync(int userId, CancellationToken cancellationToken = default) =>
         QuerySingleOrDefaultAsync<AttendanceLog>(
             $"{SelectFrom} WHERE `user_id` = @UserId AND `checkout_time` IS NULL ORDER BY `checkin_time` DESC, `id` DESC LIMIT 1",
