@@ -23,6 +23,7 @@ import { RoleGroups, Roles, type Role } from '@/types/auth';
 import type { RoleOption, User, UserFilter, UserStatus } from '@/types/user';
 import { EmployeeFormModal } from '../components/EmployeeFormModal';
 import { EmployeeDetailModal, EmployeeRolesModal, EmployeeStatusModal } from '../components/EmployeeDialogs';
+import { EmployeePasswordModal } from '../components/EmployeeAccessDialogs';
 import { statusTone } from '../components/statusTone';
 
 const roleTone: Record<Role, 'red' | 'purple' | 'blue' | 'gray'> = {
@@ -168,7 +169,7 @@ export function EmployeesPage() {
                   icon={<Icon icon={u.status === 'active' ? Lock : Unlock} />}
                   onClick={() => setStatusFor(u)}
                 />
-                <IconButton variant="ghost" size="sm" label="Cấp lại mật khẩu" tooltip="Cấp lại mật khẩu" icon={<Icon icon={KeyRound} />} onClick={() => setReissueFor(u)} />
+                <IconButton variant="ghost" size="sm" label="Mật khẩu" tooltip="Mật khẩu (gửi email / tự đặt)" icon={<Icon icon={KeyRound} />} onClick={() => setReissueFor(u)} />
                 {isAdmin && <IconButton variant="ghost" size="sm" label="Phân quyền" tooltip="Phân quyền" icon={<Icon icon={ShieldCheck} />} onClick={() => setRolesFor(u)} />}
                 <IconButton variant="ghost" size="sm" label="Xóa" tooltip="Xóa" icon={<Icon icon={Trash2} color="error" />} onClick={() => setDeleting(u)} />
               </>
@@ -220,20 +221,7 @@ export function EmployeesPage() {
       <EmployeeDetailModal user={viewing} onClose={() => setViewing(null)} />
       <EmployeeRolesModal user={rolesFor} roleOptions={roleOptions} onClose={() => setRolesFor(null)} onSaved={reload} />
       <EmployeeStatusModal user={statusFor} onClose={() => setStatusFor(null)} onSaved={reload} />
-      <ConfirmDialog
-        open={!!reissueFor}
-        tone="primary"
-        title="Cấp lại mật khẩu"
-        message={
-          <>
-            Sinh mật khẩu tạm mới cho <b>{reissueFor?.fullName}</b> và gửi tới <b>{reissueFor?.email}</b>? Mật khẩu hiện tại sẽ không dùng được nữa.
-          </>
-        }
-        confirmText="Cấp lại"
-        loading={busy}
-        onConfirm={() => reissueFor && runAction(() => userApi.reissuePassword(reissueFor.id), () => setReissueFor(null))}
-        onClose={() => setReissueFor(null)}
-      />
+      <EmployeePasswordModal user={reissueFor} onClose={() => setReissueFor(null)} onSaved={reload} />
       <ConfirmDialog
         open={!!deleting}
         title="Xóa hồ sơ nhân sự"

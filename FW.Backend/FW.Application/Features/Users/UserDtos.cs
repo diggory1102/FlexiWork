@@ -63,6 +63,16 @@ public class CreateUserRequest : UserProfileRequest
     public List<string>? Roles { get; set; }
 }
 
+/// <summary>Admin/HR đặt mật khẩu trực tiếp cho nhân viên (khi email mời không tới được).</summary>
+public class SetUserPasswordRequest
+{
+    [Required(ErrorMessage = "Vui lòng nhập mật khẩu mới.")]
+    public string NewPassword { get; set; } = string.Empty;
+
+    /// <summary>Bắt nhân viên đổi mật khẩu ở lần đăng nhập tới (mặc định bật — người đặt không nên biết mật khẩu lâu dài).</summary>
+    public bool MustChangePassword { get; set; } = true;
+}
+
 public class UpdateUserStatusRequest
 {
     /// <summary>active / suspended / left.</summary>

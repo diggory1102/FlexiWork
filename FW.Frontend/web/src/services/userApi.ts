@@ -1,6 +1,7 @@
 import { api } from './apiClient';
 import type { PaginatedResult } from '@/types/api';
 import type { Role } from '@/types/auth';
+import type { FaceStatus } from '@/types/scheduling';
 import type {
   CreateUserRequest,
   CreateUserResult,
@@ -19,6 +20,12 @@ export const userApi = {
   updateStatus: (id: number, status: UserStatus) => api.patch<User>(`/users/${id}/status`, { status }),
   updateRoles: (id: number, roles: Role[]) => api.put<User>(`/users/${id}/roles`, { roles }),
   reissuePassword: (id: number) => api.post<null>(`/users/${id}/reissue-password`),
+  /** Đặt mật khẩu trực tiếp (không gửi email). */
+  setPassword: (id: number, newPassword: string, mustChangePassword: boolean) =>
+    api.put<null>(`/users/${id}/password`, { newPassword, mustChangePassword }),
+  /** Trạng thái Face ID của nhân viên / đặt lại để nhân viên đăng ký lại. */
+  faceStatus: (id: number) => api.get<FaceStatus>(`/users/${id}/face`),
+  resetFace: (id: number) => api.delete<null>(`/users/${id}/face`),
   remove: (id: number) => api.delete<null>(`/users/${id}`),
   roles: () => api.get<RoleOption[]>('/roles'),
 };

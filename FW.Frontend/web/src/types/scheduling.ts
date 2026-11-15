@@ -1,5 +1,16 @@
 import type { PagedQuery } from './api';
 
+// ---------------------------------------------------------------- Face ID
+
+/** Khớp FaceProfileStatusDto ở backend (không chứa vector đặc trưng). */
+export interface FaceStatus {
+  registered: boolean;
+  sampleImageUrl: string | null;
+  modelName: string | null;
+  registeredAt: string | null;
+  updatedAt: string | null;
+}
+
 // ---------------------------------------------------------------- Khung ca
 
 /** Khớp ShiftDto ở backend. Giờ dạng "HH:mm". */

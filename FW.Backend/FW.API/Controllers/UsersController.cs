@@ -72,6 +72,17 @@ public class UsersController : ApiControllerBase
             : "Đã cấp lại mật khẩu tạm nhưng gửi email thất bại. Vui lòng kiểm tra cấu hình SMTP.");
     }
 
+    /// <summary>Đặt mật khẩu trực tiếp (không gửi email) — dùng khi email mời không tới được.</summary>
+    [HttpPut("{id:int}/password")]
+    [Authorize(Roles = RoleNames.AdminOrHr)]
+    public async Task<IActionResult> SetPassword(int id, [FromBody] SetUserPasswordRequest request, CancellationToken cancellationToken)
+    {
+        await _userService.SetPasswordAsync(id, request, cancellationToken);
+        return Success(request.MustChangePassword
+            ? "Đã đặt mật khẩu. Nhân viên phải đổi mật khẩu ở lần đăng nhập tới."
+            : "Đã đặt mật khẩu mới cho nhân viên.");
+    }
+
     /// <summary>Trạng thái đăng ký khuôn mặt của nhân viên (Quản lý: nhân viên chi nhánh mình).</summary>
     [HttpGet("{id:int}/face")]
     public async Task<IActionResult> GetFace(int id, CancellationToken cancellationToken) =>

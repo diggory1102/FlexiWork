@@ -22,6 +22,9 @@ public interface IUserService
     /// <summary>Cấp lại mật khẩu tạm và gửi email. Trả về true nếu gửi email thành công.</summary>
     Task<bool> ReissuePasswordAsync(int id, CancellationToken cancellationToken = default);
 
+    /// <summary>Đặt mật khẩu trực tiếp (không gửi email) — dùng khi email mời không tới được. Thu hồi mọi phiên đăng nhập cũ.</summary>
+    Task SetPasswordAsync(int id, SetUserPasswordRequest request, CancellationToken cancellationToken = default);
+
     Task DeleteAsync(int id, CancellationToken cancellationToken = default);
 }
 
@@ -169,6 +172,21 @@ public class UserService : IUserService
         var roles = await ResolveRolesAsync(roleNames, cancellationToken);
         await _users.SetRolesAsync(id, roles.Select(r => r.Id), cancellationToken);
         return await GetByIdAsync(id, cancellationToken);
+    }
+
+    public async Task SetPasswordAsync(int id, SetUserPasswordRequest request, CancellationToken cancellationToken = default)
+    {
+        UserManagementRules.EnsureNotSelf(_currentUser, id, "đặt mật khẩu cho");
+        var user = await GetManageableAsync(id, cancellationToken);
+
+        var errors = PasswordPolicy.Validate(request.NewPassword);
+        if (errors.Count > 0) throw new BadRequestException("Mật khẩu chưa đủ mạnh.", errors);
+
+        user.PasswordHash = _passwordHasher.Hash(request.NewPassword);
+        user.MustChangePassword = request.MustChangePassword;
+        _sessions.MarkPasswordChanged(user); // đăng xuất mọi thiết bị đang dùng mật khẩu cũ
+        await _users.UpdateAsync(user, cancellationToken);
+        await _sessions.InvalidateAsync(user.Id, cancellationToken);
     }
 
     public async Task<bool> ReissuePasswordAsync(int id, CancellationToken cancellationToken = default)

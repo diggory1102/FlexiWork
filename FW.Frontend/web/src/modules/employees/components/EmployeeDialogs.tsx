@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Button } from '@astryxdesign/core/Button';
 import { CheckboxInput } from '@astryxdesign/core/CheckboxInput';
+import { Divider } from '@astryxdesign/core/Divider';
 import { MetadataList, MetadataListItem } from '@astryxdesign/core/MetadataList';
 import { Selector } from '@astryxdesign/core/Selector';
 import { HStack, VStack } from '@astryxdesign/core/Stack';
@@ -15,6 +16,7 @@ import { employmentTypeLabels, formatDate, formatDateTime, roleLabels, userStatu
 import type { Role } from '@/types/auth';
 import type { RoleOption, User, UserStatus } from '@/types/user';
 import { statusTone } from './statusTone';
+import { EmployeeFaceSection } from './EmployeeAccessDialogs';
 
 /** Phân quyền (chỉ Admin). */
 export function EmployeeRolesModal({ user, roleOptions, onClose, onSaved }: { user: User | null; roleOptions: RoleOption[]; onClose: () => void; onSaved: () => void }) {
@@ -164,6 +166,8 @@ export function EmployeeDetailModal({ user, onClose }: { user: User | null; onCl
           <MetadataListItem label="Vai trò">{user.roles.map((r) => roleLabels[r]).join(', ')}</MetadataListItem>
           <MetadataListItem label="Ngày tạo">{formatDateTime(user.createdAt)}</MetadataListItem>
         </MetadataList>
+        <Divider />
+        <EmployeeFaceSection user={user} canReset />
       </VStack>
     </Modal>
   );

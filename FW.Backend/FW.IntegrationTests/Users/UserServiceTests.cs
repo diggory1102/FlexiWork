@@ -265,6 +265,13 @@ public class UserServiceTests
         await Assert.ThrowsAsync<UnauthorizedException>(() => auth.LoginAsync(new LoginRequest { Email = created.Email, Password = firstPassword }));
         Assert.True((await auth.LoginAsync(new LoginRequest { Email = created.Email, Password = secondPassword })).User.MustChangePassword);
 
+        // Đặt mật khẩu trực tiếp (email không tới được): đăng nhập bằng mật khẩu mới, vẫn phải đổi ở lần tới
+        await Assert.ThrowsAsync<BadRequestException>(() => hrService.SetPasswordAsync(created.Id, new SetUserPasswordRequest { NewPassword = "short" }));
+        await Assert.ThrowsAsync<BadRequestException>(() => hrService.SetPasswordAsync(4, new SetUserPasswordRequest { NewPassword = "Direct12345" })); // tự đặt cho mình
+        await hrService.SetPasswordAsync(created.Id, new SetUserPasswordRequest { NewPassword = "Direct12345" });
+        await Assert.ThrowsAsync<UnauthorizedException>(() => auth.LoginAsync(new LoginRequest { Email = created.Email, Password = secondPassword }));
+        Assert.True((await auth.LoginAsync(new LoginRequest { Email = created.Email, Password = "Direct12345" })).User.MustChangePassword);
+
         await Assert.ThrowsAsync<BadRequestException>(() => hrService.DeleteAsync(4)); // tự xóa
         await hrService.DeleteAsync(created.Id);
         await Assert.ThrowsAsync<NotFoundException>(() => hrService.GetByIdAsync(created.Id));
