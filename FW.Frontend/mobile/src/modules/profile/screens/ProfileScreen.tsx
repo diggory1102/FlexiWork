@@ -1,6 +1,6 @@
-import { useEffect, useState, type ComponentProps } from 'react';
+import { useCallback, useEffect, useState, type ComponentProps } from 'react';
 import { ActivityIndicator, Alert, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Avatar } from '@/components/ui/Avatar';
 import { Badge, Card, Notice } from '@/components/ui/Feedback';
@@ -10,6 +10,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { confirmAction, notify } from '@/lib/dialog';
 import { employmentTypeLabels, formatDate, roleLabels, userStatusLabels } from '@/lib/format';
 import { colors, radius } from '@/theme';
+import { profileApi } from '@/services/profileApi';
 import { useProfile, type AvatarSource } from '../hooks/useProfile';
 
 /** Hồ sơ cá nhân: xem thông tin, đổi ảnh đại diện, sửa số điện thoại, đổi mật khẩu, đăng xuất. */
@@ -18,6 +19,17 @@ export function ProfileScreen() {
   const vm = useProfile();
   const [phone, setPhone] = useState('');
   const [phoneMessage, setPhoneMessage] = useState<{ ok: boolean; message: string } | null>(null);
+  const [faceRegistered, setFaceRegistered] = useState<boolean | null>(null);
+
+  // Cập nhật trạng thái Face ID mỗi lần quay lại màn hình (VD vừa đăng ký xong)
+  useFocusEffect(
+    useCallback(() => {
+      profileApi
+        .faceStatus()
+        .then(({ data }) => setFaceRegistered(data.registered))
+        .catch(() => setFaceRegistered(null));
+    }, []),
+  );
 
   useEffect(() => {
     if (vm.profile) setPhone(vm.profile.phoneNumber ?? '');
@@ -127,7 +139,14 @@ export function ProfileScreen() {
 
       <Text style={styles.section}>Tài khoản</Text>
       <Card style={styles.list}>
-        <MenuRow icon="key-outline" label="Đổi mật khẩu" onPress={() => router.push('/change-password')} />
+        <MenuRow
+          icon="scan-outline"
+          label="Khuôn mặt (Face ID)"
+          value={faceRegistered == null ? undefined : faceRegistered ? 'Đã đăng ký' : 'Chưa đăng ký'}
+          valueTone={faceRegistered ? 'success' : 'warning'}
+          onPress={() => router.push('/face-id')}
+        />
+        <MenuRow icon="key-outline" label="Đổi mật khẩu" divider onPress={() => router.push('/change-password')} />
         <MenuRow
           icon="log-out-outline"
           label="Đăng xuất"
@@ -146,18 +165,24 @@ function MenuRow({
   onPress,
   danger,
   divider,
+  value,
+  valueTone,
 }: {
   icon: ComponentProps<typeof Ionicons>['name'];
   label: string;
   onPress: () => void;
   danger?: boolean;
   divider?: boolean;
+  /** Trạng thái ngắn hiển thị bên phải (VD "Đã đăng ký"). */
+  value?: string;
+  valueTone?: 'success' | 'warning';
 }) {
   const color = danger ? colors.danger : colors.foreground;
   return (
     <Pressable onPress={onPress} style={({ pressed }) => [styles.row, divider && styles.divider, pressed && styles.pressed]} accessibilityRole="button">
       <Ionicons name={icon} size={18} color={danger ? colors.danger : colors.muted} />
       <Text style={[styles.menuLabel, { color }]}>{label}</Text>
+      {value && <Badge label={value} tone={valueTone} />}
       {!danger && <Ionicons name="chevron-forward" size={18} color={colors.muted} />}
     </Pressable>
   );

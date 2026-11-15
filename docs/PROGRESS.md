@@ -266,8 +266,8 @@ flowchart TD
 
 > **Tổng quan Tiến độ Hiện tại:**
 > * **Giai đoạn đang thực hiện:** CẤP BẬC 2 - Khung ca, Xếp lịch & Dữ liệu Face ID
-> * **Tiến độ tổng thể:** `17 / 53` Nhiệm vụ hoàn thành (`32%`)
-> * **Hành động tiếp theo:** Thực hiện **Task 2.6** (Mobile App: xem lịch ca cá nhân, chụp ảnh đăng ký Face ID). Việc nhỏ đang chờ: bản đồ chọn tâm geofence trên form chi nhánh (Leaflet + OpenStreetMap).
+> * **Tiến độ tổng thể:** `18 / 53` Nhiệm vụ hoàn thành (`34%`)
+> * **Hành động tiếp theo:** Bắt đầu **Cấp 3 — Task 3.1** (Entity `AttendanceLog`, Haversine, đối soát Wi-Fi BSSID). Việc nhỏ đang chờ: bản đồ chọn tâm geofence trên form chi nhánh (Leaflet + OpenStreetMap).
 
 ### Các quyết định cần chốt
 
@@ -368,7 +368,7 @@ flowchart TD
 
 ---
 
-### 📌 CẤP BẬC 2: Khung ca, Xếp lịch & Dữ liệu Face ID `[5/6]`
+### 📌 CẤP BẬC 2: Khung ca, Xếp lịch & Dữ liệu Face ID `[6/6]` ✅ HOÀN THÀNH
 > 🎯 **Demo:** Quản lý xếp và công bố lịch tuần trên Web; nhân viên xem lịch và đăng ký khuôn mặt trên Mobile.
 
 - [x] **Task 2.1:** Entities & Repository `Shift`, `Schedule`, `FaceProfile`. Bổ sung schema: `shifts.branch_id` (NULL = ca dùng chung), số phút cho phép đi muộn/về sớm, trạng thái nháp/công bố của lịch (`schedules`).
@@ -383,7 +383,8 @@ flowchart TD
   - *Đã làm (15/11/2026):* nhận diện chạy trong backend (`OnnxFaceRecognitionService`: SCRFD → căn chỉnh 5 điểm mốc → ArcFace 512 chiều, xoay ảnh theo EXIF, ảnh > 1280 px thu nhỏ; đăng ký yêu cầu chỉ một người trong ảnh, mặt đủ lớn). API: `GET/POST /api/profile/face` (nhân viên tự đăng ký — **chỉ lần đầu**, chống tự đổi sang mặt người khác để nhờ chấm công hộ), `GET/DELETE /api/users/{id}/face` (Quản lý chi nhánh / HR xem & đặt lại). Ảnh mẫu lưu thư mục `faces` của kho ảnh, đặt lại thì xóa ảnh cũ; vector không trả về client. Dockerfile tự tải mô hình (kiểm tra SHA-256), `scripts/download-face-models.ps1` cho máy dev. Migration 004: `face_profiles.model_name` mặc định `buffalo_sc`. Test: 132 unit + 48 tích hợp (gồm nạp mô hình thật); thử image Docker thật với giới hạn Render free.
 - [x] **Task 2.5:** Web Admin: quản lý khung ca & quy tắc; lưới xếp lịch theo tuần cho từng chi nhánh; công bố lịch.
   - *Đã làm (15/11/2026):* trang **Khung ca** (`/shifts`: danh sách lọc chi nhánh ± ca dùng chung, form có xem trước ca qua đêm / giờ làm thực tế, khóa trường giờ giấc khi ca đã được xếp lịch, ẩn nút sửa theo cờ `canEdit`); trang **Xếp lịch** (`/schedules`: lưới tuần nhân viên × 7 ngày, màu theo trạng thái nháp / đã công bố / hoàn thành / vắng / hủy, bấm ô để xếp một hoặc nhiều ca, **Xếp nhanh** nhiều người × nhiều ngày, sao chép tuần trước, công bố, xóa nháp, xem chi tiết → xóa nháp / hủy ca; lỗi xung đột hiện từng dòng); trang **Cài đặt** (`/settings`, Admin/HR: số công chuẩn + bảng bậc phạt đi muộn / về sớm). Đã chụp ảnh kiểm tra bằng tài khoản Quản lý và HR trên CSDL test.
-- [ ] **Task 2.6:** Mobile App: xem lịch ca cá nhân; chụp ảnh đăng ký Face ID.
+- [x] **Task 2.6:** Mobile App: xem lịch ca cá nhân; chụp ảnh đăng ký Face ID.
+  - *Đã làm (15/11/2026):* tab **Lịch ca** (tuần trước / này / sau, mỗi ngày một thẻ, ca qua đêm ghi "hôm sau", ca đã hủy gạch ngang + nhãn, chỉ lịch đã công bố); **Trang chủ** hiện ca hôm nay và nhắc đăng ký khuôn mặt khi chưa có; màn hình **Khuôn mặt (Face ID)** (hướng dẫn → camera trước có khung căn mặt, tự chọn cỡ ảnh ~1280 px → xem lại → gửi; đã đăng ký thì hiện ảnh mẫu + hướng dẫn nhờ Quản lý/HR đặt lại); mục Face ID trong Hồ sơ kèm trạng thái. Chạy được trên **Expo Go** (không cần bản build riêng). Đã chụp ảnh kiểm tra bằng bản web (khung iPhone) với camera giả lập phát ảnh mẫu — đăng ký thành công qua API thật.
 
 ---
 

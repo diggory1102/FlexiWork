@@ -1,12 +1,17 @@
-import { useEffect, useState, type ComponentProps } from 'react';
+import { useCallback, useEffect, useState, type ComponentProps } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { router, type Href } from 'expo-router';
+import { router, useFocusEffect, type Href } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Avatar } from '@/components/ui/Avatar';
-import { Card } from '@/components/ui/Feedback';
+import { Badge, Card } from '@/components/ui/Feedback';
 import { useAuthStore } from '@/stores/authStore';
 import { formatLongDate, greeting } from '@/lib/format';
+import { todayIso } from '@/lib/dates';
+import { scheduleApi } from '@/services/scheduleApi';
+import { profileApi } from '@/services/profileApi';
+import { scheduleStatusBadges, shiftHours } from '@/modules/shifts/shiftUi';
+import type { Schedule } from '@/types/scheduling';
 import { colors, radius } from '@/theme';
 
 type IconName = ComponentProps<typeof Ionicons>['name'];
@@ -22,6 +27,7 @@ const shortcuts: { icon: IconName; label: string; href: Href; tint: string }[] =
 export function HomeScreen() {
   const user = useAuthStore((s) => s.user);
   const now = useClock();
+  const { shifts, faceRegistered } = useToday();
   if (!user) return null;
 
   const time = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
@@ -51,16 +57,47 @@ export function HomeScreen() {
           <Text style={styles.clockHint}>Xác minh 3 lớp: GPS · Wi-Fi nội bộ · Khuôn mặt</Text>
         </View>
 
+        {faceRegistered === false && (
+          <Pressable onPress={() => router.push('/face-id')} style={({ pressed }) => [styles.faceReminder, pressed && styles.pressed]} accessibilityRole="button">
+            <Ionicons name="scan-outline" size={22} color={colors.warning} />
+            <View style={styles.flex}>
+              <Text style={styles.faceTitle}>Bạn chưa đăng ký khuôn mặt</Text>
+              <Text style={styles.shiftText}>Cần đăng ký một lần để chấm công. Chạm để đăng ký ngay.</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={colors.warning} />
+          </Pressable>
+        )}
+
         <Text style={styles.section}>Ca làm hôm nay</Text>
-        <Card style={styles.shiftCard}>
-          <View style={styles.shiftIcon}>
-            <Ionicons name="time-outline" size={22} color={colors.muted} />
-          </View>
-          <View style={styles.flex}>
-            <Text style={styles.shiftTitle}>Chưa có lịch ca</Text>
-            <Text style={styles.shiftText}>Lịch ca sẽ hiển thị tại đây sau khi Quản lý xếp và công bố lịch (Cấp 2).</Text>
-          </View>
-        </Card>
+        {shifts === null || shifts.length === 0 ? (
+          <Card style={styles.shiftCard}>
+            <View style={styles.shiftIcon}>
+              <Ionicons name="cafe-outline" size={22} color={colors.muted} />
+            </View>
+            <View style={styles.flex}>
+              <Text style={styles.shiftTitle}>{shifts === null ? 'Đang tải lịch…' : 'Hôm nay bạn không có ca'}</Text>
+              <Text style={styles.shiftText}>Xem lịch cả tuần ở mục Lịch ca.</Text>
+            </View>
+          </Card>
+        ) : (
+          shifts.map((s) => {
+            const badge = scheduleStatusBadges[s.status];
+            return (
+              <Pressable key={s.id} onPress={() => router.push('/schedule')} style={({ pressed }) => [pressed && styles.pressed]}>
+                <Card style={[styles.shiftCard, styles.shiftSpacing]}>
+                  <View style={[styles.shiftIcon, styles.shiftIconActive]}>
+                    <Ionicons name="time-outline" size={22} color={colors.primary} />
+                  </View>
+                  <View style={styles.flex}>
+                    <Text style={[styles.shiftTitle, s.status === 'cancelled' && styles.cancelled]}>{s.shiftName}</Text>
+                    <Text style={styles.shiftText}>{shiftHours(s)}</Text>
+                  </View>
+                  {badge && <Badge label={badge.label} tone={badge.tone} />}
+                </Card>
+              </Pressable>
+            );
+          })
+        )}
 
         <Text style={styles.section}>Tiện ích</Text>
         <View style={styles.grid}>
@@ -76,6 +113,28 @@ export function HomeScreen() {
       </ScrollView>
     </SafeAreaView>
   );
+}
+
+/** Ca hôm nay + trạng thái Face ID, tải lại mỗi lần quay về Trang chủ. */
+function useToday() {
+  const [shifts, setShifts] = useState<Schedule[] | null>(null);
+  const [faceRegistered, setFaceRegistered] = useState<boolean | null>(null);
+
+  useFocusEffect(
+    useCallback(() => {
+      const today = todayIso();
+      scheduleApi
+        .mine(today, today)
+        .then(({ data }) => setShifts(data))
+        .catch(() => setShifts([]));
+      profileApi
+        .faceStatus()
+        .then(({ data }) => setFaceRegistered(data.registered))
+        .catch(() => setFaceRegistered(null));
+    }, []),
+  );
+
+  return { shifts, faceRegistered };
 }
 
 /** Đồng hồ cập nhật mỗi 15 giây (đủ để hiển thị giờ:phút). */
@@ -113,6 +172,21 @@ const styles = StyleSheet.create({
   clockHint: { marginTop: 12, fontSize: 12, color: 'rgba(255,255,255,0.6)' },
   section: { marginTop: 24, marginBottom: 10, marginLeft: 4, fontSize: 13, fontWeight: '700', color: colors.muted, textTransform: 'uppercase' },
   shiftCard: { flexDirection: 'row', gap: 12, alignItems: 'center' },
+  shiftSpacing: { marginBottom: 8 },
+  shiftIconActive: { backgroundColor: colors.primarySoft },
+  cancelled: { textDecorationLine: 'line-through', color: colors.muted },
+  faceReminder: {
+    marginTop: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 14,
+    borderRadius: radius.lg,
+    backgroundColor: colors.warningSoft,
+    borderWidth: 1,
+    borderColor: colors.warning,
+  },
+  faceTitle: { fontSize: 15, fontWeight: '700', color: colors.warning },
   shiftIcon: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center' },
   shiftTitle: { fontSize: 15, fontWeight: '600', color: colors.foreground },
   shiftText: { marginTop: 2, fontSize: 13, lineHeight: 18, color: colors.muted },

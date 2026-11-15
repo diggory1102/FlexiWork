@@ -1,6 +1,7 @@
 import { Platform } from 'react-native';
 import { api } from './apiClient';
 import type { UserProfile } from '@/types/user';
+import type { FaceStatus } from '@/types/scheduling';
 
 /** Ảnh đã chọn từ thư viện / camera (expo-image-picker). */
 export interface PickedImage {
@@ -28,14 +29,16 @@ async function toFormData(image: PickedImage): Promise<FormData> {
   return form;
 }
 
+/** Native: axios cần khai báo multipart và giữ nguyên FormData; web: để trình duyệt tự đặt boundary. */
+const multipartConfig = Platform.OS === 'web' ? undefined : { headers: { 'Content-Type': 'multipart/form-data' }, transformRequest: (data: unknown) => data };
+
 export const profileApi = {
   get: () => api.get<UserProfile>('/profile'),
   update: (phoneNumber: string | null) => api.put<UserProfile>('/profile', { phoneNumber }),
-  uploadAvatar: async (image: PickedImage) =>
-    api.post<UserProfile>(
-      '/profile/avatar',
-      await toFormData(image),
-      // Native: axios cần khai báo multipart và giữ nguyên FormData; web: để trình duyệt tự đặt boundary.
-      Platform.OS === 'web' ? undefined : { headers: { 'Content-Type': 'multipart/form-data' }, transformRequest: (data) => data },
-    ),
+  uploadAvatar: async (image: PickedImage) => api.post<UserProfile>('/profile/avatar', await toFormData(image), multipartConfig),
+
+  /** Trạng thái đăng ký khuôn mặt (Face ID) của tôi. */
+  faceStatus: () => api.get<FaceStatus>('/profile/face'),
+  /** Đăng ký khuôn mặt mẫu — chỉ được một lần, muốn đổi phải nhờ Quản lý / HR đặt lại. */
+  registerFace: async (image: PickedImage) => api.post<FaceStatus>('/profile/face', await toFormData(image), multipartConfig),
 };
