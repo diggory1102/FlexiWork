@@ -57,10 +57,12 @@ function GeofenceMapPreview({ latitude, longitude }: { latitude: number; longitu
         title="Bản đồ vị trí chi nhánh"
         src={src}
         loading="lazy"
-        style={{ width: '100%', height: 240, border: 0, borderRadius: 8, display: 'block' }}
+        tabIndex={-1}
+        // Chỉ để xem: không nhận chuột, nên lăn chuột trên bản đồ vẫn cuộn form thay vì phóng to bản đồ
+        style={{ width: '100%', height: 240, border: 0, borderRadius: 8, display: 'block', pointerEvents: 'none' }}
       />
       <Text type="supporting" size="sm">
-        Ghim trên bản đồ là tâm vùng chấm công. Bản đồ © OpenStreetMap.
+        Ghim trên bản đồ là tâm vùng chấm công. Muốn xem rộng hơn, bấm "Xem trên bản đồ". Bản đồ © OpenStreetMap.
       </Text>
     </VStack>
   );
