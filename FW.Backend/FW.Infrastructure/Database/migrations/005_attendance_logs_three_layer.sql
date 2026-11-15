@@ -4,16 +4,37 @@
 --   độ tương đồng khuôn mặt (cosine 0–1), mã thiết bị, thông tin duyệt; mỗi ca tối đa một bản ghi.
 --   Bảng cũ chưa có dữ liệu (chưa có chức năng nào ghi vào) → đổi tên thành bảng sao lưu rồi tạo bảng mới,
 --   thay vì ALTER từng cột. Khóa ngoại của bảng mới đặt tên riêng (fk_attendance_*) để không trùng với bảng sao lưu.
--- Chạy MỘT lần trên CSDL đã khởi tạo trước đó (TiDB Cloud / MySQL dev) — xem docs/DEPLOY.md.
+--
+-- CHẠY LẠI AN TOÀN: script tự nhận biết trạng thái —
+--   * bảng attendance_logs còn là bản cũ (chưa có cột work_date) → đổi tên thành attendance_logs_backup_005 rồi tạo bảng mới;
+--   * đã chạy migration trước đó (bảng đã có work_date) → bỏ qua, KHÔNG đụng tới dữ liệu chấm công đang có.
+-- Xem docs/DEPLOY.md.
 -- =====================================================================
 USE flexiwork_db;
 
--- Số dòng của bảng cũ (kỳ vọng 0)
-SELECT COUNT(*) AS so_dong_bang_cu FROM attendance_logs;
+-- Bảng attendance_logs hiện tại đã là thiết kế mới chưa (có cột work_date)?
+SET @attendance_is_new = (
+    SELECT COUNT(*) FROM information_schema.columns
+    WHERE table_schema = DATABASE() AND table_name = 'attendance_logs' AND column_name = 'work_date'
+);
+SET @attendance_exists = (
+    SELECT COUNT(*) FROM information_schema.tables
+    WHERE table_schema = DATABASE() AND table_name = 'attendance_logs'
+);
+SET @backup_exists = (
+    SELECT COUNT(*) FROM information_schema.tables
+    WHERE table_schema = DATABASE() AND table_name = 'attendance_logs_backup_005'
+);
 
-RENAME TABLE attendance_logs TO attendance_logs_backup_005;
+-- Chỉ đổi tên khi bảng còn là bản cũ và chưa có bảng sao lưu
+SET @step = IF(@attendance_exists = 1 AND @attendance_is_new = 0 AND @backup_exists = 0,
+    'RENAME TABLE attendance_logs TO attendance_logs_backup_005',
+    'SELECT ''Bỏ qua bước đổi tên: attendance_logs đã là bảng mới (migration 005 đã chạy trước đó)'' AS thong_bao');
+PREPARE migration_step FROM @step;
+EXECUTE migration_step;
+DEALLOCATE PREPARE migration_step;
 
-CREATE TABLE attendance_logs (
+CREATE TABLE IF NOT EXISTS attendance_logs (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     schedule_id BIGINT NULL COMMENT 'Ca được chấm công (mỗi ca tối đa 1 bản ghi); NULL nếu lịch đã bị xóa',
     user_id INT NOT NULL,
@@ -69,5 +90,15 @@ CREATE TABLE attendance_logs (
     INDEX idx_attendance_device_date (checkin_device_id, work_date)
 ) ENGINE=InnoDB COMMENT='Nhật ký đối soát chấm công đa lớp: GPS + Wi-Fi + Face ID';
 
--- Sau khi kiểm tra so_dong_bang_cu = 0 (hoặc đã chuyển xong dữ liệu), xóa bảng sao lưu:
--- DROP TABLE attendance_logs_backup_005;
+-- Kiểm tra kết quả: co_cot_work_date = 1 là bảng mới; so_dong_bang_sao_luu = 0 thì xóa được bảng sao lưu (lệnh cuối file)
+SELECT
+    (SELECT COUNT(*) FROM information_schema.columns
+     WHERE table_schema = DATABASE() AND table_name = 'attendance_logs' AND column_name = 'work_date') AS co_cot_work_date,
+    (SELECT COUNT(*) FROM attendance_logs) AS so_dong_cham_cong,
+    (SELECT COUNT(*) FROM information_schema.tables
+     WHERE table_schema = DATABASE() AND table_name = 'attendance_logs_backup_005') AS con_bang_sao_luu;
+
+-- Khi con_bang_sao_luu = 1, kiểm tra bảng cũ không có dữ liệu cần giữ:
+--   SELECT COUNT(*) AS so_dong_bang_sao_luu FROM attendance_logs_backup_005;
+-- rồi xóa bảng sao lưu (chỉ bảng _backup_005, KHÔNG xóa attendance_logs):
+--   DROP TABLE attendance_logs_backup_005;
