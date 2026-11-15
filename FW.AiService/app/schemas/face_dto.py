@@ -17,4 +17,4 @@ class FaceVerifyResponse(BaseModel):
     message: str
     is_matched: bool = False
     confidence: float = 0.0
-    threshold: float = 0.60
+    threshold: float = 0.40

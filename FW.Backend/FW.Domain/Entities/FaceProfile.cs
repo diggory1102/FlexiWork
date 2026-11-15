@@ -9,10 +9,10 @@ namespace FW.Domain.Entities;
 /// </summary>
 public class FaceProfile : BaseEntity, IAuditableEntity
 {
-    /// <summary>Số chiều vector của mô hình InsightFace buffalo_l (ArcFace).</summary>
+    /// <summary>Số chiều vector của mô hình ArcFace (InsightFace buffalo_sc: MobileFaceNet huấn luyện trên WebFace600K).</summary>
     public const int EmbeddingSize = 512;
 
-    public const string DefaultModelName = "buffalo_l";
+    public const string DefaultModelName = "buffalo_sc";
 
     public int UserId { get; set; }
 

@@ -1,4 +1,5 @@
 using FW.Application.Features.Auth;
+using FW.Application.Features.FaceId;
 using FW.Application.Features.Organization;
 using FW.Application.Features.Scheduling;
 using FW.Application.Features.Setup;
@@ -27,6 +28,7 @@ public static class DependencyInjection
 
         services.AddScoped<IUserService, UserService>();
         services.AddScoped<IProfileService, ProfileService>();
+        services.AddScoped<IFaceProfileService, FaceProfileService>();
 
         services.AddScoped<IBootstrapAdminService, BootstrapAdminService>();
 

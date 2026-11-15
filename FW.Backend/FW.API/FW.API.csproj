@@ -16,4 +16,9 @@
     <ProjectReference Include="..\FW.Infrastructure\FW.Infrastructure.csproj" />
   </ItemGroup>
 
+  <!-- Mô hình nhận diện khuôn mặt tải bằng scripts/download-face-models.ps1 (không lưu trong repo) -->
+  <ItemGroup>
+    <None Include="models\**\*.onnx" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Never" />
+  </ItemGroup>
+
 </Project>

@@ -1,4 +1,5 @@
 using FW.Application.Common.Interfaces.Persistence;
+using FW.Application.Features.FaceId;
 using FW.Application.Features.Users;
 using FW.Domain.Enums;
 using Microsoft.AspNetCore.Authorization;
@@ -15,10 +16,12 @@ namespace FW.API.Controllers;
 public class UsersController : ApiControllerBase
 {
     private readonly IUserService _userService;
+    private readonly IFaceProfileService _faceProfileService;
 
-    public UsersController(IUserService userService)
+    public UsersController(IUserService userService, IFaceProfileService faceProfileService)
     {
         _userService = userService;
+        _faceProfileService = faceProfileService;
     }
 
     /// <summary>Danh sách nhân sự: tìm theo mã/email/họ tên/SĐT; lọc theo chi nhánh, phòng ban, chức vụ, trạng thái, vai trò.</summary>
@@ -67,6 +70,19 @@ public class UsersController : ApiControllerBase
         return Success(sent
             ? "Đã cấp lại mật khẩu tạm và gửi email cho nhân viên."
             : "Đã cấp lại mật khẩu tạm nhưng gửi email thất bại. Vui lòng kiểm tra cấu hình SMTP.");
+    }
+
+    /// <summary>Trạng thái đăng ký khuôn mặt của nhân viên (Quản lý: nhân viên chi nhánh mình).</summary>
+    [HttpGet("{id:int}/face")]
+    public async Task<IActionResult> GetFace(int id, CancellationToken cancellationToken) =>
+        Success(await _faceProfileService.GetStatusAsync(id, cancellationToken));
+
+    /// <summary>Đặt lại dữ liệu khuôn mặt để nhân viên đăng ký lại (Quản lý: nhân viên chi nhánh mình).</summary>
+    [HttpDelete("{id:int}/face")]
+    public async Task<IActionResult> ResetFace(int id, CancellationToken cancellationToken)
+    {
+        await _faceProfileService.ResetAsync(id, cancellationToken);
+        return Success("Đã đặt lại dữ liệu khuôn mặt. Nhân viên cần đăng ký lại trên ứng dụng.");
     }
 
     [HttpDelete("{id:int}")]

@@ -8,11 +8,11 @@
 | Gửi email | **Brevo** (HTTP API) | Free — 300 email/ngày |
 | Lưu ảnh | **Cloudinary** | Free |
 | App di động | **Expo EAS Build** | Free — làm ở Task 3.4 |
-| AI Service — Face ID (InsightFace, Docker) | **Hugging Face Spaces** (Space riêng tư) | CPU basic (free) — 2 vCPU, 16 GB RAM — làm ở Task 2.4 |
+| Nhận diện khuôn mặt (Face ID) | **Chạy ngay trong Backend** (ONNX Runtime + mô hình InsightFace buffalo_sc) | Không cần dịch vụ riêng — mô hình tự tải khi build Docker |
 | Giữ Backend luôn thức | **UptimeRobot** | Free — kiểm tra 5 phút/lần |
 | Trợ lý AI (chatbot) | **Claude API** (Anthropic) | Trả theo lượng dùng (nạp trước ~5–10 USD) — làm ở Cấp 7 |
 
-> **Phân bổ chức năng AI (đã chốt 15/11/2026):** chỉ phần cần chạy mô hình trên máy chủ (InsightFace) mới đặt ở Hugging Face. Chatbot do backend .NET điều phối (mô hình Claude chạy trên máy chủ Anthropic; các công cụ đọc CSDL và kiểm tra quyền ngay trong backend, cùng vùng Singapore với TiDB). Chấm điểm nguy cơ nghỉ việc là tác vụ nền của backend. Render chỉ chạy **một** web service (750 giờ free/tháng ≈ đủ cho 1 service chạy 24/7).
+> **Phân bổ chức năng AI (đã chốt 15/11/2026):** Hugging Face Spaces không còn chạy được Docker miễn phí (cần gói PRO) → nhận diện khuôn mặt chạy **trong backend** bằng ONNX Runtime (đo với giới hạn của Render free 0,1 CPU / 512 MB: ~0,6–0,85 giây mỗi lần, backend dùng ~151 MB RAM). Chatbot do backend gọi Claude API. Chấm điểm nguy cơ nghỉ việc là tác vụ nền của backend. Render chỉ chạy **một** web service (750 giờ free/tháng ≈ đủ cho 1 service chạy 24/7).
 
 > **Nguyên tắc bảo mật:** repo GitHub đang để công khai → mọi mật khẩu, khóa API chỉ được dán vào trang quản trị của từng dịch vụ, **không** ghi vào file trong repo.
 
@@ -113,36 +113,14 @@ Render gói free ngủ sau ~15 phút không có truy cập. Một service chạy
 2. **New Monitor** → Type **HTTP(s)** → URL `https://flexiwork-api.onrender.com/api/healthcheck` → Interval **5 minutes** → **Create**.
 3. Nếu Render báo sắp hết giờ free trong tháng (Billing → Usage): tạm **Pause** monitor; API vẫn chạy, chỉ quay lại cơ chế ngủ.
 
-## Bước 7 — AI Service trên Hugging Face Spaces (Task 2.4)
+## Bước 7 — Nhận diện khuôn mặt (Task 2.4) — không cần cấu hình thêm
 
-Vì sao không dùng Render: InsightFace cần ~300–450 MB RAM (sát giới hạn 512 MB của Render free) và service thứ hai trên Render làm vượt 750 giờ/tháng → phải ngủ, lần chấm công đầu chờ 1–2 phút. Space free có 16 GB RAM, chỉ ngủ sau ~48 giờ không dùng.
+Nhận diện khuôn mặt chạy ngay trong `flexiwork-api` bằng ONNX Runtime với bộ mô hình InsightFace **buffalo_sc** (SCRFD phát hiện mặt + ArcFace MobileFaceNet trích vector 512 chiều). Dockerfile tự tải mô hình (~16 MB, kiểm tra mã băm SHA-256) ở stage `models` — Render build lâu hơn khoảng 1 phút, không cần biến môi trường nào.
 
-1. Đăng ký <https://huggingface.co/join> bằng email (bấm link xác minh trong email Hugging Face gửi về).
-2. **New Space**: tên `flexiwork-ai`, SDK **Docker** (Blank), Hardware **CPU basic · Free**, Visibility **Private** → **Create Space**.
-3. **Settings → Access Tokens** (trang tài khoản) tạo 2 token:
-   - `flexiwork-deploy` — quyền **Write** (GitHub Actions đẩy code lên Space).
-   - `flexiwork-backend` — quyền **Read** (backend gọi vào Space riêng tư).
-4. Trong Space → **Settings → Variables and secrets → New secret**: `AI_API_KEY` = một chuỗi ngẫu nhiên dài. Tự sinh bằng PowerShell:
-   ```powershell
-   -join ((48..57) + (65..90) + (97..122) | Get-Random -Count 40 | ForEach-Object { [char]$_ })
-   ```
-   Lưu lại chuỗi này (cần điền vào Render ở bước 6).
-5. GitHub repo → **Settings → Secrets and variables → Actions**:
-   - Secret `HF_TOKEN` = token `flexiwork-deploy`.
-   - Variable `HF_SPACE_ID` = `<tên-tài-khoản-hf>/flexiwork-ai`.
-   Từ đây mỗi lần push có thay đổi trong `FW.AiService/`, workflow `deploy-ai-space.yml` tự cập nhật Space.
-6. Render → `flexiwork-api` → **Environment** thêm:
-
-   | Biến | Giá trị |
-   |---|---|
-   | `AiService__BaseUrl` | `https://<tên-tài-khoản-hf>-flexiwork-ai.hf.space` |
-   | `AiService__HfToken` | token `flexiwork-backend` |
-   | `AiService__ApiKey` | trùng giá trị `AI_API_KEY` ở bước 4 |
-   | `AiService__TimeoutSeconds` | `60` (chờ Space thức dậy) |
-
-7. Kiểm tra: Render Logs không báo lỗi gọi AI; đăng ký Face ID thử trên app.
-
-> Trước buổi demo/bảo vệ: mở Space một lần (Space ngủ sau ~48 giờ không dùng). Khi chạy trên máy: `docker run -p 8000:8000` AI Service, backend mặc định gọi `http://localhost:8000`, không cần token.
+- **Chạy trên máy:** tải mô hình một lần: `powershell -ExecutionPolicy Bypass -File FW.Backend\scripts\download-face-models.ps1` (file `.onnx` không lưu trong repo).
+- **Tham số** (section `FaceRecognition`, đổi trên Render bằng biến `FaceRecognition__MatchThreshold`…): ngưỡng khớp mặc định `0.40` (hiệu chỉnh ở thực nghiệm Chương 4), kích thước ảnh phát hiện `640`.
+- **Phương án tách dịch vụ:** đặt `FaceRecognition__Engine=AiService` + `AiService__BaseUrl` để gọi microservice `FW.AiService` (FastAPI + InsightFace) thay vì chạy trong backend.
+- Mô hình InsightFace chỉ dùng cho nghiên cứu / phi thương mại — phù hợp phạm vi khóa luận.
 
 ## Bước 8 — Claude API cho Trợ lý AI (Cấp 7)
 
@@ -177,7 +155,7 @@ Không có migration tự động (theo thiết kế Chương 2). Mỗi thay đ�
 ```powershell
 $mysql = "C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe"
 cd FW.Backend\FW.Infrastructure\Database\migrations
-& $mysql --host=<HOST> --port=4000 --user=<USERNAME> -p --ssl-mode=REQUIRED --default-character-set=utf8mb4 -e "source 003_violation_rules_system_settings.sql;"   # thay bằng tên file cần chạy
+& $mysql --host=<HOST> --port=4000 --user=<USERNAME> -p --ssl-mode=REQUIRED --default-character-set=utf8mb4 -e "source 004_face_profiles_model_buffalo_sc.sql;"   # thay bằng tên file cần chạy
 ```
 
 | File | Nội dung | TiDB |
@@ -185,6 +163,7 @@ cd FW.Backend\FW.Infrastructure\Database\migrations
 | `001_users_password_changed_at.sql` | Cột `users.password_changed_at` — đổi mật khẩu thì đăng xuất các thiết bị khác | ✅ |
 | `002_shifts_schedules_face_profiles.sql` | Khung ca theo chi nhánh + số phút cho phép đi muộn/về sớm; lịch nháp/công bố; Face ID lưu mã ảnh & tên mô hình | ✅ |
 | `003_violation_rules_system_settings.sql` | Quy tắc trừ công / phạt theo bậc + số công chuẩn tháng (kèm giá trị mặc định) | ✅ |
+| `004_face_profiles_model_buffalo_sc.sql` | Tên mô hình mặc định của `face_profiles` là `buffalo_sc` | ☐ |
 
 ## Xử lý sự cố
 
@@ -196,6 +175,5 @@ cd FW.Backend\FW.Infrastructure\Database\migrations
 | Render Logs: lỗi kết nối MySQL | Thiếu `SslMode=Required`, sai cổng (TiDB là `4000`), hoặc username thiếu phần tiền tố `xxxxxxxx.root` |
 | Không tạo được Admin đầu tiên | Mật khẩu Bootstrap không đạt quy tắc, hoặc chưa chạy `flexiwork_seed_production.sql` (thiếu bảng vai trò) |
 | Email không tới | Email người gửi chưa được xác minh trên Brevo; kiểm tra thư mục Spam |
-| Chấm công / đăng ký Face ID báo "hệ thống nhận diện đang khởi động" | Space đang ngủ — chờ 30–60 giây rồi thử lại |
-| Render Logs: AI Service trả 401 / 404 | Sai `AiService__HfToken` (token Read) hoặc sai `AiService__BaseUrl`; 403 = `AiService__ApiKey` khác `AI_API_KEY` của Space |
-| Space build lỗi | Xem tab **Logs → Build** trên Space; kiểm tra secret `HF_TOKEN` và variable `HF_SPACE_ID` trên GitHub |
+| Render Logs: `Chưa có mô hình nhận diện khuôn mặt` | Build Docker không tải được mô hình (mạng / sai mã băm) — Manual Deploy lại; chạy trên máy thì chạy `scripts/download-face-models.ps1` |
+| Đăng ký Face ID báo "Ảnh có nhiều khuôn mặt" / "Khuôn mặt quá nhỏ" | Chụp một mình, chính diện, đưa điện thoại lại gần |

@@ -71,7 +71,7 @@ async def verify_face(
     # Tính độ tương đồng Cosine
     similarity = face_engine.calculate_cosine_similarity(target_vec, checkin_embedding)
     
-    threshold = 0.60 # Ngưỡng 60% cho ArcFace / MobileFaceNet L2-normalized
+    threshold = 0.40 # Cùng ngưỡng mặc định với backend (FaceRecognition:MatchThreshold)
     is_matched = similarity >= threshold
 
     return FaceVerifyResponse(

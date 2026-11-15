@@ -8,6 +8,7 @@ using FW.Infrastructure.Services;
 using FW.Infrastructure.Services.Caching;
 using FW.Infrastructure.Services.Email;
 using FW.Infrastructure.Services.FaceRecognition;
+using FW.Infrastructure.Services.FaceRecognition.Onnx;
 using FW.Infrastructure.Services.Storage;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -100,13 +101,22 @@ public static class DependencyInjection
             services.AddSingleton<IFileStorageService, CloudinaryStorageService>();
         }
 
-        // 7. Client gọi FW.AiService
-        services.AddHttpClient<IFaceRecognitionService, FaceRecognitionClient>((sp, client) =>
+        // 7. Nhận diện khuôn mặt: mặc định chạy ONNX ngay trong backend; "AiService" = gọi microservice FW.AiService
+        services.Configure<FaceRecognitionSettings>(configuration.GetSection(FaceRecognitionSettings.SectionName));
+        var faceEngine = configuration[$"{FaceRecognitionSettings.SectionName}:Engine"] ?? FaceRecognitionSettings.OnnxEngine;
+        if (string.Equals(faceEngine, FaceRecognitionSettings.AiServiceEngine, StringComparison.OrdinalIgnoreCase))
         {
-            var settings = sp.GetRequiredService<IOptions<AiServiceSettings>>().Value;
-            client.BaseAddress = new Uri(settings.BaseUrl.TrimEnd('/') + "/");
-            client.Timeout = TimeSpan.FromSeconds(settings.TimeoutSeconds);
-        });
+            services.AddHttpClient<IFaceRecognitionService, FaceRecognitionClient>((sp, client) =>
+            {
+                var settings = sp.GetRequiredService<IOptions<AiServiceSettings>>().Value;
+                client.BaseAddress = new Uri(settings.BaseUrl.TrimEnd('/') + "/");
+                client.Timeout = TimeSpan.FromSeconds(settings.TimeoutSeconds);
+            });
+        }
+        else
+        {
+            services.AddSingleton<IFaceRecognitionService, OnnxFaceRecognitionService>();
+        }
 
         // 8. Repositories (Dapper)
         services.AddScoped<IBranchRepository, BranchRepository>();

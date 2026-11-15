@@ -8,3 +8,5 @@ FW.UnitTests/
 FW.IntegrationTests/
 # global.json ghim SDK cho máy dev; trong Docker dùng SDK có sẵn của image dotnet/sdk:8.0
 global.json
+# Mô hình nhận diện khuôn mặt được tải trong Dockerfile (stage models), không lấy từ máy dev
+**/models/

@@ -152,10 +152,10 @@ CREATE TABLE user_roles (
 CREATE TABLE face_profiles (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL UNIQUE,
-    face_encoding JSON NOT NULL COMMENT 'Vector đặc trưng khuôn mặt 512 chiều (InsightFace buffalo_l)',
+    face_encoding JSON NOT NULL COMMENT 'Vector đặc trưng khuôn mặt 512 chiều (InsightFace buffalo_sc)',
     sample_image_url VARCHAR(255) NOT NULL COMMENT 'Ảnh gốc dùng để trích xuất vector',
     sample_image_public_id VARCHAR(255) NULL COMMENT 'Mã ảnh trên Cloudinary — xóa ảnh cũ khi đăng ký lại',
-    model_name VARCHAR(50) NOT NULL DEFAULT 'buffalo_l' COMMENT 'Mô hình trích xuất vector (vector khác mô hình không so khớp được)',
+    model_name VARCHAR(50) NOT NULL DEFAULT 'buffalo_sc' COMMENT 'Mô hình trích xuất vector (vector khác mô hình không so khớp được)',
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
