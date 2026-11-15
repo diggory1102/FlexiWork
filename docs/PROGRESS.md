@@ -267,7 +267,7 @@ flowchart TD
 > **Tổng quan Tiến độ Hiện tại:**
 > * **Giai đoạn đang thực hiện:** CẤP BẬC 3 - Lõi chấm công 3 lớp
 > * **Tiến độ tổng thể:** `22 / 53` Nhiệm vụ hoàn thành (`42%`)
-> * **Hành động tiếp theo:** **Task 3.5** — Web Admin: nhật ký chấm công, xem minh chứng, duyệt bản ghi chờ duyệt (chạy migration `005` trước khi push Task 3.1–3.4). Việc nhỏ đang chờ: bản đồ chọn tâm geofence trên form chi nhánh (Leaflet + OpenStreetMap).
+> * **Hành động tiếp theo:** **Task 3.5** — Web Admin: nhật ký chấm công, xem minh chứng, duyệt bản ghi chờ duyệt (chạy migration `005` trước khi push Task 3.1–3.4). Việc nhỏ còn lại: kéo ghim trực tiếp trên bản đồ (Leaflet) — làm khi chốt nâng cấp Vite/React Router đang dở trong `package.json` của web.
 
 ### Các quyết định cần chốt
 
@@ -354,6 +354,7 @@ flowchart TD
   - Bố cục tham khảo HRM iPOS (header tối, sidebar nhóm thu gọn, Dashboard thẻ thống kê) với thương hiệu, logo, hình minh họa SVG riêng của FlexiWork; menu theo 6 phân hệ, mục chưa làm hiển thị trang "đang phát triển".
   - Xác thực: đăng nhập, quên mật khẩu 2 bước (email → OTP + mật khẩu mới), **bắt buộc đổi mật khẩu tạm** (chặn mọi trang khác), đổi mật khẩu chủ động, tự đăng xuất khi token hết hạn/401.
   - Trang: Tổng quan (khung số liệu, chờ dữ liệu Cấp 3/5), Nhân viên (lọc chi nhánh/phòng ban/vai trò/trạng thái; thêm kèm vai trò; sửa; khóa/mở; cấp lại mật khẩu; phân quyền; xóa; xem chi tiết), Chi nhánh (Geofence: lấy vị trí hiện tại, xem bản đồ; quản lý Wi-Fi BSSID), Phòng ban, Chức vụ & đơn giá, Hồ sơ cá nhân (SĐT, ảnh đại diện).
+  - *Bổ sung (16/11/2026):* form chi nhánh có nút **Tìm theo địa chỉ** — backend `GET /api/branches/geocode?address=` (Admin) tra **Nominatim (OpenStreetMap)**: chuẩn hóa địa chỉ (bỏ chữ "Số" trước số nhà), tối đa 5 kết quả để chọn, không thấy cả địa chỉ thì lần lượt bỏ phần đầu (tối đa 2 lần, luôn giữ ≥ 2 cấp) và đánh dấu **gần đúng**; cache 30 ngày (không thấy: 1 ngày), xếp hàng 1 yêu cầu/giây theo chính sách Nominatim, User-Agent chung `FlexiWork-HRM/1.0` (cấu hình mục `Geocoding`). Form tự điền vĩ độ/kinh độ và hiện **bản đồ OpenStreetMap nhúng** có ghim tại tâm. Thử thật: "Số 25 Lý Thường Kiệt" ra đúng số nhà (3 vị trí); "Tòa nhà FPT, Phố Duy Tân" → gần đúng theo phố. +10 unit test.
   - Hiển thị theo vai trò: Admin đầy đủ; HR không gán Admin/HR, không thao tác tài khoản Admin, không phân quyền; Manager chỉ xem chi nhánh mình; Employee thấy trang hướng dẫn dùng app di động.
   - Kỹ thuật: MVVM (hook `usePagedList` làm ViewModel), Zustand (`authStore`, `lookupStore`, `toastStore`), Axios client chuẩn hóa `ApiError`, bộ component UI dùng chung (Button, Form, Modal, DataTable, Badge, Toaster), icon `lucide-react`.
   - **Làm lại giao diện bằng Astryx (12/11/2026):** React 19 + Tailwind 4; khung `AppShell` + `TopNav` + `SideNav` thu gọn được; form/bảng/hộp thoại/toast/phân trang dùng component Astryx; lớp mỏng `components/ui` (PageHeader, DataTable, Modal/ConfirmDialog, Badge, ListCard) giữ API cũ cho các trang; `LinkProvider` nối react-router; `ToastBridge` chuyển `toast.*` sang Astryx; nút chuyển giao diện sáng/tối (lưu theo người dùng). Kiểm thử lại bằng Chrome: tạo NV, xem chi tiết, Wi-Fi, sửa chi nhánh, chế độ tối, buộc đổi mật khẩu tạm, phân quyền hiển thị Manager/HR, menu tài khoản — không lỗi console.

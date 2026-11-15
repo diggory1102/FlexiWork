@@ -9,6 +9,7 @@ using FW.Infrastructure.Services.Caching;
 using FW.Infrastructure.Services.Email;
 using FW.Infrastructure.Services.FaceRecognition;
 using FW.Infrastructure.Services.FaceRecognition.Onnx;
+using FW.Infrastructure.Services.Geocoding;
 using FW.Infrastructure.Services.Storage;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -103,6 +104,16 @@ public static class DependencyInjection
 
         // 7. Nhận diện khuôn mặt: mặc định chạy ONNX ngay trong backend; "AiService" = gọi microservice FW.AiService
         services.Configure<AttendanceSettings>(configuration.GetSection(AttendanceSettings.SectionName));
+
+        // Tra tọa độ từ địa chỉ: Nominatim (OpenStreetMap)
+        services.Configure<GeocodingSettings>(configuration.GetSection(GeocodingSettings.SectionName));
+        services.AddHttpClient<IGeocodingService, NominatimGeocodingService>((sp, client) =>
+        {
+            var settings = sp.GetRequiredService<IOptions<GeocodingSettings>>().Value;
+            client.BaseAddress = new Uri(settings.BaseUrl.TrimEnd('/') + "/");
+            client.DefaultRequestHeaders.UserAgent.ParseAdd(settings.UserAgent);
+            client.Timeout = TimeSpan.FromSeconds(settings.TimeoutSeconds);
+        });
         services.Configure<FaceRecognitionSettings>(configuration.GetSection(FaceRecognitionSettings.SectionName));
         var faceEngine = configuration[$"{FaceRecognitionSettings.SectionName}:Engine"] ?? FaceRecognitionSettings.OnnxEngine;
         if (string.Equals(faceEngine, FaceRecognitionSettings.AiServiceEngine, StringComparison.OrdinalIgnoreCase))

@@ -4,18 +4,19 @@ import { Card } from '@astryxdesign/core/Card';
 import { Grid, GridSpan } from '@astryxdesign/core/Grid';
 import { Icon } from '@astryxdesign/core/Icon';
 import { NumberInput } from '@astryxdesign/core/NumberInput';
+import { RadioList, RadioListItem } from '@astryxdesign/core/RadioList';
 import { Selector } from '@astryxdesign/core/Selector';
 import { HStack, VStack } from '@astryxdesign/core/Stack';
 import { Heading, Text } from '@astryxdesign/core/Text';
 import { TextInput } from '@astryxdesign/core/TextInput';
-import { ExternalLink, LocateFixed } from 'lucide-react';
+import { ExternalLink, LocateFixed, Search } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
-import { FormError } from '@/components/ui/Feedback';
+import { FormError, Notice } from '@/components/ui/Feedback';
 import { branchApi } from '@/services/organizationApi';
 import { getErrorMessage } from '@/services/apiClient';
 import { toast } from '@/stores/toastStore';
 import { branchStatusLabels } from '@/lib/format';
-import type { Branch, BranchRequest, BranchStatus } from '@/types/organization';
+import type { AddressLookup, Branch, BranchRequest, BranchStatus, GeocodeCandidate } from '@/types/organization';
 
 const empty: BranchRequest = { branchCode: '', name: '', address: '', phone: '', email: '', latitude: 21.0285, longitude: 105.8542, radius: 50, status: 'active' };
 
@@ -23,6 +24,43 @@ const statusOptions = [
   { value: 'active', label: branchStatusLabels.active },
   { value: 'inactive', label: branchStatusLabels.inactive },
 ];
+
+/** Khung bản đồ OpenStreetMap quanh tâm (độ) — đủ thấy vài dãy phố quanh chi nhánh. */
+const MAP_SPAN = { lat: 0.0025, lng: 0.0035 };
+
+/** Bản đồ OpenStreetMap nhúng có ghim tại tâm Geofence (chỉ để xem; chỉnh tâm bằng ô Vĩ độ / Kinh độ). */
+function GeofenceMapPreview({ latitude, longitude }: { latitude: number; longitude: number }) {
+  // Chờ người dùng gõ xong mới tải lại bản đồ
+  const [center, setCenter] = useState({ latitude, longitude });
+  useEffect(() => {
+    const id = setTimeout(() => setCenter({ latitude, longitude }), 600);
+    return () => clearTimeout(id);
+  }, [latitude, longitude]);
+
+  const valid = Math.abs(center.latitude) <= 90 && Math.abs(center.longitude) <= 180;
+  if (!valid) return null;
+  const bbox = [
+    center.longitude - MAP_SPAN.lng,
+    center.latitude - MAP_SPAN.lat,
+    center.longitude + MAP_SPAN.lng,
+    center.latitude + MAP_SPAN.lat,
+  ].join(',');
+  const src = `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${center.latitude},${center.longitude}`;
+  return (
+    <VStack gap={1}>
+      <iframe
+        key={src}
+        title="Bản đồ vị trí chi nhánh"
+        src={src}
+        loading="lazy"
+        style={{ width: '100%', height: 240, border: 0, borderRadius: 8, display: 'block' }}
+      />
+      <Text type="supporting" size="sm">
+        Ghim trên bản đồ là tâm vùng chấm công. Bản đồ © OpenStreetMap.
+      </Text>
+    </VStack>
+  );
+}
 
 interface Props {
   open: boolean;
@@ -36,10 +74,17 @@ export function BranchFormModal({ open, branch, onClose, onSaved }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [locating, setLocating] = useState(false);
+  const [lookup, setLookup] = useState<{ loading: boolean; result: AddressLookup | null; message: string | null; selected: string }>({
+    loading: false,
+    result: null,
+    message: null,
+    selected: '0',
+  });
 
   useEffect(() => {
     if (!open) return;
     setError(null);
+    setLookup({ loading: false, result: null, message: null, selected: '0' });
     setForm(branch ? { ...branch, phone: branch.phone ?? '', email: branch.email ?? '' } : empty);
   }, [open, branch]);
 
@@ -59,6 +104,26 @@ export function BranchFormModal({ open, branch, onClose, onSaved }: Props) {
       },
       { enableHighAccuracy: true, timeout: 10_000 },
     );
+  };
+
+  const applyCandidate = (c: GeocodeCandidate) => setForm((f) => ({ ...f, latitude: c.latitude, longitude: c.longitude }));
+
+  /** Tra tọa độ từ địa chỉ: nhiều kết quả thì điền kết quả đầu và cho chọn lại. */
+  const findByAddress = async () => {
+    setLookup((l) => ({ ...l, loading: true }));
+    try {
+      const { data, message } = await branchApi.geocode(form.address);
+      if (data.candidates.length > 0) applyCandidate(data.candidates[0]);
+      setLookup({ loading: false, result: data, message, selected: '0' });
+    } catch (err) {
+      setLookup({ loading: false, result: null, message: getErrorMessage(err), selected: '0' });
+    }
+  };
+
+  const chooseCandidate = (value: string) => {
+    const candidate = lookup.result?.candidates[Number(value)];
+    if (candidate) applyCandidate(candidate);
+    setLookup((l) => ({ ...l, selected: value }));
   };
 
   const submit = async (e: FormEvent) => {
@@ -124,11 +189,20 @@ export function BranchFormModal({ open, branch, onClose, onSaved }: Props) {
                   <Heading level={4}>Vùng chấm công (Geofence)</Heading>
                   <Text type="supporting">Nhân viên phải đứng trong bán kính này quanh tâm tọa độ.</Text>
                 </VStack>
-                <HStack gap={2}>
+                <HStack gap={2} wrap="wrap">
+                  <Button
+                    label="Tìm theo địa chỉ"
+                    size="sm"
+                    icon={<Icon icon={Search} />}
+                    isLoading={lookup.loading}
+                    isDisabled={form.address.trim().length < 5}
+                    onClick={findByAddress}
+                  />
                   <Button label="Lấy vị trí hiện tại" size="sm" icon={<Icon icon={LocateFixed} />} isLoading={locating} onClick={useCurrentLocation} />
                   <Button label="Xem trên bản đồ" size="sm" icon={<Icon icon={ExternalLink} />} href={mapUrl} target="_blank" rel="noreferrer" />
                 </HStack>
               </HStack>
+              <LookupResult lookup={lookup} onChoose={chooseCandidate} />
               <Grid columns={{ minWidth: 160, max: 3 }} gap={4}>
                 <NumberInput label="Vĩ độ" isRequired min={-90} max={90} step={0.000001} value={form.latitude} onChange={(v) => set('latitude', v ?? 0)} />
                 <NumberInput label="Kinh độ" isRequired min={-180} max={180} step={0.000001} value={form.longitude} onChange={(v) => set('longitude', v ?? 0)} />
@@ -144,6 +218,7 @@ export function BranchFormModal({ open, branch, onClose, onSaved }: Props) {
                   onChange={(v) => set('radius', v ?? 50)}
                 />
               </Grid>
+              <GeofenceMapPreview latitude={form.latitude} longitude={form.longitude} />
             </VStack>
           </Card>
 
@@ -153,5 +228,45 @@ export function BranchFormModal({ open, branch, onClose, onSaved }: Props) {
         </VStack>
       </form>
     </Modal>
+  );
+}
+
+/** Kết quả tra tọa độ: thông báo (gần đúng / không tìm thấy) và danh sách để chọn khi có nhiều vị trí. */
+function LookupResult({
+  lookup,
+  onChoose,
+}: {
+  lookup: { result: AddressLookup | null; message: string | null; selected: string };
+  onChoose: (value: string) => void;
+}) {
+  const { result, message } = lookup;
+  if (!message) return null;
+  if (!result || result.candidates.length === 0) return <Notice status="warning" title={message} />;
+
+  const chosen = result.candidates[Number(lookup.selected)] ?? result.candidates[0];
+  return (
+    <VStack gap={3}>
+      <Notice
+        status={result.approximate ? 'warning' : 'success'}
+        title={result.approximate ? message : 'Đã điền tọa độ theo địa chỉ.'}
+        description={
+          result.approximate
+            ? `Đã tìm theo "${result.matchedQuery}". Hãy kiểm tra ghim trên bản đồ; tốt nhất là đứng tại chi nhánh và bấm "Lấy vị trí hiện tại".`
+            : chosen.displayName
+        }
+      />
+      {result.candidates.length > 1 && (
+        <RadioList label="Chọn đúng vị trí" size="sm" value={lookup.selected} onChange={onChoose}>
+          {result.candidates.map((c, i) => (
+            <RadioListItem
+              key={`${c.latitude},${c.longitude},${i}`}
+              value={String(i)}
+              label={c.displayName.split(',').slice(0, 2).join(',')}
+              description={`${c.displayName} · ${c.latitude.toFixed(6)}, ${c.longitude.toFixed(6)}`}
+            />
+          ))}
+        </RadioList>
+      )}
+    </VStack>
   );
 }

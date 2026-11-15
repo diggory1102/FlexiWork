@@ -14,10 +14,29 @@ namespace FW.API.Controllers;
 public class BranchesController : ApiControllerBase
 {
     private readonly IBranchService _branchService;
+    private readonly IAddressLookupService _addressLookup;
 
-    public BranchesController(IBranchService branchService)
+    public BranchesController(IBranchService branchService, IAddressLookupService addressLookup)
     {
         _branchService = branchService;
+        _addressLookup = addressLookup;
+    }
+
+    /// <summary>
+    /// Tìm tọa độ từ địa chỉ (OpenStreetMap) để điền tâm Geofence — trả tối đa 5 vị trí để chọn; không tìm thấy cả địa chỉ thì
+    /// bỏ bớt số nhà / tên tòa nhà ở đầu và đánh dấu kết quả gần đúng.
+    /// </summary>
+    [HttpGet("geocode")]
+    [Authorize(Roles = RoleNames.Admin)]
+    public async Task<IActionResult> Geocode([FromQuery] string? address, CancellationToken cancellationToken)
+    {
+        var result = await _addressLookup.LookupAsync(address, cancellationToken);
+        var message = result.Candidates.Count == 0
+            ? "Không tìm thấy địa chỉ này trên bản đồ. Hãy ghi rõ đường, phường, quận, tỉnh/thành hoặc dùng \"Lấy vị trí hiện tại\" tại chi nhánh."
+            : result.Approximate
+                ? "Không tìm thấy chính xác số nhà / tòa nhà — đây là vị trí gần đúng theo tên đường, khu vực."
+                : $"Tìm thấy {result.Candidates.Count} vị trí.";
+        return Success(result, message);
     }
 
     /// <summary>Danh sách chi nhánh (phân trang, tìm theo mã/tên/địa chỉ, lọc theo trạng thái).</summary>

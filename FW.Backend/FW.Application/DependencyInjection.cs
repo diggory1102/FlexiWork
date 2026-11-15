@@ -20,6 +20,7 @@ public static class DependencyInjection
         services.AddScoped<ISessionStampService, SessionStampService>();
 
         services.AddScoped<IBranchService, BranchService>();
+        services.AddScoped<IAddressLookupService, AddressLookupService>();
         services.AddScoped<IDepartmentService, DepartmentService>();
         services.AddScoped<IPositionService, PositionService>();
 

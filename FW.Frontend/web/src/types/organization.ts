@@ -82,3 +82,20 @@ export interface PositionRequest {
   baseSalaryPerHour: number;
   description?: string | null;
 }
+
+/** Một vị trí tìm được từ địa chỉ (OpenStreetMap). */
+export interface GeocodeCandidate {
+  displayName: string;
+  latitude: number;
+  longitude: number;
+  category: string | null;
+  type: string | null;
+}
+
+/** Kết quả tra tọa độ từ địa chỉ. approximate = phải bỏ số nhà / tên tòa nhà mới tìm thấy. */
+export interface AddressLookup {
+  query: string;
+  matchedQuery: string;
+  approximate: boolean;
+  candidates: GeocodeCandidate[];
+}

@@ -1,6 +1,7 @@
 import { api } from './apiClient';
 import type { PagedQuery, PaginatedResult } from '@/types/api';
 import type {
+  AddressLookup,
   Branch,
   BranchDetail,
   BranchFilter,
@@ -19,6 +20,8 @@ export const branchApi = {
   create: (body: BranchRequest) => api.post<Branch>('/branches', body),
   update: (id: number, body: BranchRequest) => api.put<Branch>(`/branches/${id}`, body),
   remove: (id: number) => api.delete<null>(`/branches/${id}`),
+  /** Tìm tọa độ từ địa chỉ (OpenStreetMap) để điền tâm Geofence. */
+  geocode: (address: string) => api.get<AddressLookup>('/branches/geocode', { address }),
 
   addWifi: (branchId: number, body: BranchWifiRequest) => api.post<BranchWifi>(`/branches/${branchId}/wifis`, body),
   updateWifi: (branchId: number, wifiId: number, body: BranchWifiRequest) =>
