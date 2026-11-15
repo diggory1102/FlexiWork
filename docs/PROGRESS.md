@@ -1,7 +1,7 @@
 # FlexiWork - Nhật ký Dự án & Kiến trúc Chức năng (Project Progress & Architecture)
 
 > **Tài liệu theo dõi tiến độ, kiến trúc chức năng và ma trận phân quyền hệ thống FlexiWork.**  
-> *Thời gian cập nhật: 12/11/2026*
+> *Thời gian cập nhật: 15/11/2026*
 
 ---
 
@@ -20,9 +20,9 @@
 
 ---
 
-## 2. Danh mục 7 Phân hệ Chức năng Cốt lõi
+## 2. Danh mục 8 Phân hệ Chức năng
 
-> Đối chiếu `docs/UML.md` (9 phân hệ, 39 UC): UML tách "Hệ thống & Danh mục" và "Hồ sơ Nhân sự" thành 2 phân hệ — ở đây gộp vào 2.1; Phân hệ 8 (Bảng lương rút gọn) tương ứng mục 2.7.
+> Đối chiếu `docs/UML.md` (11 phân hệ, 55 UC): UML tách "Xác thực", "Hệ thống & Danh mục", "Hồ sơ Nhân sự" thành 3 phân hệ — ở đây gộp vào 2.1; Phân hệ 8 (Bảng lương rút gọn) tương ứng mục 2.7; Phân hệ 10 (Trợ lý AI & Phân tích) tương ứng mục 2.8.
 
 ### 2.1. Phân hệ Quản lý Hồ sơ & Tổ chức (Web Admin)
 * **Quản lý danh sách chi nhánh / cửa hàng:** Khai báo thông tin hành chính, thiết lập tâm tọa độ vĩ độ/kinh độ, bán kính chấm công hợp lệ (GPS Geofencing) và danh sách địa chỉ phần cứng Wi-Fi BSSID nội bộ.
@@ -67,6 +67,10 @@
 * **Tính lương tạm tính (UC 8.3):** `(Công thực tế × Đơn giá) + Phụ cấp + OT − Tiền phạt`, lưu chi tiết từng khoản để đối soát.
 * **Chốt & phát hành phiếu lương (UC 8.4):** Chốt kỳ lương, gửi phiếu lương điện tử qua email, nhân viên xem trên Mobile, xuất Excel cho kế toán.
 
+### 2.8. Phân hệ Trợ lý AI & Phân tích (Mobile App & Web Admin) — UML Phân hệ 10
+* **Trợ lý nhân sự (UC 10.1–10.2):** Chatbot dùng LLM (Claude API) + Function Calling: nhân viên hỏi công, phép, lịch ca bằng ngôn ngữ tự nhiên; nói "xin nghỉ ca sáng thứ 5 vì bận thi" → trợ lý trích xuất ngày/ca/lý do và tạo **bản nháp** đơn, nhân viên bấm xác nhận mới gửi. Mọi công cụ chạy với quyền của người hỏi.
+* **Cảnh báo nguy cơ nghỉ việc (UC 10.3–10.4):** Tác vụ nền hằng tuần chấm điểm 0–100 từ biến động hành vi chấm công/đơn từ so với chính nhân viên đó, kèm lý do; Quản lý/HR xem danh sách "nhân sự cần quan tâm". Phương pháp chấm điểm có giải thích (không huấn luyện mô hình vì không có dữ liệu thật về người đã nghỉ).
+
 ---
 
 ## 3. Sơ đồ Phân rã Chức năng (BFD - Business Function Decomposition)
@@ -83,6 +87,7 @@ flowchart TD
     ROOT --> M5["5. Trao đổi Thời gian thực (Web & Mobile)"]
     ROOT --> M6["6. Báo cáo & Bảng công (Web Admin)"]
     ROOT --> M7["7. Bảng lương Rút gọn (Web & Mobile)"]
+    ROOT --> M8["8. Trợ lý AI & Phân tích (Mobile & Web)"]
 
     %% Module 0
     M0 --> M0_1["0.1 Đăng nhập / Đăng xuất (khóa tạm khi sai nhiều lần)"]
@@ -128,6 +133,11 @@ flowchart TD
     M7 --> M7_2["7.2 Tính Bảng lương tạm tính từ Bảng công"]
     M7 --> M7_3["7.3 Chốt kỳ lương & Gửi phiếu lương điện tử"]
     M7 --> M7_4["7.4 Xuất Bảng lương ra Excel cho Kế toán"]
+
+    %% Module 8
+    M8 --> M8_1["8.1 Trợ lý nhân sự: hỏi đáp công, phép, lịch ca"]
+    M8 --> M8_2["8.2 Tạo đơn từ qua hội thoại (bản nháp + xác nhận)"]
+    M8 --> M8_3["8.3 Chấm điểm & cảnh báo nguy cơ nghỉ việc"]
 ```
 
 ---
@@ -203,6 +213,11 @@ flowchart TD
 | - Chốt kỳ lương & Gửi phiếu lương | Web | `E` | `E` | `-` | `-` |
 | - Xem phiếu lương cá nhân | Mobile/Web | `R` | `R` | `R` | `R` *(Cá nhân)* |
 | - Xuất Bảng lương ra Excel | Web | `E` | `E` | `-` | `-` |
+| **8. Trợ lý AI & Phân tích** | | | | | |
+| - Hỏi đáp với trợ lý (chỉ dữ liệu trong phạm vi quyền của mình) | Mobile/Web | `E` | `E` | `E` *(theo CN)* | `E` *(Cá nhân)* |
+| - Tạo bản nháp đơn qua hội thoại (phải bấm xác nhận) | Mobile | `C` | `C` | `C` | `C` *(Cá nhân)* |
+| - Xem cảnh báo nhân sự cần quan tâm | Web | `R` | `R` | `R` *(theo CN)* | `-` |
+| - Cấu hình trọng số / ngưỡng cảnh báo | Web | `U` | `U` | `-` | `-` |
 
 ---
 
@@ -251,8 +266,8 @@ flowchart TD
 
 > **Tổng quan Tiến độ Hiện tại:**
 > * **Giai đoạn đang thực hiện:** CẤP BẬC 2 - Khung ca, Xếp lịch & Dữ liệu Face ID
-> * **Tiến độ tổng thể:** `15 / 47` Nhiệm vụ hoàn thành (`32%`)
-> * **Hành động tiếp theo:** Thực hiện **Task 2.4** (Đăng ký Face ID qua `FW.AiService`) hoặc **Task 2.5** (Web Admin: khung ca, quy tắc, lưới xếp lịch). Việc nhỏ đang chờ: bản đồ chọn tâm geofence trên form chi nhánh (Leaflet + OpenStreetMap).
+> * **Tiến độ tổng thể:** `15 / 53` Nhiệm vụ hoàn thành (`28%`)
+> * **Hành động tiếp theo:** Thực hiện **Task 2.5** (Web Admin: khung ca, quy tắc, lưới xếp lịch) → **Task 2.4** (Face ID trên Hugging Face — trong lúc làm 2.5, chuẩn bị tài khoản Hugging Face theo `docs/DEPLOY.md` Bước 7) → **Task 2.6**. Việc nhỏ đang chờ: bản đồ chọn tâm geofence trên form chi nhánh (Leaflet + OpenStreetMap).
 
 ### Các quyết định cần chốt
 
@@ -278,6 +293,8 @@ flowchart TD
 | ~~Redis khi triển khai~~ | Task 6.3 | ✅ **Đã chốt:** **Render Key Value** (khai báo trong `render.yaml`); backend đọc được cả URL `redis://` / `rediss://` |
 | ~~Thu hồi phiên khi đổi mật khẩu~~ | Task 1.x (bổ sung) | ✅ **Đã chốt (14/11/2026):** đổi mật khẩu vẫn chỉ cần mật khẩu hiện tại (OTP chỉ cho "Quên mật khẩu"), bổ sung: (1) email thông báo "Mật khẩu vừa được thay đổi" sau đổi/đặt lại mật khẩu; (2) cột `users.password_changed_at` + claim JWT `pwd_stamp` — token cấp trước lần đổi/đặt lại/cấp lại mật khẩu bị từ chối 401 (kiểm tra ở `OnTokenValidated`, cache Redis 30 phút), thiết bị đang đổi nhận token mới. Migration `001_users_password_changed_at.sql`. Chương 2 (bảo mật) nêu cơ chế này |
 | ~~Triển khai sớm~~ | Task 6.3 | ✅ **Đã chốt (12/11/2026):** đưa Web (Vercel) + API (Render, Docker) + MySQL (TiDB Cloud) lên cloud ngay để phát hiện lỗi sớm; AI Service lên cloud ở Task 2.4 (kiểm tra RAM), EAS Build ở Task 3.4. Không seed tài khoản mẫu trên cloud — Admin đầu tiên tạo từ biến môi trường `Bootstrap__*`. Hướng dẫn: `docs/DEPLOY.md` |
+| ~~Nơi chạy AI Service (Face ID)~~ | Task 2.4, 6.3 | ✅ **Đã chốt (15/11/2026):** `FW.AiService` (Docker) trên **Hugging Face Spaces**, Space **riêng tư**, CPU basic free (2 vCPU, 16 GB RAM). Lý do: InsightFace sát giới hạn 512 MB RAM của Render free; thêm service thứ 2 trên Render vượt 750 giờ/tháng → phải ngủ, lần chấm công đầu chờ 1–2 phút. Backend gọi Space bằng token Read của Hugging Face + `AI_API_KEY` riêng; GitHub Actions tự đẩy `FW.AiService/` lên Space. Render chỉ còn `flexiwork-api`, giữ thức bằng UptimeRobot. Mô hình `buffalo_sc` (đặt sẵn trong image) |
+| ~~Phân bổ chức năng AI~~ | Task 2.4, Cấp 7 | ✅ **Đã chốt (15/11/2026):** Face ID → `FW.AiService` (Hugging Face). **Chatbot** → backend .NET gọi **Claude API** (SDK chính thức cho C#, mô hình mặc định Claude Opus 5.5, giới hạn chi tiêu trên Console): công cụ tái sử dụng service sẵn có, chạy với quyền người hỏi, AI chỉ tạo **bản nháp** đơn — người dùng xác nhận. Đặt ở backend (Singapore, cùng TiDB) thay vì Space để tránh nhiều vòng gọi xuyên lục địa và không phải chuyển token người dùng qua thêm một tầng. **Cảnh báo nghỉ việc** → tác vụ nền backend, chấm điểm có giải thích (không học máy: không có dữ liệu nhãn người đã nghỉ) |
 | ~~CSDL trên cloud~~ | Task 6.3 | ✅ **Đã chốt (13/11/2026):** Aiven ngừng MySQL free (không tạo mới từ 06/11/2026, tắt dịch vụ cũ 21/12/2026) → dùng **TiDB Cloud Starter** (AWS Singapore, tương thích giao thức MySQL 8, free 5 GiB + 50 triệu RU/tháng). Giữ nguyên MySQL 8 trên máy dev, `MySqlConnector` và toàn bộ SQL; đã chạy đạt 33/33 test tích hợp trên TiDB v8.5. Không chuyển PostgreSQL (phải viết lại schema + ~57 câu SQL, mất tìm kiếm không dấu). Lưu ý: TiDB bắt buộc SSL, cổng 4000, ID tự tăng có thể nhảy cóc. Chương 2 khóa luận: thay "Aiven" bằng "TiDB Cloud" |
 
 ---
@@ -363,6 +380,7 @@ flowchart TD
 - [x] **Task 2.3:** API Phân ca & Xếp lịch: xếp theo tuần/tháng, chống trùng và chồng giờ giữa các ca, chuyển nháp → công bố, xem lịch cá nhân / chi nhánh.
   - *Đã làm (14/11/2026):* API `/api/schedules` — `GET` lưới lịch chi nhánh (kể cả nháp/đã hủy, tối đa 62 ngày), `GET me` lịch đã công bố của tôi (mặc định 14 ngày), `POST` xếp nhiều ca (≤ 500/lần, **có xung đột thì không lưu ca nào** và trả danh sách lý do), `POST copy` sao chép tuần/khoảng ngày (bỏ qua ca không hợp lệ/xung đột, báo lý do), `POST publish`, `DELETE drafts`, `DELETE {id}` (nháp → xóa hẳn; đã công bố & chưa tới giờ → `cancelled`). Ràng buộc: nhân viên đang hoạt động & thuộc đúng chi nhánh, ca dùng chung hoặc ca của chi nhánh, ngày từ hôm nay tới tối đa 366 ngày; Quản lý chỉ thao tác chi nhánh mình (gửi chi nhánh khác → 403). Domain `SchedulePlanner`: trùng ca, chồng giờ (kể cả ca đêm hôm trước kéo sang), ca gãy nối tiếp hợp lệ. Không cần migration. Test: 109 unit + 46 tích hợp; thử API thật bằng tài khoản Quản lý / Nhân viên.
 - [ ] **Task 2.4:** Đăng ký Face ID: nhận ảnh mẫu → lưu Cloudinary → `FW.AiService` trích xuất vector 512 chiều → lưu `face_profiles`; sửa vector mẫu trong seed cho đủ 512 chiều.
+  - *Triển khai (đã chốt 15/11/2026):* `FW.AiService` lên Hugging Face Spaces (Docker, riêng tư) theo `docs/DEPLOY.md` Bước 7 — Dockerfile chạy user không phải root, đặt sẵn mô hình `buffalo_sc`; xác thực bằng token Hugging Face + `AI_API_KEY`; tắt fallback ngoài dev; workflow `.github/workflows/deploy-ai-space.yml`; backend báo "hệ thống nhận diện đang khởi động" khi Space ngủ. Migration 004: `face_profiles.model_name` mặc định `buffalo_sc` (đang ghi nhầm `buffalo_l`).
 - [ ] **Task 2.5:** Web Admin: quản lý khung ca & quy tắc; lưới xếp lịch theo tuần cho từng chi nhánh; công bố lịch.
 - [ ] **Task 2.6:** Mobile App: xem lịch ca cá nhân; chụp ảnh đăng ký Face ID.
 
@@ -413,11 +431,24 @@ flowchart TD
 > 🎯 **Demo:** Hệ thống chạy trên môi trường cloud; có số liệu thực nghiệm cho Chương 4.
 
 - [ ] **Task 6.1:** Tác vụ nền (`BackgroundService`): tự đánh dấu vắng mặt khi hết ca, xử lý quên check-out, khởi tạo quỹ phép đầu năm.
-- [ ] **Task 6.2:** Gia cố `FW.AiService`: tắt chế độ dự phòng (fallback) ngoài môi trường dev, ngưỡng nhận diện cấu hình được, xác thực Backend ↔ AI Service bằng API key. Chống giả mạo khuôn mặt (liveness) `[Tùy chọn]`.
-- [ ] **Task 6.3:** Triển khai: MySQL trên TiDB Cloud, Backend + AI Service trên Render (kiểm tra RAM cho InsightFace), Web trên Vercel, bản build Android (EAS) để demo.
+- [ ] **Task 6.2:** Gia cố `FW.AiService`: tắt chế độ dự phòng (fallback) ngoài môi trường dev, ngưỡng nhận diện cấu hình được, xác thực Backend ↔ AI Service bằng API key. Chống giả mạo khuôn mặt (liveness) `[Tùy chọn]`. *(Xác thực bằng API key và tắt fallback làm luôn ở Task 2.4; còn lại: ngưỡng nhận diện cấu hình được, liveness.)*
+- [ ] **Task 6.3:** Triển khai: MySQL trên TiDB Cloud, Backend trên Render (giữ thức bằng UptimeRobot), AI Service trên Hugging Face Spaces, Web trên Vercel, bản build Android (EAS) để demo.
   - *Đã chuẩn bị (12/11/2026):* `render.yaml` (API Docker + Key Value), `FW.Frontend/mobile/eas.json`, `docs/DEPLOY.md` (TiDB Cloud → Brevo → Cloudinary → Render → Vercel → EAS); backend: `BrevoEmailService`, `RedisConnectionParser` (URL `redis://`), `BootstrapAdminService` (Admin đầu tiên từ biến môi trường), `flexiwork_seed_production.sql` (chỉ vai trò + loại đơn), ForwardedHeaders sau proxy, cờ `Swagger:Enabled`; Dockerfile không phụ thuộc `global.json`. Kiểm thử chế độ Production cục bộ: tạo Admin tự động, đăng nhập qua Redis, tài khoản mẫu không tồn tại, CORS chỉ nhận domain khai báo, gọi được API Brevo. *Đã triển khai (13/11/2026):* Web <https://flexiwork-tlu.vercel.app> (Vercel, root `FW.Frontend/web`) — API <https://flexiwork-api.onrender.com> (Render Blueprint + Key Value) — CSDL TiDB Cloud Starter (Singapore) — email Brevo, ảnh Cloudinary; Admin đầu tiên tạo qua Bootstrap. Còn lại: AI Service (Task 2.4), EAS Build (Task 3.4).
-- [ ] **Task 6.4:** Dữ liệu demo quy mô 30–80 nhân sự (seed mở rộng: nhiều chi nhánh, lịch 1 tháng, lịch sử chấm công, đơn từ).
-- [ ] **Task 6.5:** Thực nghiệm trên thiết bị thật: chấm công đúng vị trí, ngoài bán kính, dùng Fake GPS, sai Wi-Fi, người khác chụp hộ; đo tỷ lệ nhận diện và thời gian xử lý; đối soát bảng công — làm số liệu cho Chương 4.
+- [ ] **Task 6.4:** Dữ liệu demo quy mô 30–80 nhân sự (seed mở rộng: nhiều chi nhánh, lịch 1 tháng, lịch sử chấm công, đơn từ). Gồm vài nhân viên có hành vi "xấu dần" (đi muộn, xin nghỉ tăng) để minh họa cảnh báo nghỉ việc (Task 7.4).
+- [ ] **Task 6.5:** Thực nghiệm trên thiết bị thật: chấm công đúng vị trí, ngoài bán kính, dùng Fake GPS, sai Wi-Fi, người khác chụp hộ; đo tỷ lệ nhận diện và thời gian xử lý; đối soát bảng công — làm số liệu cho Chương 4. Trợ lý AI: bộ ~50 câu hỏi/yêu cầu mẫu — đo tỷ lệ trích xuất đúng ngày/ca/loại đơn, thời gian phản hồi và chi phí mỗi lượt.
+
+---
+
+### 📌 CẤP BẬC 7: Trợ lý AI & Phân tích `[0/6]`
+> 🎯 **Demo:** Nhân viên nhắn "Cho em xin nghỉ ca sáng thứ 5 tuần này vì bận thi" → trợ lý tạo bản nháp đơn đúng ngày/ca → nhân viên xác nhận → Quản lý nhận đơn chờ duyệt. Dashboard của Quản lý hiện "Nhân sự cần quan tâm" kèm lý do.
+> ⚠️ **Phụ thuộc:** làm sau Cấp 4–5 (cần đơn từ, quỹ phép, bảng công để trợ lý tra cứu và dữ liệu chấm công tích lũy để chấm điểm). Cấu hình: `docs/DEPLOY.md` Bước 8.
+
+- [ ] **Task 7.1:** Module `Assistant` (backend): gọi Claude API bằng SDK chính thức cho C# với Function Calling; công cụ tra cứu tái sử dụng service sẵn có (lịch ca, bảng công, quỹ phép, trạng thái đơn, loại đơn) và **chạy với quyền của người hỏi**; lưu hội thoại (`assistant_conversations`, `assistant_messages`); giới hạn số lượt/người/ngày để kiểm soát chi phí; xử lý lỗi/từ chối của mô hình.
+- [ ] **Task 7.2:** Tạo đơn qua hội thoại (UC 10.2): công cụ tạo **bản nháp** đơn nghỉ / đổi ca / OT (ngày tương đối như "thứ 5 tuần này" quy đổi theo giờ Việt Nam) → thẻ xác nhận → gửi qua API đơn từ (Task 4.1). Bộ kiểm thử ~50 câu mẫu.
+- [ ] **Task 7.3:** Mobile App + Web Admin: màn hình chat với trợ lý (hiển thị câu trả lời dần dần), thẻ xác nhận đơn, lịch sử hội thoại.
+- [ ] **Task 7.4:** Chấm điểm nguy cơ nghỉ việc (UC 10.3): tác vụ nền hằng tuần so 2 tuần gần nhất với nền 8 tuần trước của chính nhân viên (phút đi muộn, số đơn nghỉ, vắng mặt, xin đổi ca, nguyện vọng ca nếu có) → điểm 0–100 + lý do, lưu `attrition_risk_snapshots`; trọng số / ngưỡng cấu hình được (kèm unit test).
+- [ ] **Task 7.5:** Web Admin (UC 10.4): widget "Nhân sự cần quan tâm" trên Dashboard, trang chi tiết xu hướng theo tuần; `[Tùy chọn]` LLM viết tóm tắt dễ hiểu cho Quản lý.
+- [ ] **Task 7.6:** `[Tùy chọn]` Đăng ký nguyện vọng ca (UC 3.5): nhân viên đăng ký ca / ngày có thể làm; Quản lý xem khi xếp lịch; cung cấp tín hiệu "giảm đăng ký ca" cho Task 7.4.
 
 ---
 
@@ -427,9 +458,10 @@ flowchart TD
   - Điền chỗ trống "mô hình (…)"; thống nhất Clean Architecture; chỉ dùng **SignalR** (bỏ Socket.io).
   - Bổ sung công nghệ đang dùng: Mobile (Expo, expo-camera/location, NetInfo, SecureStore), `FW.AiService` (FastAPI + InsightFace), xUnit, ClosedXML/QuestPDF, Recharts, Expo Push.
   - Mục Frontend: **React 18 → React 19**; **Tailwind CSS v4** (cascade layers, cấu hình bằng CSS); thêm **hệ thống thiết kế Astryx** (Meta): component có trợ năng (accessibility), design token qua CSS variables (Dynamic Theming), chế độ sáng/tối, đa ngôn ngữ; giải thích vì sao chọn design system thay vì tự viết component.
-  - Mục 1.4.2: thêm phân hệ Bảng lương rút gọn cho khớp `docs/UML.md`.
+  - Mục 1.4.2: thêm phân hệ Bảng lương rút gọn và **Trợ lý AI & Phân tích** cho khớp `docs/UML.md`.
+  - Chương 2: lý thuyết LLM & Function Calling (Claude API), phương pháp chấm điểm rủi ro có giải thích; triển khai: Render (API), Vercel (Web), TiDB Cloud (CSDL), **Hugging Face Spaces (AI Service)**, Brevo, Cloudinary.
 - [ ] **Task K.2:** Chương 3 — **làm một lần sau khi hoàn thiện sản phẩm** (đã chốt 14/11/2026) để biểu đồ khớp code thật:
-  - Quy trình TO-BE; danh sách tác nhân; biểu đồ UC tổng quát + UC phân rã 10 phân hệ theo `docs/UML.md` (đã bổ sung Phân hệ 0 và các UC ★ — 50 UC); BFD.
+  - Quy trình TO-BE; danh sách tác nhân; biểu đồ UC tổng quát + UC phân rã 11 phân hệ theo `docs/UML.md` (đã bổ sung Phân hệ 0, Phân hệ 10 và các UC ★ — 55 UC); BFD.
   - Đặc tả UC dạng bảng ngắn cho mọi UC; đặc tả đầy đủ + **biểu đồ hoạt động** + **biểu đồ tuần tự** cho ~12–15 UC cốt lõi (đăng nhập, quên mật khẩu OTP, đổi mật khẩu, mời nhân viên, cấu hình geofence, xếp & công bố lịch, đăng ký Face ID, **chấm công 3 lớp**, duyệt chấm công chờ xác nhận, lập & duyệt đơn, tổng hợp bảng công, tính & chốt lương).
   - Biểu đồ lớp (theo entity/service thật), ERD & mô tả bảng (theo `flexiwork_schema.sql`), kiến trúc Clean Architecture & triển khai cloud.
   - Công cụ: **PlantUML** (`docs/diagrams/*.puml`, render PNG bằng Java có sẵn trên máy) — sửa được bằng code, tuần tự đi đúng lớp `Controller → Service → Repository`. Đầu ra: ảnh PNG + nội dung chương (đặc tả, lời dẫn hình) để chép vào Word; không sửa trực tiếp file `.docx`.

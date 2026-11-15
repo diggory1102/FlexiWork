@@ -8,7 +8,11 @@
 | Gửi email | **Brevo** (HTTP API) | Free — 300 email/ngày |
 | Lưu ảnh | **Cloudinary** | Free |
 | App di động | **Expo EAS Build** | Free — làm ở Task 3.4 |
-| AI Service (InsightFace) | — | Bổ sung ở Task 2.4 (cần kiểm tra RAM) |
+| AI Service — Face ID (InsightFace, Docker) | **Hugging Face Spaces** (Space riêng tư) | CPU basic (free) — 2 vCPU, 16 GB RAM — làm ở Task 2.4 |
+| Giữ Backend luôn thức | **UptimeRobot** | Free — kiểm tra 5 phút/lần |
+| Trợ lý AI (chatbot) | **Claude API** (Anthropic) | Trả theo lượng dùng (nạp trước ~5–10 USD) — làm ở Cấp 7 |
+
+> **Phân bổ chức năng AI (đã chốt 15/11/2026):** chỉ phần cần chạy mô hình trên máy chủ (InsightFace) mới đặt ở Hugging Face. Chatbot do backend .NET điều phối (mô hình Claude chạy trên máy chủ Anthropic; các công cụ đọc CSDL và kiểm tra quyền ngay trong backend, cùng vùng Singapore với TiDB). Chấm điểm nguy cơ nghỉ việc là tác vụ nền của backend. Render chỉ chạy **một** web service (750 giờ free/tháng ≈ đủ cho 1 service chạy 24/7).
 
 > **Nguyên tắc bảo mật:** repo GitHub đang để công khai → mọi mật khẩu, khóa API chỉ được dán vào trang quản trị của từng dịch vụ, **không** ghi vào file trong repo.
 
@@ -101,7 +105,48 @@ Render gói miễn phí chặn cổng SMTP, nên backend gửi email qua HTTP AP
 
 Từ đây mỗi lần `git push` lên `main`: Vercel tự build Web; Render tự build Backend khi có thay đổi trong `FW.Backend/`.
 
-## Bước 6 — App di động (Task 3.4)
+## Bước 6 — Giữ Backend luôn thức (UptimeRobot) — làm được ngay
+
+Render gói free ngủ sau ~15 phút không có truy cập. Một service chạy cả tháng ≈ 744 giờ, vừa trong 750 giờ free — nên **chỉ để duy nhất `flexiwork-api` trên Render** (không tạo thêm web service khác).
+
+1. Đăng ký <https://uptimerobot.com> (gói Free).
+2. **New Monitor** → Type **HTTP(s)** → URL `https://flexiwork-api.onrender.com/api/healthcheck` → Interval **5 minutes** → **Create**.
+3. Nếu Render báo sắp hết giờ free trong tháng (Billing → Usage): tạm **Pause** monitor; API vẫn chạy, chỉ quay lại cơ chế ngủ.
+
+## Bước 7 — AI Service trên Hugging Face Spaces (Task 2.4)
+
+Vì sao không dùng Render: InsightFace cần ~300–450 MB RAM (sát giới hạn 512 MB của Render free) và service thứ hai trên Render làm vượt 750 giờ/tháng → phải ngủ, lần chấm công đầu chờ 1–2 phút. Space free có 16 GB RAM, chỉ ngủ sau ~48 giờ không dùng.
+
+1. Đăng ký <https://huggingface.co> (đăng nhập bằng GitHub được).
+2. **New Space**: tên `flexiwork-ai`, SDK **Docker** (Blank), Hardware **CPU basic · Free**, Visibility **Private** → **Create Space**.
+3. **Settings → Access Tokens** (trang tài khoản) tạo 2 token:
+   - `flexiwork-deploy` — quyền **Write** (GitHub Actions đẩy code lên Space).
+   - `flexiwork-backend` — quyền **Read** (backend gọi vào Space riêng tư).
+4. Trong Space → **Settings → Variables and secrets → New secret**: `AI_API_KEY` = một chuỗi ngẫu nhiên dài (tự sinh, VD 40 ký tự).
+5. GitHub repo → **Settings → Secrets and variables → Actions**:
+   - Secret `HF_TOKEN` = token `flexiwork-deploy`.
+   - Variable `HF_SPACE_ID` = `<tên-tài-khoản-hf>/flexiwork-ai`.
+   Từ đây mỗi lần push có thay đổi trong `FW.AiService/`, workflow `deploy-ai-space.yml` tự cập nhật Space.
+6. Render → `flexiwork-api` → **Environment** thêm:
+
+   | Biến | Giá trị |
+   |---|---|
+   | `AiService__BaseUrl` | `https://<tên-tài-khoản-hf>-flexiwork-ai.hf.space` |
+   | `AiService__HfToken` | token `flexiwork-backend` |
+   | `AiService__ApiKey` | trùng giá trị `AI_API_KEY` ở bước 4 |
+   | `AiService__TimeoutSeconds` | `60` (chờ Space thức dậy) |
+
+7. Kiểm tra: Render Logs không báo lỗi gọi AI; đăng ký Face ID thử trên app.
+
+> Trước buổi demo/bảo vệ: mở Space một lần (Space ngủ sau ~48 giờ không dùng). Khi chạy trên máy: `docker run -p 8000:8000` AI Service, backend mặc định gọi `http://localhost:8000`, không cần token.
+
+## Bước 8 — Claude API cho Trợ lý AI (Cấp 7)
+
+1. Đăng ký <https://console.anthropic.com> → **Billing**: nạp trước 5–10 USD, đặt **spend limit** theo tháng (tránh bị trừ quá tay).
+2. **API Keys → Create Key** tên `flexiwork-render` — chỉ hiện một lần.
+3. Render → `flexiwork-api` → **Environment**: thêm `Anthropic__ApiKey`.
+
+## Bước 9 — App di động (Task 3.4)
 
 Hiện tại dùng **Expo Go** là đủ (trỏ API về Render bằng `.env.local`):
 ```
@@ -135,7 +180,7 @@ cd FW.Backend\FW.Infrastructure\Database\migrations
 |---|---|---|
 | `001_users_password_changed_at.sql` | Cột `users.password_changed_at` — đổi mật khẩu thì đăng xuất các thiết bị khác | ✅ |
 | `002_shifts_schedules_face_profiles.sql` | Khung ca theo chi nhánh + số phút cho phép đi muộn/về sớm; lịch nháp/công bố; Face ID lưu mã ảnh & tên mô hình | ✅ |
-| `003_violation_rules_system_settings.sql` | Quy tắc trừ công / phạt theo bậc + số công chuẩn tháng (kèm giá trị mặc định) | ☐ |
+| `003_violation_rules_system_settings.sql` | Quy tắc trừ công / phạt theo bậc + số công chuẩn tháng (kèm giá trị mặc định) | ✅ |
 
 ## Xử lý sự cố
 
@@ -147,3 +192,6 @@ cd FW.Backend\FW.Infrastructure\Database\migrations
 | Render Logs: lỗi kết nối MySQL | Thiếu `SslMode=Required`, sai cổng (TiDB là `4000`), hoặc username thiếu phần tiền tố `xxxxxxxx.root` |
 | Không tạo được Admin đầu tiên | Mật khẩu Bootstrap không đạt quy tắc, hoặc chưa chạy `flexiwork_seed_production.sql` (thiếu bảng vai trò) |
 | Email không tới | Email người gửi chưa được xác minh trên Brevo; kiểm tra thư mục Spam |
+| Chấm công / đăng ký Face ID báo "hệ thống nhận diện đang khởi động" | Space đang ngủ — chờ 30–60 giây rồi thử lại |
+| Render Logs: AI Service trả 401 / 404 | Sai `AiService__HfToken` (token Read) hoặc sai `AiService__BaseUrl`; 403 = `AiService__ApiKey` khác `AI_API_KEY` của Space |
+| Space build lỗi | Xem tab **Logs → Build** trên Space; kiểm tra secret `HF_TOKEN` và variable `HF_SPACE_ID` trên GitHub |
