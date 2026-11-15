@@ -117,12 +117,16 @@ Render gói free ngủ sau ~15 phút không có truy cập. Một service chạy
 
 Vì sao không dùng Render: InsightFace cần ~300–450 MB RAM (sát giới hạn 512 MB của Render free) và service thứ hai trên Render làm vượt 750 giờ/tháng → phải ngủ, lần chấm công đầu chờ 1–2 phút. Space free có 16 GB RAM, chỉ ngủ sau ~48 giờ không dùng.
 
-1. Đăng ký <https://huggingface.co> (đăng nhập bằng GitHub được).
+1. Đăng ký <https://huggingface.co/join> bằng email (bấm link xác minh trong email Hugging Face gửi về).
 2. **New Space**: tên `flexiwork-ai`, SDK **Docker** (Blank), Hardware **CPU basic · Free**, Visibility **Private** → **Create Space**.
 3. **Settings → Access Tokens** (trang tài khoản) tạo 2 token:
    - `flexiwork-deploy` — quyền **Write** (GitHub Actions đẩy code lên Space).
    - `flexiwork-backend` — quyền **Read** (backend gọi vào Space riêng tư).
-4. Trong Space → **Settings → Variables and secrets → New secret**: `AI_API_KEY` = một chuỗi ngẫu nhiên dài (tự sinh, VD 40 ký tự).
+4. Trong Space → **Settings → Variables and secrets → New secret**: `AI_API_KEY` = một chuỗi ngẫu nhiên dài. Tự sinh bằng PowerShell:
+   ```powershell
+   -join ((48..57) + (65..90) + (97..122) | Get-Random -Count 40 | ForEach-Object { [char]$_ })
+   ```
+   Lưu lại chuỗi này (cần điền vào Render ở bước 6).
 5. GitHub repo → **Settings → Secrets and variables → Actions**:
    - Secret `HF_TOKEN` = token `flexiwork-deploy`.
    - Variable `HF_SPACE_ID` = `<tên-tài-khoản-hf>/flexiwork-ai`.
