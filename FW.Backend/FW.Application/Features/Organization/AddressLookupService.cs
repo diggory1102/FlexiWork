@@ -15,6 +15,10 @@ public interface IAddressLookupService
 {
     /// <summary>Tìm tọa độ từ địa chỉ để điền tâm Geofence của chi nhánh.</summary>
     Task<AddressLookupDto> LookupAsync(string? address, CancellationToken cancellationToken = default);
+
+    /// <summary>Gợi ý địa điểm khi đang gõ (Geoapify), ưu tiên kết quả gần vị trí cho trước.</summary>
+    Task<IReadOnlyList<GeocodeCandidateDto>> SuggestAsync(string? text, double? biasLatitude, double? biasLongitude,
+        CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -29,17 +33,50 @@ public partial class AddressLookupService : IAddressLookupService
     public const int MaxCandidates = 5;
     /// <summary>Số lần bỏ phần đầu địa chỉ tối đa (mỗi lần tra mất ~1 giây).</summary>
     public const int MaxFallbacks = 2;
+    public const int MinSuggestLength = 3;
+    public const int MaxSuggestions = 6;
 
     private static readonly TimeSpan FoundCacheTime = TimeSpan.FromDays(30);
     private static readonly TimeSpan NotFoundCacheTime = TimeSpan.FromDays(1);
+    private static readonly TimeSpan SuggestionCacheTime = TimeSpan.FromDays(7);
 
     private readonly IGeocodingService _geocoder;
+    private readonly IPlaceSuggestionService _suggestions;
     private readonly ICacheService _cache;
 
-    public AddressLookupService(IGeocodingService geocoder, ICacheService cache)
+    public AddressLookupService(IGeocodingService geocoder, IPlaceSuggestionService suggestions, ICacheService cache)
     {
         _geocoder = geocoder;
+        _suggestions = suggestions;
         _cache = cache;
+    }
+
+    public async Task<IReadOnlyList<GeocodeCandidateDto>> SuggestAsync(string? text, double? biasLatitude, double? biasLongitude,
+        CancellationToken cancellationToken = default)
+    {
+        var query = Whitespace().Replace(text ?? string.Empty, " ").Trim();
+        if (query.Length < MinSuggestLength) return Array.Empty<GeocodeCandidateDto>();
+        if (query.Length > MaxLength) query = query[..MaxLength];
+
+        // Vị trí ưu tiên làm tròn ~10 km để các lần gõ cùng khu vực dùng chung cache (tiết kiệm hạn mức miễn phí)
+        var hasBias = biasLatitude is >= -90 and <= 90 && biasLongitude is >= -180 and <= 180;
+        double? lat = hasBias ? Math.Round(biasLatitude!.Value, 1) : null;
+        double? lng = hasBias ? Math.Round(biasLongitude!.Value, 1) : null;
+
+        var key = $"place-suggest:{query.ToLowerInvariant()}|{lat?.ToString(System.Globalization.CultureInfo.InvariantCulture)},{lng?.ToString(System.Globalization.CultureInfo.InvariantCulture)}";
+        var cached = await _cache.GetAsync<List<GeocodeCandidateDto>>(key, cancellationToken);
+        if (cached != null) return cached;
+
+        if (!_suggestions.IsAvailable)
+        {
+            throw new ExternalServiceException("Chưa cấu hình gợi ý địa điểm (Geoapify). Hãy dùng nút \"Tìm theo địa chỉ\" hoặc nhập tọa độ.");
+        }
+
+        var results = (await _suggestions.SuggestAsync(query, lat, lng, MaxSuggestions, cancellationToken))
+            .Select(r => new GeocodeCandidateDto(r.DisplayName, Math.Round(r.Latitude, 7), Math.Round(r.Longitude, 7), r.Category, r.Type))
+            .ToList();
+        await _cache.SetAsync(key, results, SuggestionCacheTime, cancellationToken);
+        return results;
     }
 
     [GeneratedRegex(@"\s+")]

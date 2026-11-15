@@ -5,6 +5,18 @@ namespace FW.Application.Common.Interfaces;
 /// <param name="Category">Loại vị trí (VD: building, highway, place) — để biết mức độ chính xác.</param>
 public record GeocodeResult(string DisplayName, double Latitude, double Longitude, string? Category, string? Type);
 
+/// <summary>Gợi ý địa điểm khi đang gõ (autocomplete) — Geoapify.</summary>
+public interface IPlaceSuggestionService
+{
+    /// <summary>Đã cấu hình API key chưa.</summary>
+    bool IsAvailable { get; }
+
+    /// <param name="biasLatitude">Ưu tiên kết quả gần vị trí này (VD tâm hiện tại của chi nhánh).</param>
+    /// <exception cref="Exceptions.ExternalServiceException">Dịch vụ không phản hồi / hết hạn mức.</exception>
+    Task<IReadOnlyList<GeocodeResult>> SuggestAsync(string text, double? biasLatitude, double? biasLongitude, int limit,
+        CancellationToken cancellationToken = default);
+}
+
 /// <summary>Tra tọa độ từ địa chỉ (geocoding) qua dịch vụ bản đồ bên ngoài.</summary>
 public interface IGeocodingService
 {

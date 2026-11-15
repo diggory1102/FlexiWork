@@ -114,6 +114,13 @@ public static class DependencyInjection
             client.DefaultRequestHeaders.UserAgent.ParseAdd(settings.UserAgent);
             client.Timeout = TimeSpan.FromSeconds(settings.TimeoutSeconds);
         });
+        // Gợi ý khi gõ: Geoapify. API key nằm trong URL → tắt log của HttpClient này để key không lọt vào log (Render)
+        services.AddHttpClient<IPlaceSuggestionService, GeoapifyPlaceSuggestionService>((sp, client) =>
+        {
+            var settings = sp.GetRequiredService<IOptions<GeocodingSettings>>().Value;
+            client.BaseAddress = new Uri(settings.GeoapifyBaseUrl.TrimEnd('/') + "/");
+            client.Timeout = TimeSpan.FromSeconds(settings.TimeoutSeconds);
+        }).RemoveAllLoggers();
         services.Configure<FaceRecognitionSettings>(configuration.GetSection(FaceRecognitionSettings.SectionName));
         var faceEngine = configuration[$"{FaceRecognitionSettings.SectionName}:Engine"] ?? FaceRecognitionSettings.OnnxEngine;
         if (string.Equals(faceEngine, FaceRecognitionSettings.AiServiceEngine, StringComparison.OrdinalIgnoreCase))

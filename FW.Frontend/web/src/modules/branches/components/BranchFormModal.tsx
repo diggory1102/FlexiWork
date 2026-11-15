@@ -11,6 +11,7 @@ import { Heading, Text } from '@astryxdesign/core/Text';
 import { TextInput } from '@astryxdesign/core/TextInput';
 import { ExternalLink, LocateFixed, Search } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
+import { PlaceSearch } from './PlaceSearch';
 import { FormError, Notice } from '@/components/ui/Feedback';
 import { branchApi } from '@/services/organizationApi';
 import { getErrorMessage } from '@/services/apiClient';
@@ -24,6 +25,9 @@ const statusOptions = [
   { value: 'active', label: branchStatusLabels.active },
   { value: 'inactive', label: branchStatusLabels.inactive },
 ];
+
+/** Đánh dấu kết quả đến từ ô "Tìm địa điểm" (không phải nút "Tìm theo địa chỉ"). */
+const PICKED_PLACE = 'picked-place';
 
 /** Khung bản đồ OpenStreetMap quanh tâm (độ) — đủ thấy vài dãy phố quanh chi nhánh. */
 const MAP_SPAN = { lat: 0.0025, lng: 0.0035 };
@@ -120,6 +124,17 @@ export function BranchFormModal({ open, branch, onClose, onSaved }: Props) {
     }
   };
 
+  /** Chọn một gợi ý ở ô "Tìm địa điểm" → điền tâm và hiện tên vị trí đã chọn. */
+  const pickPlace = (place: GeocodeCandidate) => {
+    applyCandidate(place);
+    setLookup({
+      loading: false,
+      result: { query: place.displayName, matchedQuery: place.displayName, approximate: false, candidates: [place] },
+      message: PICKED_PLACE,
+      selected: '0',
+    });
+  };
+
   const chooseCandidate = (value: string) => {
     const candidate = lookup.result?.candidates[Number(value)];
     if (candidate) applyCandidate(candidate);
@@ -202,6 +217,7 @@ export function BranchFormModal({ open, branch, onClose, onSaved }: Props) {
                   <Button label="Xem trên bản đồ" size="sm" icon={<Icon icon={ExternalLink} />} href={mapUrl} target="_blank" rel="noreferrer" />
                 </HStack>
               </HStack>
+              <PlaceSearch near={{ latitude: form.latitude, longitude: form.longitude }} onPick={pickPlace} />
               <LookupResult lookup={lookup} onChoose={chooseCandidate} />
               <Grid columns={{ minWidth: 160, max: 3 }} gap={4}>
                 <NumberInput label="Vĩ độ" isRequired min={-90} max={90} step={0.000001} value={form.latitude} onChange={(v) => set('latitude', v ?? 0)} />
@@ -248,7 +264,7 @@ function LookupResult({
     <VStack gap={3}>
       <Notice
         status={result.approximate ? 'warning' : 'success'}
-        title={result.approximate ? message : 'Đã điền tọa độ theo địa chỉ.'}
+        title={result.approximate ? message : message === PICKED_PLACE ? 'Đã điền tọa độ theo địa điểm đã chọn.' : 'Đã điền tọa độ theo địa chỉ.'}
         description={
           result.approximate
             ? `Đã tìm theo "${result.matchedQuery}". Hãy kiểm tra ghim trên bản đồ; tốt nhất là đứng tại chi nhánh và bấm "Lấy vị trí hiện tại".`

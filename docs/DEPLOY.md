@@ -10,6 +10,7 @@
 | App di động | **Expo EAS Build** | Free — làm ở Task 3.4 |
 | Nhận diện khuôn mặt (Face ID) | **Chạy ngay trong Backend** (ONNX Runtime + mô hình InsightFace buffalo_sc) | Không cần dịch vụ riêng — mô hình tự tải khi build Docker |
 | Giữ Backend luôn thức | **UptimeRobot** | Free — kiểm tra 5 phút/lần |
+| Tìm tọa độ chi nhánh | **Nominatim** (nút "Tìm theo địa chỉ") + **Geoapify** (ô "Tìm địa điểm" gợi ý khi gõ) | Free — Nominatim không cần đăng ký; Geoapify 3.000 yêu cầu/ngày, cần API key |
 | Trợ lý AI (chatbot) | **Claude API** (Anthropic) | Trả theo lượng dùng (nạp trước ~5–10 USD) — làm ở Cấp 7 |
 
 > **Phân bổ chức năng AI (đã chốt 15/11/2026):** Hugging Face Spaces không còn chạy được Docker miễn phí (cần gói PRO) → nhận diện khuôn mặt chạy **trong backend** bằng ONNX Runtime (đo với giới hạn của Render free 0,1 CPU / 512 MB: ~0,6–0,85 giây mỗi lần, backend dùng ~151 MB RAM). Chatbot do backend gọi Claude API. Chấm điểm nguy cơ nghỉ việc là tác vụ nền của backend. Render chỉ chạy **một** web service (750 giờ free/tháng ≈ đủ cho 1 service chạy 24/7).
@@ -121,6 +122,17 @@ Nhận diện khuôn mặt chạy ngay trong `flexiwork-api` bằng ONNX Runtime
 - **Tham số** (section `FaceRecognition`, đổi trên Render bằng biến `FaceRecognition__MatchThreshold`…): ngưỡng khớp mặc định `0.40` (hiệu chỉnh ở thực nghiệm Chương 4), kích thước ảnh phát hiện `640`.
 - **Phương án tách dịch vụ:** đặt `FaceRecognition__Engine=AiService` + `AiService__BaseUrl` để gọi microservice `FW.AiService` (FastAPI + InsightFace) thay vì chạy trong backend.
 - Mô hình InsightFace chỉ dùng cho nghiên cứu / phi thương mại — phù hợp phạm vi khóa luận.
+
+## Bước 7b — Gợi ý địa điểm khi gõ (Geoapify) — tùy chọn
+
+Form chi nhánh (Web) có ô **Tìm địa điểm** gợi ý ngay khi gõ. Nominatim (dùng cho nút "Tìm theo địa chỉ") **cấm** dùng cho gợi ý khi gõ, nên phần này dùng **Geoapify** (dữ liệu OpenStreetMap, gói Free 3.000 yêu cầu/ngày, không cần thẻ). Chưa có key thì ô này báo "Chưa cấu hình", nút "Tìm theo địa chỉ" vẫn dùng được.
+
+1. Đăng ký <https://myprojects.geoapify.com> (đăng nhập bằng Google/GitHub được) → **Create a project** tên `flexiwork` → mở project → **API Keys**: copy key có sẵn.
+2. (Khuyến nghị) trong trang key, giới hạn **chỉ cho API "Geocoding / Address Autocomplete"**.
+3. Render → `flexiwork-api` → **Environment** → thêm `Geocoding__GeoapifyApiKey` = key vừa copy → **Save** (Render tự deploy lại).
+4. Chạy trên máy: thêm vào `FW.Backend/FW.API/appsettings.Development.json` (file đã gitignore): `"Geocoding": { "GeoapifyApiKey": "..." }`.
+
+> Key chỉ nằm ở backend (không gửi xuống trình duyệt); HttpClient gọi Geoapify đã tắt log để key không lọt vào log Render. Gợi ý được cache 7 ngày, web chỉ gọi khi người dùng ngừng gõ 0,5 giây và từ 3 ký tự — một lần thêm chi nhánh tốn khoảng 3–10 yêu cầu. Gói Free yêu cầu ghi nguồn: form đã hiện "Powered by Geoapify · © OpenStreetMap contributors".
 
 ## Bước 8 — Claude API cho Trợ lý AI (Cấp 7)
 

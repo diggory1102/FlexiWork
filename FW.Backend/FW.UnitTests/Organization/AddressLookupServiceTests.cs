@@ -27,13 +27,35 @@ public class AddressLookupServiceTests
         }
     }
 
+    /// <summary>Gợi ý giả: ghi lại truy vấn và vị trí ưu tiên đã nhận.</summary>
+    private sealed class FakeSuggestions : IPlaceSuggestionService
+    {
+        public bool IsAvailable { get; set; } = true;
+        public List<(string Text, double? Lat, double? Lng)> Calls { get; } = new();
+
+        public Task<IReadOnlyList<GeocodeResult>> SuggestAsync(string text, double? biasLatitude, double? biasLongitude, int limit,
+            CancellationToken cancellationToken = default)
+        {
+            Calls.Add((text, biasLatitude, biasLongitude));
+            IReadOnlyList<GeocodeResult> results = new[] { DuyTan with { DisplayName = $"{text} — gợi ý" } };
+            return Task.FromResult(results);
+        }
+    }
+
     private static readonly GeocodeResult DuyTan = new("Phố Duy Tân, Dịch Vọng Hậu, Cầu Giấy, Hà Nội", 21.03158412345, 105.78311587654, "highway", "residential");
 
     private static (AddressLookupService Service, FakeGeocoder Geocoder, FakeClock Clock) Create()
     {
+        var (service, geocoder, _, clock) = CreateWithSuggestions();
+        return (service, geocoder, clock);
+    }
+
+    private static (AddressLookupService Service, FakeGeocoder Geocoder, FakeSuggestions Suggestions, FakeClock Clock) CreateWithSuggestions()
+    {
         var clock = new FakeClock();
         var geocoder = new FakeGeocoder();
-        return (new AddressLookupService(geocoder, new FakeCache(clock)), geocoder, clock);
+        var suggestions = new FakeSuggestions();
+        return (new AddressLookupService(geocoder, suggestions, new FakeCache(clock)), geocoder, suggestions, clock);
     }
 
     [Theory]
@@ -113,5 +135,36 @@ public class AddressLookupServiceTests
         clock.Advance(TimeSpan.FromDays(2));
         await service.LookupAsync("Không có, ở đâu cả");
         Assert.Equal(3, geocoder.Queries.Count);
+    }
+
+    [Fact]
+    public async Task Suggestions_need_three_characters_and_are_cached_per_area()
+    {
+        var (service, _, suggestions, _) = CreateWithSuggestions();
+
+        Assert.Empty(await service.SuggestAsync("  Du ", 21.03, 105.78));
+        Assert.Empty(suggestions.Calls);
+
+        var first = await service.SuggestAsync("Vincom  Bà Triệu", 21.0312, 105.7834);
+        Assert.Equal("Vincom Bà Triệu — gợi ý", Assert.Single(first).DisplayName);
+        Assert.Equal(("Vincom Bà Triệu", (double?)21.0, (double?)105.8), suggestions.Calls[0]); // vị trí ưu tiên làm tròn ~10 km
+
+        await service.SuggestAsync("vincom bà triệu", 21.04, 105.79); // cùng khu vực → dùng cache
+        Assert.Single(suggestions.Calls);
+        await service.SuggestAsync("Vincom Bà Triệu", 10.78, 106.70); // TP.HCM → gọi lại
+        Assert.Equal(2, suggestions.Calls.Count);
+        await service.SuggestAsync("Vincom Bà Triệu", 999, 105.78); // tọa độ sai → không gửi vị trí ưu tiên
+        Assert.Equal(("Vincom Bà Triệu", (double?)null, (double?)null), suggestions.Calls[2]);
+    }
+
+    [Fact]
+    public async Task Suggestions_without_api_key_report_not_configured()
+    {
+        var (service, _, suggestions, _) = CreateWithSuggestions();
+        suggestions.IsAvailable = false;
+
+        var error = await Assert.ThrowsAsync<ExternalServiceException>(() => service.SuggestAsync("Duy Tân", null, null));
+        Assert.Contains("Geoapify", error.Message);
+        Assert.Empty(suggestions.Calls);
     }
 }

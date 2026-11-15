@@ -20,4 +20,13 @@ public class GeocodingSettings
     public string CountryCodes { get; set; } = "vn";
 
     public int TimeoutSeconds { get; set; } = 10;
+
+    /// <summary>
+    /// API key Geoapify (gói miễn phí 3.000 yêu cầu/ngày) cho ô gợi ý địa điểm khi gõ — Nominatim cấm dùng cho gợi ý khi gõ.
+    /// Chỉ đặt qua biến môi trường <c>Geocoding__GeoapifyApiKey</c> hoặc appsettings.Development.json (không commit).
+    /// Để trống thì ô gợi ý báo chưa cấu hình, nút "Tìm theo địa chỉ" (Nominatim) vẫn dùng được.
+    /// </summary>
+    public string? GeoapifyApiKey { get; set; }
+
+    public string GeoapifyBaseUrl { get; set; } = "https://api.geoapify.com/";
 }

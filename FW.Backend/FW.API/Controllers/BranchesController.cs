@@ -39,6 +39,16 @@ public class BranchesController : ApiControllerBase
         return Success(result, message);
     }
 
+    /// <summary>
+    /// Gợi ý địa điểm khi gõ (Geoapify — tên đường, tòa nhà, địa danh), ưu tiên kết quả gần (lat, lng). Từ 3 ký tự; chọn một
+    /// gợi ý để điền tâm Geofence.
+    /// </summary>
+    [HttpGet("places")]
+    [Authorize(Roles = RoleNames.Admin)]
+    public async Task<IActionResult> SuggestPlaces([FromQuery] string? text, [FromQuery] double? lat, [FromQuery] double? lng,
+        CancellationToken cancellationToken) =>
+        Success(await _addressLookup.SuggestAsync(text, lat, lng, cancellationToken));
+
     /// <summary>Danh sách chi nhánh (phân trang, tìm theo mã/tên/địa chỉ, lọc theo trạng thái).</summary>
     [HttpGet]
     public async Task<IActionResult> GetPaged([FromQuery] BranchFilter filter, CancellationToken cancellationToken) =>
