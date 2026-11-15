@@ -5,6 +5,7 @@ using FW.Application.Common.Models;
 using FW.Application.Common.Security;
 using FW.Domain.Entities;
 using FW.Domain.Enums;
+using FW.Domain.Services;
 
 namespace FW.Application.Features.Organization;
 
@@ -190,7 +191,7 @@ public class BranchService : IBranchService
 
     private async Task<string> ValidateBssidAsync(int branchId, string input, int? excludeId, CancellationToken cancellationToken)
     {
-        if (!BssidFormat.TryNormalize(input, out var bssid))
+        if (!BssidFormat.TryNormalize(input, out var bssid) || BssidFormat.IsPlaceholder(bssid))
         {
             throw new BadRequestException("BSSID không hợp lệ. Định dạng đúng: AA:BB:CC:DD:EE:FF.");
         }

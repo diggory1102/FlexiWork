@@ -164,6 +164,7 @@ cd FW.Backend\FW.Infrastructure\Database\migrations
 | `002_shifts_schedules_face_profiles.sql` | Khung ca theo chi nhánh + số phút cho phép đi muộn/về sớm; lịch nháp/công bố; Face ID lưu mã ảnh & tên mô hình | ✅ |
 | `003_violation_rules_system_settings.sql` | Quy tắc trừ công / phạt theo bậc + số công chuẩn tháng (kèm giá trị mặc định) | ✅ |
 | `004_face_profiles_model_buffalo_sc.sql` | Tên mô hình mặc định của `face_profiles` là `buffalo_sc` | ☐ |
+| `005_attendance_logs_three_layer.sql` | Thiết kế lại `attendance_logs` cho chấm công 3 lớp (bảng cũ đổi tên thành `attendance_logs_backup_005` — kiểm tra `so_dong_bang_cu = 0` rồi xóa bằng lệnh ở cuối file) | ☐ |
 
 ## Xử lý sự cố
 

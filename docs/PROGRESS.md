@@ -265,9 +265,9 @@ flowchart TD
 > * `[Tùy chọn]`: chỉ thực hiện khi còn thời gian; có thể đưa vào "Hướng phát triển" (Chương 5).
 
 > **Tổng quan Tiến độ Hiện tại:**
-> * **Giai đoạn đang thực hiện:** CẤP BẬC 2 - Khung ca, Xếp lịch & Dữ liệu Face ID
-> * **Tiến độ tổng thể:** `18 / 53` Nhiệm vụ hoàn thành (`34%`)
-> * **Hành động tiếp theo:** Bắt đầu **Cấp 3 — Task 3.1** (Entity `AttendanceLog`, Haversine, đối soát Wi-Fi BSSID). Việc nhỏ đang chờ: bản đồ chọn tâm geofence trên form chi nhánh (Leaflet + OpenStreetMap).
+> * **Giai đoạn đang thực hiện:** CẤP BẬC 3 - Lõi chấm công 3 lớp
+> * **Tiến độ tổng thể:** `19 / 53` Nhiệm vụ hoàn thành (`36%`)
+> * **Hành động tiếp theo:** **Task 3.2** — engine Check-in / Check-out (chạy migration `005` trước khi push Task 3.1). Việc nhỏ đang chờ: bản đồ chọn tâm geofence trên form chi nhánh (Leaflet + OpenStreetMap).
 
 ### Các quyết định cần chốt
 
@@ -275,7 +275,7 @@ flowchart TD
 | :--- | :--- | :--- |
 | Manager phụ trách 1 hay nhiều chi nhánh | Task 1.3, 1.5 | 1 chi nhánh (`users.branch_id`) |
 | ~~Múi giờ lưu trữ~~ | Task 1.2, 3.2, 5.3 | ✅ **Đã chốt:** giờ Việt Nam (UTC+7) — `SET time_zone` mỗi kết nối + `IDateTimeProvider` |
-| Xử lý khi 1 lớp chấm công không đạt | Task 3.2 | GPS + Face bắt buộc; sai Wi-Fi → `pending_approval` |
+| Xử lý khi 1 lớp chấm công không đạt | Task 3.2 | GPS + Face bắt buộc; sai Wi-Fi **hoặc không đọc được Wi-Fi** (tắt Wi-Fi, thiếu quyền vị trí, iOS trong Expo Go) → `pending_approval`; chi nhánh chưa khai báo Wi-Fi → bỏ qua lớp 2 |
 | ~~Ca gãy~~ | Task 2.2 | ✅ **Đã chốt:** tách thành 2 ca trong cùng ngày (ca nối tiếp không tính chồng giờ). Ca xoay là cách xếp lịch (Task 2.3), không phải thuộc tính của ca |
 | ~~Quyền khai báo khung ca~~ | Task 2.2 | ✅ **Đã chốt (14/11/2026):** Admin/HR quản lý mọi ca (dùng chung + ca riêng của chi nhánh); Quản lý chi nhánh thêm/sửa/xóa ca riêng của chi nhánh mình (UC 3.1), chỉ xem ca dùng chung. Ca đã được xếp lịch không đổi được giờ, giờ nghỉ, hệ số công, ca đêm, chi nhánh — tạo ca mới thay thế; còn lịch từ hôm nay trở đi thì không xóa được. Ca dài tối đa 16 giờ |
 | ~~Quy tắc vi phạm~~ | Task 2.2 | ✅ **Đã chốt (14/11/2026):** áp dụng toàn công ty, **theo bậc** (`violation_rules`: từ X phút → trừ Y công / phạt Z đồng, chỉ áp dụng bậc cao nhất thỏa mãn, bậc sau không nhẹ hơn bậc trước). Vượt số phút cho phép của ca thì tính **toàn bộ** số phút muộn/sớm. Số công chuẩn tháng ở `system_settings.standard_work_days` (mặc định 26). Mặc định: muộn/sớm từ 1' phạt 20.000đ, từ 15' phạt 50.000đ, từ 60' trừ 0,5 công + 50.000đ |
@@ -388,10 +388,14 @@ flowchart TD
 
 ---
 
-### 📌 CẤP BẬC 3: LÕI CHẤM CÔNG 3 LỚP (3-Factor Attendance Engine) `[0/5]`
+### 📌 CẤP BẬC 3: LÕI CHẤM CÔNG 3 LỚP (3-Factor Attendance Engine) `[1/5]`
 > 🎯 **Demo:** Nhân viên check-in/check-out trên điện thoại thật; Quản lý xem nhật ký kèm minh chứng trên Web.
 
-- [ ] **Task 3.1:** Entity `AttendanceLog`; helper tính khoảng cách Haversine và xác minh Wi-Fi BSSID (kèm unit test).
+- [x] **Task 3.1:** Entity `AttendanceLog`; helper tính khoảng cách Haversine và xác minh Wi-Fi BSSID (kèm unit test).
+  - *Đã làm (15/11/2026):* thiết kế lại bảng `attendance_logs` (migration `005`): thêm ngày công `work_date`, sai số GPS, kết quả từng lớp ở **cả lượt vào và lượt ra** (khoảng cách, BSSID + có khớp không, độ tương đồng khuôn mặt cosine 0–1), mã thiết bị, thông tin duyệt (`reviewed_by/at`, `review_note`); `UNIQUE(schedule_id)` — mỗi ca tối đa một bản ghi, chặn hai yêu cầu check-in đồng thời ở tầng CSDL. Trạng thái `AttendanceStatus`: `valid` / `pending_approval` / `invalid`.
+  - Domain: `Geofence` (Haversine, R = 6.371.008,8 m; kiểm tra tọa độ hợp lệ; `GeofenceResult.IsInside` — đúng bằng bán kính vẫn tính là trong vùng); `WifiVerifier` → `Matched` / `NotMatched` / `NoWifiInfo` / `NotRequired` (chi nhánh chưa khai báo Wi-Fi), vẫn lưu BSSID lạ làm minh chứng; `BssidFormat` chuyển xuống Domain, chấp nhận BSSID iOS bỏ số 0 đầu nhóm (`0:1a:...`), nhận diện địa chỉ giả `02:00:00:00:00:00` (Android thiếu quyền vị trí) — form Wi-Fi chi nhánh cũng từ chối địa chỉ này.
+  - Repository `AttendanceLogRepository`: theo ca, lượt đang mở của nhân viên, nhân viên khác đã chấm công trên cùng thiết bị trong ngày.
+  - Test: +37 unit test (Haversine: 1 độ vĩ, co theo cos vĩ độ, kinh tuyến 180, Hà Nội ↔ TP.HCM ≈ 1.140 km, biên bán kính; Wi-Fi; BSSID) + 3 integration test (minh chứng vào/ra + duyệt, trùng ca bị chặn, trùng thiết bị). Đã chạy thử migration `005` trên bản sao schema cũ: cột và index khớp schema mới.
 - [ ] **Task 3.2:** Engine Check-in / Check-out:
   - Kiểm tra 3 lớp: GPS $\le$ bán kính, Wi-Fi BSSID hợp lệ, Face ID match $\ge$ ngưỡng tin cậy (qua `FaceRecognitionClient`).
   - Xử lý khi một lớp không đạt (từ chối hoặc `pending_approval`) theo quyết định đã chốt.

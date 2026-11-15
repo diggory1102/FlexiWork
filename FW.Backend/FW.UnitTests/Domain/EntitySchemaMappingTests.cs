@@ -26,6 +26,7 @@ public class EntitySchemaMappingTests
         { typeof(Schedule), "schedules" },
         { typeof(FaceProfile), "face_profiles" },
         { typeof(ViolationRule), "violation_rules" },
+        { typeof(AttendanceLog), "attendance_logs" },
     };
 
     [Theory]
