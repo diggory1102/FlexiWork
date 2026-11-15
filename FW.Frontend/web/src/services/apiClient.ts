@@ -74,6 +74,12 @@ export const api = {
   delete: <T>(url: string) => request<T>({ method: 'DELETE', url }),
 };
 
+/** Lỗi dạng tiêu đề + danh sách chi tiết (hiển thị bằng ErrorList). */
+export function getErrorDetail(error: unknown): { message: string; errors: string[] } {
+  if (error instanceof ApiError) return { message: error.message, errors: error.errors };
+  return { message: error instanceof Error ? error.message : 'Đã xảy ra lỗi không xác định.', errors: [] };
+}
+
 /** Lấy nội dung lỗi để hiển thị (thông báo + chi tiết). */
 export function getErrorMessage(error: unknown): string {
   if (error instanceof ApiError) {

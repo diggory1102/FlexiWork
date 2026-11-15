@@ -11,6 +11,9 @@ import { DepartmentsPage } from '@/modules/organization/pages/DepartmentsPage';
 import { PositionsPage } from '@/modules/organization/pages/PositionsPage';
 import { EmployeesPage } from '@/modules/employees/pages/EmployeesPage';
 import { ProfilePage } from '@/modules/profile/pages/ProfilePage';
+import { ShiftsPage } from '@/modules/shifts/pages/ShiftsPage';
+import { SchedulesPage } from '@/modules/schedules/pages/SchedulesPage';
+import { SettingsPage } from '@/modules/settings/pages/SettingsPage';
 import { ComingSoonPage } from '@/components/common/ComingSoonPage';
 import { NotFoundPage } from '@/components/common/NotFoundPage';
 import { useAuthStore } from '@/stores/authStore';
@@ -53,15 +56,18 @@ const router = createBrowserRouter([
                   { path: '/positions', element: <PositionsPage /> },
                   { path: '/branches', element: <BranchesPage /> },
                   comingSoon('/requests', 'Yêu cầu chờ duyệt', 'Cấp bậc 4 — Đơn từ & Phê duyệt'),
-                  comingSoon('/shifts', 'Khung ca làm việc', 'Cấp bậc 2 — Khung ca & Xếp lịch'),
-                  comingSoon('/schedules', 'Xếp lịch', 'Cấp bậc 2 — Khung ca & Xếp lịch'),
+                  { path: '/shifts', element: <ShiftsPage /> },
+                  { path: '/schedules', element: <SchedulesPage /> },
                   comingSoon('/attendance', 'Nhật ký chấm công', 'Cấp bậc 3 — Chấm công 3 lớp'),
                   comingSoon('/timesheets', 'Bảng công', 'Cấp bậc 5 — Tổng hợp bảng công'),
                   comingSoon('/tasks', 'Công việc theo ca', 'Cấp bậc 4 — Công việc theo ca'),
                   comingSoon('/chat', 'Truyền thông nội bộ', 'Cấp bậc 5 — Realtime'),
                   comingSoon('/reports', 'Báo cáo', 'Cấp bậc 5 — Báo cáo'),
-                  comingSoon('/settings', 'Cài đặt', 'Cấp bậc 2 & 4 — Quy tắc vi phạm, loại đơn'),
                 ],
+              },
+              {
+                element: <ProtectedRoute allowedRoles={RoleGroups.AdminOrHr} />,
+                children: [{ path: '/settings', element: <SettingsPage /> }],
               },
             ],
           },

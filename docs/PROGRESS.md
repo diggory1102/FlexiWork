@@ -266,8 +266,8 @@ flowchart TD
 
 > **Tổng quan Tiến độ Hiện tại:**
 > * **Giai đoạn đang thực hiện:** CẤP BẬC 2 - Khung ca, Xếp lịch & Dữ liệu Face ID
-> * **Tiến độ tổng thể:** `15 / 53` Nhiệm vụ hoàn thành (`28%`)
-> * **Hành động tiếp theo:** Thực hiện **Task 2.5** (Web Admin: khung ca, quy tắc, lưới xếp lịch) → **Task 2.4** (Face ID trên Hugging Face — trong lúc làm 2.5, chuẩn bị tài khoản Hugging Face theo `docs/DEPLOY.md` Bước 7) → **Task 2.6**. Việc nhỏ đang chờ: bản đồ chọn tâm geofence trên form chi nhánh (Leaflet + OpenStreetMap).
+> * **Tiến độ tổng thể:** `16 / 53` Nhiệm vụ hoàn thành (`30%`)
+> * **Hành động tiếp theo:** Thực hiện **Task 2.4** (Face ID trên Hugging Face — chuẩn bị tài khoản Hugging Face theo `docs/DEPLOY.md` Bước 7) → **Task 2.6**. Việc nhỏ đang chờ: bản đồ chọn tâm geofence trên form chi nhánh (Leaflet + OpenStreetMap).
 
 ### Các quyết định cần chốt
 
@@ -368,7 +368,7 @@ flowchart TD
 
 ---
 
-### 📌 CẤP BẬC 2: Khung ca, Xếp lịch & Dữ liệu Face ID `[3/6]`
+### 📌 CẤP BẬC 2: Khung ca, Xếp lịch & Dữ liệu Face ID `[4/6]`
 > 🎯 **Demo:** Quản lý xếp và công bố lịch tuần trên Web; nhân viên xem lịch và đăng ký khuôn mặt trên Mobile.
 
 - [x] **Task 2.1:** Entities & Repository `Shift`, `Schedule`, `FaceProfile`. Bổ sung schema: `shifts.branch_id` (NULL = ca dùng chung), số phút cho phép đi muộn/về sớm, trạng thái nháp/công bố của lịch (`schedules`).
@@ -381,7 +381,8 @@ flowchart TD
   - *Đã làm (14/11/2026):* API `/api/schedules` — `GET` lưới lịch chi nhánh (kể cả nháp/đã hủy, tối đa 62 ngày), `GET me` lịch đã công bố của tôi (mặc định 14 ngày), `POST` xếp nhiều ca (≤ 500/lần, **có xung đột thì không lưu ca nào** và trả danh sách lý do), `POST copy` sao chép tuần/khoảng ngày (bỏ qua ca không hợp lệ/xung đột, báo lý do), `POST publish`, `DELETE drafts`, `DELETE {id}` (nháp → xóa hẳn; đã công bố & chưa tới giờ → `cancelled`). Ràng buộc: nhân viên đang hoạt động & thuộc đúng chi nhánh, ca dùng chung hoặc ca của chi nhánh, ngày từ hôm nay tới tối đa 366 ngày; Quản lý chỉ thao tác chi nhánh mình (gửi chi nhánh khác → 403). Domain `SchedulePlanner`: trùng ca, chồng giờ (kể cả ca đêm hôm trước kéo sang), ca gãy nối tiếp hợp lệ. Không cần migration. Test: 109 unit + 46 tích hợp; thử API thật bằng tài khoản Quản lý / Nhân viên.
 - [ ] **Task 2.4:** Đăng ký Face ID: nhận ảnh mẫu → lưu Cloudinary → `FW.AiService` trích xuất vector 512 chiều → lưu `face_profiles`; sửa vector mẫu trong seed cho đủ 512 chiều.
   - *Triển khai (đã chốt 15/11/2026):* `FW.AiService` lên Hugging Face Spaces (Docker, riêng tư) theo `docs/DEPLOY.md` Bước 7 — Dockerfile chạy user không phải root, đặt sẵn mô hình `buffalo_sc`; xác thực bằng token Hugging Face + `AI_API_KEY`; tắt fallback ngoài dev; workflow `.github/workflows/deploy-ai-space.yml`; backend báo "hệ thống nhận diện đang khởi động" khi Space ngủ. Migration 004: `face_profiles.model_name` mặc định `buffalo_sc` (đang ghi nhầm `buffalo_l`).
-- [ ] **Task 2.5:** Web Admin: quản lý khung ca & quy tắc; lưới xếp lịch theo tuần cho từng chi nhánh; công bố lịch.
+- [x] **Task 2.5:** Web Admin: quản lý khung ca & quy tắc; lưới xếp lịch theo tuần cho từng chi nhánh; công bố lịch.
+  - *Đã làm (15/11/2026):* trang **Khung ca** (`/shifts`: danh sách lọc chi nhánh ± ca dùng chung, form có xem trước ca qua đêm / giờ làm thực tế, khóa trường giờ giấc khi ca đã được xếp lịch, ẩn nút sửa theo cờ `canEdit`); trang **Xếp lịch** (`/schedules`: lưới tuần nhân viên × 7 ngày, màu theo trạng thái nháp / đã công bố / hoàn thành / vắng / hủy, bấm ô để xếp một hoặc nhiều ca, **Xếp nhanh** nhiều người × nhiều ngày, sao chép tuần trước, công bố, xóa nháp, xem chi tiết → xóa nháp / hủy ca; lỗi xung đột hiện từng dòng); trang **Cài đặt** (`/settings`, Admin/HR: số công chuẩn + bảng bậc phạt đi muộn / về sớm). Đã chụp ảnh kiểm tra bằng tài khoản Quản lý và HR trên CSDL test.
 - [ ] **Task 2.6:** Mobile App: xem lịch ca cá nhân; chụp ảnh đăng ký Face ID.
 
 ---

@@ -4,6 +4,8 @@ import { Banner } from '@astryxdesign/core/Banner';
 import { EmptyState as AstryxEmptyState } from '@astryxdesign/core/EmptyState';
 import { Icon } from '@astryxdesign/core/Icon';
 import { Spinner as AstryxSpinner } from '@astryxdesign/core/Spinner';
+import { VStack } from '@astryxdesign/core/Stack';
+import { Text } from '@astryxdesign/core/Text';
 import { Inbox } from 'lucide-react';
 
 export function Spinner({ size = 'md', label }: { size?: 'sm' | 'md' | 'lg' | 'xl'; label?: string }) {
@@ -55,4 +57,32 @@ export function Notice({
 /** Lỗi tổng của form (thông báo từ API). */
 export function FormError({ message }: { message?: string | null }) {
   return <Notice status="error" title={message} />;
+}
+
+/** Lỗi API kèm danh sách chi tiết (VD: các ca bị xung đột khi xếp lịch). */
+export interface ErrorDetail {
+  message: string;
+  errors: string[];
+}
+
+/** Hiển thị lỗi API dạng tiêu đề + danh sách từng lý do (dễ đọc hơn khi có nhiều lỗi). */
+export function ErrorList({ error, status = 'error' }: { error: ErrorDetail | null; status?: 'error' | 'warning' }) {
+  if (!error) return null;
+  return (
+    <Notice
+      status={status}
+      title={error.message}
+      description={
+        error.errors.length > 0 && (
+          <VStack gap={1}>
+            {error.errors.map((e) => (
+              <Text key={e} size="sm">
+                • {e}
+              </Text>
+            ))}
+          </VStack>
+        )
+      }
+    />
+  );
 }
