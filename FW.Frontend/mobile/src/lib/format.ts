@@ -51,3 +51,13 @@ export function initials(fullName: string): string {
   const first = parts.length > 1 ? parts[0] : '';
   return ((first[0] ?? '') + (last[0] ?? '')).toUpperCase();
 }
+
+/** "08:05" từ chuỗi ISO giờ Việt Nam (yyyy-MM-ddTHH:mm:ss). */
+export function formatTime(value: string | null | undefined): string {
+  return value ? value.slice(11, 16) : '—';
+}
+
+/** "7,5 giờ" — số giờ làm (tối đa 2 chữ số thập phân, dấu phẩy thập phân). */
+export function formatHours(hours: number): string {
+  return `${Number(hours.toFixed(2)).toString().replace('.', ',')} giờ`;
+}

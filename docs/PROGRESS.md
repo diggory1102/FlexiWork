@@ -266,8 +266,8 @@ flowchart TD
 
 > **Tổng quan Tiến độ Hiện tại:**
 > * **Giai đoạn đang thực hiện:** CẤP BẬC 3 - Lõi chấm công 3 lớp
-> * **Tiến độ tổng thể:** `21 / 53` Nhiệm vụ hoàn thành (`40%`)
-> * **Hành động tiếp theo:** **Task 3.4** — màn hình chấm công trên Mobile (chạy migration `005` trước khi push Task 3.1–3.3). Việc nhỏ đang chờ: bản đồ chọn tâm geofence trên form chi nhánh (Leaflet + OpenStreetMap).
+> * **Tiến độ tổng thể:** `22 / 53` Nhiệm vụ hoàn thành (`42%`)
+> * **Hành động tiếp theo:** **Task 3.5** — Web Admin: nhật ký chấm công, xem minh chứng, duyệt bản ghi chờ duyệt (chạy migration `005` trước khi push Task 3.1–3.4). Việc nhỏ đang chờ: bản đồ chọn tâm geofence trên form chi nhánh (Leaflet + OpenStreetMap).
 
 ### Các quyết định cần chốt
 
@@ -388,7 +388,7 @@ flowchart TD
 
 ---
 
-### 📌 CẤP BẬC 3: LÕI CHẤM CÔNG 3 LỚP (3-Factor Attendance Engine) `[3/5]`
+### 📌 CẤP BẬC 3: LÕI CHẤM CÔNG 3 LỚP (3-Factor Attendance Engine) `[4/5]`
 > 🎯 **Demo:** Nhân viên check-in/check-out trên điện thoại thật; Quản lý xem nhật ký kèm minh chứng trên Web.
 
 - [x] **Task 3.1:** Entity `AttendanceLog`; helper tính khoảng cách Haversine và xác minh Wi-Fi BSSID (kèm unit test).
@@ -408,7 +408,12 @@ flowchart TD
   - *Đã làm (15/11/2026):* `GET /api/attendance/me` (lịch sử của tôi, mặc định từ đầu tháng), `GET /api/attendance/logs` (Admin/HR mọi chi nhánh, Quản lý chi nhánh mình; lọc chi nhánh, nhân viên, khoảng ngày công — mặc định 7 ngày, tối đa 366 —, trạng thái, tìm theo tên/mã nhân viên; phân trang, mới nhất trước), `GET /api/attendance/logs/{id}` (chính chủ hoặc người quản lý chi nhánh: minh chứng lượt vào/ra — ảnh, tọa độ, sai số, khoảng cách, BSSID, độ tương đồng khuôn mặt, mã thiết bị — kèm tâm & bán kính chi nhánh, thông tin duyệt, cờ `canReview`). Đọc bằng một truy vấn JOIN nhân viên – chi nhánh – lịch – ca – người duyệt.
   - Làm luôn API duyệt cho UC 4.6 (Task 3.5 chỉ còn giao diện Web): `PUT /api/attendance/logs/{id}/review` `{approved, note}` — chỉ bản ghi `pending_approval`, trong phạm vi chi nhánh, **không tự duyệt bản ghi của mình** (bản ghi của Quản lý do HR/Admin duyệt), từ chối bắt buộc ghi lý do; chấp nhận → `valid`, từ chối → `invalid` (không tính công). Lượt ra có vấn đề Wi-Fi sau khi lượt vào đã được duyệt → về lại chờ duyệt, xóa thông tin duyệt cũ.
   - Test: +3 integration test (phạm vi theo vai trò & bộ lọc, chi tiết minh chứng, quy tắc duyệt); gọi thử qua HTTP: 403 khi Quản lý xem chi nhánh khác / nhân viên gọi `/logs`, 400 trạng thái sai / từ chối thiếu lý do.
-- [ ] **Task 3.4:** Mobile App: màn hình chấm công (lấy GPS + BSSID + chụp selfie), hiển thị kết quả từng lớp xác minh; lịch sử chấm công cá nhân.
+- [x] **Task 3.4:** Mobile App: màn hình chấm công (lấy GPS + BSSID + chụp selfie), hiển thị kết quả từng lớp xác minh; lịch sử chấm công cá nhân.
+  - *Đã làm (16/11/2026):* tab **Chấm công** — đồng hồ, thẻ việc cần làm (check-in / check-out theo `GET /api/attendance/today`) kèm **kiểm tra trước** 3 lớp: khoảng cách tới chi nhánh (Haversine trên máy, nút Cập nhật vị trí), đọc được Wi-Fi hay không (không đọc được → báo trước sẽ chờ duyệt), đã đăng ký khuôn mặt chưa; bấm nút → đọc GPS mới (độ chính xác cao, có hạn 20 s, cờ `mocked`) + BSSID (NetInfo) + mã thiết bị (`expo-application`) → camera trước toàn màn hình (ẩn tiêu đề & thanh tab) → gửi ảnh → **thẻ kết quả từng lớp** (khoảng cách / Wi-Fi / % khớp khuôn mặt, đi muộn – về sớm, giờ làm, cảnh báo). Check-out trước giờ kết thúc ca hỏi xác nhận. Danh sách ca hôm nay kèm giờ vào/ra, trạng thái.
+  - Màn hình **Lịch sử chấm công** theo tháng: tổng lượt, giờ làm, số lần đi muộn, số lượt chờ duyệt; từng ngày giờ vào/ra, muộn/sớm, giờ làm, ghi chú; tải thêm theo trang.
+  - Tách camera selfie thành component dùng chung `SelfieCamera` (đăng ký Face ID + chấm công), tách `imageFormData` gửi ảnh kèm trường chữ.
+  - Kiểm tra: chạy bản web (khung iPhone) với GPS và camera giả lập gọi API local + nhận diện ONNX thật: đứng cách 278 m → máy chủ từ chối; lại gần ~15 m → check-in (khớp 98%, Wi-Fi không đọc được → chờ duyệt), check-out sớm có hộp xác nhận, lịch sử hiện đúng. Bản web dùng `navigator.geolocation` trực tiếp vì `expo-location` trên web trả vị trí đã lưu.
+  - Giới hạn Expo Go: **iPhone không đọc được BSSID** (cần quyền Access Wi-Fi Information của bản build riêng + tài khoản Apple Developer) → lượt chấm công trên iPhone qua Expo Go luôn chờ duyệt; Android đọc được khi đã cấp quyền vị trí.
 - [ ] **Task 3.5:** Web Admin: nhật ký chấm công có bộ lọc; xem chi tiết minh chứng; duyệt các bản ghi `pending_approval`.
 
 ---

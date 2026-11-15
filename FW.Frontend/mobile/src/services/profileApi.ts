@@ -1,44 +1,18 @@
-import { Platform } from 'react-native';
 import { api } from './apiClient';
+import { imageFormData, multipartConfig, type PickedImage } from './multipart';
 import type { UserProfile } from '@/types/user';
 import type { FaceStatus } from '@/types/scheduling';
 
-/** Ảnh đã chọn từ thư viện / camera (expo-image-picker). */
-export interface PickedImage {
-  uri: string;
-  mimeType?: string | null;
-  fileName?: string | null;
-}
-
-/**
- * Tạo FormData cho file ảnh. React Native nhận object { uri, name, type };
- * bản web cần Blob thật nên phải tải nội dung từ uri trước.
- */
-async function toFormData(image: PickedImage): Promise<FormData> {
-  const type = image.mimeType ?? 'image/jpeg';
-  const extension = type.split('/')[1] ?? 'jpg';
-  const name = image.fileName ?? `avatar.${extension}`;
-  const form = new FormData();
-
-  if (Platform.OS === 'web') {
-    const blob = await (await fetch(image.uri)).blob();
-    form.append('file', blob, name);
-  } else {
-    form.append('file', { uri: image.uri, name, type } as unknown as Blob);
-  }
-  return form;
-}
-
-/** Native: axios cần khai báo multipart và giữ nguyên FormData; web: để trình duyệt tự đặt boundary. */
-const multipartConfig = Platform.OS === 'web' ? undefined : { headers: { 'Content-Type': 'multipart/form-data' }, transformRequest: (data: unknown) => data };
+export type { PickedImage } from './multipart';
 
 export const profileApi = {
   get: () => api.get<UserProfile>('/profile'),
   update: (phoneNumber: string | null) => api.put<UserProfile>('/profile', { phoneNumber }),
-  uploadAvatar: async (image: PickedImage) => api.post<UserProfile>('/profile/avatar', await toFormData(image), multipartConfig),
+  uploadAvatar: async (image: PickedImage) =>
+    api.post<UserProfile>('/profile/avatar', await imageFormData({ fileName: 'avatar.jpg', ...image }), multipartConfig),
 
   /** Trạng thái đăng ký khuôn mặt (Face ID) của tôi. */
   faceStatus: () => api.get<FaceStatus>('/profile/face'),
   /** Đăng ký khuôn mặt mẫu — chỉ được một lần, muốn đổi phải nhờ Quản lý / HR đặt lại. */
-  registerFace: async (image: PickedImage) => api.post<FaceStatus>('/profile/face', await toFormData(image), multipartConfig),
+  registerFace: async (image: PickedImage) => api.post<FaceStatus>('/profile/face', await imageFormData(image), multipartConfig),
 };

@@ -52,6 +52,7 @@ export default function RootLayout() {
           <Stack.Screen name="tasks" options={{ title: 'Công việc theo ca' }} />
           <Stack.Screen name="chat" options={{ title: 'Tin nhắn' }} />
           <Stack.Screen name="face-id" options={{ title: 'Khuôn mặt (Face ID)' }} />
+          <Stack.Screen name="attendance-history" options={{ title: 'Lịch sử chấm công' }} />
         </Stack.Protected>
 
         <Stack.Protected guard={signedIn}>
