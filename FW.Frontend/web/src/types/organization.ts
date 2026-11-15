@@ -91,11 +91,3 @@ export interface GeocodeCandidate {
   category: string | null;
   type: string | null;
 }
-
-/** Kết quả tra tọa độ từ địa chỉ. approximate = phải bỏ số nhà / tên tòa nhà mới tìm thấy. */
-export interface AddressLookup {
-  query: string;
-  matchedQuery: string;
-  approximate: boolean;
-  candidates: GeocodeCandidate[];
-}

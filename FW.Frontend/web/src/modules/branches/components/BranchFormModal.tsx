@@ -2,22 +2,20 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { Button } from '@astryxdesign/core/Button';
 import { Card } from '@astryxdesign/core/Card';
 import { Grid, GridSpan } from '@astryxdesign/core/Grid';
-import { Icon } from '@astryxdesign/core/Icon';
+import { Link } from '@astryxdesign/core/Link';
 import { NumberInput } from '@astryxdesign/core/NumberInput';
-import { RadioList, RadioListItem } from '@astryxdesign/core/RadioList';
 import { Selector } from '@astryxdesign/core/Selector';
-import { HStack, VStack } from '@astryxdesign/core/Stack';
+import { VStack } from '@astryxdesign/core/Stack';
 import { Heading, Text } from '@astryxdesign/core/Text';
 import { TextInput } from '@astryxdesign/core/TextInput';
-import { ExternalLink, LocateFixed, Search } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { PlaceSearch } from './PlaceSearch';
-import { FormError, Notice } from '@/components/ui/Feedback';
+import { FormError } from '@/components/ui/Feedback';
 import { branchApi } from '@/services/organizationApi';
 import { getErrorMessage } from '@/services/apiClient';
 import { toast } from '@/stores/toastStore';
 import { branchStatusLabels } from '@/lib/format';
-import type { AddressLookup, Branch, BranchRequest, BranchStatus, GeocodeCandidate } from '@/types/organization';
+import type { Branch, BranchRequest, BranchStatus, GeocodeCandidate } from '@/types/organization';
 
 const empty: BranchRequest = { branchCode: '', name: '', address: '', phone: '', email: '', latitude: 21.0285, longitude: 105.8542, radius: 50, status: 'active' };
 
@@ -26,13 +24,10 @@ const statusOptions = [
   { value: 'inactive', label: branchStatusLabels.inactive },
 ];
 
-/** Đánh dấu kết quả đến từ ô "Tìm địa điểm" (không phải nút "Tìm theo địa chỉ"). */
-const PICKED_PLACE = 'picked-place';
-
 /** Khung bản đồ OpenStreetMap quanh tâm (độ) — đủ thấy vài dãy phố quanh chi nhánh. */
 const MAP_SPAN = { lat: 0.0025, lng: 0.0035 };
 
-/** Bản đồ OpenStreetMap nhúng có ghim tại tâm Geofence (chỉ để xem; chỉnh tâm bằng ô Vĩ độ / Kinh độ). */
+/** Bản đồ OpenStreetMap nhúng có ghim tại tâm Geofence (chỉ để xem; chỉnh tâm bằng ô tìm vị trí hoặc Vĩ độ / Kinh độ). */
 function GeofenceMapPreview({ latitude, longitude }: { latitude: number; longitude: number }) {
   // Chờ người dùng gõ xong mới tải lại bản đồ
   const [center, setCenter] = useState({ latitude, longitude });
@@ -62,7 +57,10 @@ function GeofenceMapPreview({ latitude, longitude }: { latitude: number; longitu
         style={{ width: '100%', height: 240, border: 0, borderRadius: 8, display: 'block', pointerEvents: 'none' }}
       />
       <Text type="supporting" size="sm">
-        Ghim trên bản đồ là tâm vùng chấm công. Muốn xem rộng hơn, bấm "Xem trên bản đồ". Bản đồ © OpenStreetMap.
+        © OpenStreetMap · Gợi ý vị trí: Geoapify ·{' '}
+        <Link href={`https://www.google.com/maps?q=${latitude},${longitude}`} target="_blank" rel="noreferrer">
+          Mở Google Maps
+        </Link>
       </Text>
     </VStack>
   );
@@ -80,17 +78,10 @@ export function BranchFormModal({ open, branch, onClose, onSaved }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [locating, setLocating] = useState(false);
-  const [lookup, setLookup] = useState<{ loading: boolean; result: AddressLookup | null; message: string | null; selected: string }>({
-    loading: false,
-    result: null,
-    message: null,
-    selected: '0',
-  });
 
   useEffect(() => {
     if (!open) return;
     setError(null);
-    setLookup({ loading: false, result: null, message: null, selected: '0' });
     setForm(branch ? { ...branch, phone: branch.phone ?? '', email: branch.email ?? '' } : empty);
   }, [open, branch]);
 
@@ -112,38 +103,14 @@ export function BranchFormModal({ open, branch, onClose, onSaved }: Props) {
     );
   };
 
-  const applyCandidate = (c: GeocodeCandidate) => setForm((f) => ({ ...f, latitude: c.latitude, longitude: c.longitude }));
-
-  /** Tra tọa độ từ địa chỉ: nhiều kết quả thì điền kết quả đầu và cho chọn lại. */
-  const findByAddress = async () => {
-    setLookup((l) => ({ ...l, loading: true }));
-    try {
-      const { data, message } = await branchApi.geocode(form.address);
-      if (data.candidates.length > 0) applyCandidate(data.candidates[0]);
-      setLookup({ loading: false, result: data, message, selected: '0' });
-    } catch (err) {
-      setLookup({ loading: false, result: null, message: getErrorMessage(err), selected: '0' });
-    }
-  };
-
-  /** Chọn một gợi ý ở ô "Tìm địa điểm" → điền tâm và hiện tên vị trí đã chọn. */
-  const pickPlace = (place: GeocodeCandidate) => {
-    applyCandidate(place);
-    // Chưa nhập địa chỉ → dùng luôn địa chỉ của địa điểm vừa chọn (bỏ đuôi ", Việt Nam")
-    setForm((f) => (f.address.trim() ? f : { ...f, address: place.displayName.replace(/,\s*Việt Nam$/i, '') }));
-    setLookup({
-      loading: false,
-      result: { query: place.displayName, matchedQuery: place.displayName, approximate: false, candidates: [place] },
-      message: PICKED_PLACE,
-      selected: '0',
-    });
-  };
-
-  const chooseCandidate = (value: string) => {
-    const candidate = lookup.result?.candidates[Number(value)];
-    if (candidate) applyCandidate(candidate);
-    setLookup((l) => ({ ...l, selected: value }));
-  };
+  /** Chọn một vị trí ở ô tìm → điền tâm; chưa nhập địa chỉ thì dùng luôn địa chỉ của vị trí đó (bỏ đuôi ", Việt Nam"). */
+  const pickPlace = (place: GeocodeCandidate) =>
+    setForm((f) => ({
+      ...f,
+      latitude: place.latitude,
+      longitude: place.longitude,
+      address: f.address.trim() ? f.address : place.displayName.replace(/,\s*Việt Nam$/i, ''),
+    }));
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -162,8 +129,6 @@ export function BranchFormModal({ open, branch, onClose, onSaved }: Props) {
       setSaving(false);
     }
   };
-
-  const mapUrl = `https://www.google.com/maps?q=${form.latitude},${form.longitude}`;
 
   return (
     <Modal
@@ -202,27 +167,18 @@ export function BranchFormModal({ open, branch, onClose, onSaved }: Props) {
           </Grid>
 
           <Card variant="muted" padding={4}>
-            <VStack gap={3}>
-              <HStack gap={2} wrap="wrap" hAlign="between" vAlign="center">
-                <VStack gap={0.5}>
-                  <Heading level={4}>Vùng chấm công (Geofence)</Heading>
-                  <Text type="supporting">Nhân viên phải đứng trong bán kính này quanh tâm tọa độ.</Text>
-                </VStack>
-                <HStack gap={2} wrap="wrap">
-                  <Button
-                    label="Tìm theo địa chỉ"
-                    size="sm"
-                    icon={<Icon icon={Search} />}
-                    isLoading={lookup.loading}
-                    isDisabled={form.address.trim().length < 5}
-                    onClick={findByAddress}
-                  />
-                  <Button label="Lấy vị trí hiện tại" size="sm" icon={<Icon icon={LocateFixed} />} isLoading={locating} onClick={useCurrentLocation} />
-                  <Button label="Xem trên bản đồ" size="sm" icon={<Icon icon={ExternalLink} />} href={mapUrl} target="_blank" rel="noreferrer" />
-                </HStack>
-              </HStack>
-              <PlaceSearch key={open ? `place-${branch?.id ?? 'new'}` : 'closed'} near={{ latitude: form.latitude, longitude: form.longitude }} onPick={pickPlace} />
-              <LookupResult lookup={lookup} onChoose={chooseCandidate} />
+            <VStack gap={4}>
+              <VStack gap={0.5}>
+                <Heading level={4}>Vùng chấm công (Geofence)</Heading>
+                <Text type="supporting">Nhân viên phải đứng trong bán kính này quanh tâm. Tìm vị trí chi nhánh hoặc đứng tại chi nhánh và lấy vị trí hiện tại.</Text>
+              </VStack>
+              <PlaceSearch
+                key={open ? `place-${branch?.id ?? 'new'}` : 'closed'}
+                near={{ latitude: form.latitude, longitude: form.longitude }}
+                onPick={pickPlace}
+                onLocate={useCurrentLocation}
+                locating={locating}
+              />
               {/* Tọa độ bên trái, bản đồ bên phải (màn hình hẹp thì xuống dòng) */}
               <Grid columns={{ minWidth: 260, max: 2 }} gap={4}>
                 <VStack gap={3}>
@@ -251,45 +207,5 @@ export function BranchFormModal({ open, branch, onClose, onSaved }: Props) {
         </VStack>
       </form>
     </Modal>
-  );
-}
-
-/** Kết quả tra tọa độ: thông báo (gần đúng / không tìm thấy) và danh sách để chọn khi có nhiều vị trí. */
-function LookupResult({
-  lookup,
-  onChoose,
-}: {
-  lookup: { result: AddressLookup | null; message: string | null; selected: string };
-  onChoose: (value: string) => void;
-}) {
-  const { result, message } = lookup;
-  if (!message) return null;
-  if (!result || result.candidates.length === 0) return <Notice status="warning" title={message} />;
-
-  const chosen = result.candidates[Number(lookup.selected)] ?? result.candidates[0];
-  return (
-    <VStack gap={3}>
-      <Notice
-        status={result.approximate ? 'warning' : 'success'}
-        title={result.approximate ? message : message === PICKED_PLACE ? 'Đã điền tọa độ theo địa điểm đã chọn.' : 'Đã điền tọa độ theo địa chỉ.'}
-        description={
-          result.approximate
-            ? `Đã tìm theo "${result.matchedQuery}". Hãy kiểm tra ghim trên bản đồ; tốt nhất là đứng tại chi nhánh và bấm "Lấy vị trí hiện tại".`
-            : chosen.displayName
-        }
-      />
-      {result.candidates.length > 1 && (
-        <RadioList label="Chọn đúng vị trí" size="sm" value={lookup.selected} onChange={onChoose}>
-          {result.candidates.map((c, i) => (
-            <RadioListItem
-              key={`${c.latitude},${c.longitude},${i}`}
-              value={String(i)}
-              label={c.displayName.split(',').slice(0, 2).join(',')}
-              description={`${c.displayName} · ${c.latitude.toFixed(6)}, ${c.longitude.toFixed(6)}`}
-            />
-          ))}
-        </RadioList>
-      )}
-    </VStack>
   );
 }
