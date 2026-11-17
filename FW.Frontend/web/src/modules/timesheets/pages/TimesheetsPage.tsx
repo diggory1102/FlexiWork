@@ -5,7 +5,8 @@ import { HStack, VStack } from '@astryxdesign/core/Stack';
 import { Tab, TabList } from '@astryxdesign/core/TabList';
 import { Text } from '@astryxdesign/core/Text';
 import { Calculator, CheckCheck, Lock } from 'lucide-react';
-import { Avatar, PageHeader, Toolbar } from '@/components/ui/Layout';
+import { PageHeader, Toolbar } from '@/components/ui/Layout';
+import { EmployeeCell } from '@/components/ui/EmployeeCell';
 import { ListCard, SearchInput } from '@/components/ui/ListCard';
 import { Badge, Notice } from '@/components/ui/Feedback';
 import { DataTable, Pagination, type Column } from '@/components/ui/DataTable';
@@ -108,20 +109,7 @@ export function TimesheetsPage() {
       key: 'employee',
       header: 'Nhân viên',
       width: 230,
-      render: (t) => (
-        <HStack gap={3} vAlign="center">
-          <Avatar name={t.employee.fullName} url={t.employee.avatarUrl} size={36} />
-          <VStack gap={0.5} className="min-w-0">
-            <Text weight="medium" maxLines={1}>
-              {t.employee.fullName}
-            </Text>
-            <Text type="supporting" maxLines={1}>
-              <span className="font-mono">{t.employee.employeeCode}</span>
-              {branchFilter.companyWide && t.branchName && <> · {t.branchName}</>}
-            </Text>
-          </VStack>
-        </HStack>
-      ),
+      render: (t) => <EmployeeCell name={t.employee.fullName} code={t.employee.employeeCode} avatarUrl={t.employee.avatarUrl} sub={branchFilter.companyWide ? t.branchName : null} />,
     },
     {
       key: 'shifts',

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Grid } from '@astryxdesign/core/Grid';
 import { Selector } from '@astryxdesign/core/Selector';
 import { HStack, VStack } from '@astryxdesign/core/Stack';
@@ -11,10 +11,9 @@ import { Badge, Spinner } from '@/components/ui/Feedback';
 import { DataTable, type Column } from '@/components/ui/DataTable';
 import { BranchSelector, useBranchFilter } from '@/components/ui/BranchFilter';
 import { ChartCard, ChartTooltip, axisProps, chartColors } from '@/components/charts/ChartCard';
+import { useApiData } from '@/hooks/useApiData';
 import { reportApi } from '@/services/reportApi';
-import { getErrorMessage } from '@/services/apiClient';
-import { toast } from '@/stores/toastStore';
-import type { BranchLeaveUsage, LeaveTypeUsage, LeaveUsageEmployee, LeaveUsageReport } from '@/types/reports';
+import type { BranchLeaveUsage, LeaveTypeUsage, LeaveUsageEmployee } from '@/types/reports';
 import { percent } from './ViolationsTab';
 
 const thisYear = new Date().getFullYear();
@@ -25,22 +24,8 @@ const days = (value: number) => `${value} ngày`;
 export function LeaveUsageTab() {
   const branchFilter = useBranchFilter();
   const [year, setYear] = useState(String(thisYear));
-  const [report, setReport] = useState<LeaveUsageReport | null>(null);
-  const [loading, setLoading] = useState(true);
   const { apiBranchId } = branchFilter;
-
-  useEffect(() => {
-    let current = true;
-    setLoading(true);
-    reportApi
-      .leaveUsage({ year: Number(year), branchId: apiBranchId })
-      .then(({ data }) => current && setReport(data))
-      .catch((err) => current && toast.error(getErrorMessage(err)))
-      .finally(() => current && setLoading(false));
-    return () => {
-      current = false;
-    };
-  }, [year, apiBranchId]);
+  const { data: report, loading } = useApiData(() => reportApi.leaveUsage({ year: Number(year), branchId: apiBranchId }), [year, apiBranchId]);
 
   const months = useMemo(
     () => (report?.byMonth ?? []).map((m) => ({ month: `T${m.month}`, 'Ngày phép đã dùng': m.days })),

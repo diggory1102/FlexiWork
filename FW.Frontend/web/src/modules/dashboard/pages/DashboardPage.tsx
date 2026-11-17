@@ -6,7 +6,6 @@ import { EmptyState } from '@astryxdesign/core/EmptyState';
 import { Grid } from '@astryxdesign/core/Grid';
 import { Icon } from '@astryxdesign/core/Icon';
 import { IconButton } from '@astryxdesign/core/IconButton';
-import { Selector } from '@astryxdesign/core/Selector';
 import { HStack, VStack } from '@astryxdesign/core/Stack';
 import { Heading, Text } from '@astryxdesign/core/Text';
 import {
@@ -36,13 +35,13 @@ import {
 } from 'lucide-react';
 import { PageHeader } from '@/components/ui/Layout';
 import { StatCard } from '@/components/ui/StatCard';
+import { BranchSelector, useBranchFilter } from '@/components/ui/BranchFilter';
 import { Notice } from '@/components/ui/Feedback';
 import { Spinner } from '@/components/ui/Feedback';
 import { ChartCard, ChartTooltip, axisProps, chartColors, legendProps } from '@/components/charts/ChartCard';
 import { reportApi } from '@/services/reportApi';
 import { getErrorMessage } from '@/services/apiClient';
 import { useAuthStore } from '@/stores/authStore';
-import { useLookupStore } from '@/stores/lookupStore';
 import { RoleGroups } from '@/types/auth';
 import type { Dashboard } from '@/types/reports';
 import { formatDayMonth } from '@/lib/dates';
@@ -55,9 +54,8 @@ const REFRESH_MS = 60_000;
 export function DashboardPage() {
   const user = useAuthStore((s) => s.user);
   const hasAnyRole = useAuthStore((s) => s.hasAnyRole);
-  const { branches, load } = useLookupStore();
-  const companyWide = hasAnyRole(RoleGroups.AdminOrHr);
-  const [branchId, setBranchId] = useState('');
+  const branchFilter = useBranchFilter();
+  const { apiBranchId } = branchFilter;
   const [date, setDate] = useState<ISODateString>(todayIso());
   const [data, setData] = useState<Dashboard | null>(null);
   const [loading, setLoading] = useState(true);
@@ -65,15 +63,11 @@ export function DashboardPage() {
   const isManager = hasAnyRole(RoleGroups.Managers);
   const isToday = date === todayIso();
 
-  useEffect(() => {
-    if (isManager) void load();
-  }, [isManager, load]);
-
   const fetchData = useCallback(
     async (silent: boolean) => {
       if (!silent) setLoading(true);
       try {
-        const { data: result } = await reportApi.dashboard({ date, branchId: companyWide && branchId ? Number(branchId) : '' });
+        const { data: result } = await reportApi.dashboard({ date, branchId: apiBranchId });
         setData(result);
         setError(null);
       } catch (err) {
@@ -82,7 +76,7 @@ export function DashboardPage() {
         setLoading(false);
       }
     },
-    [date, branchId, companyWide],
+    [date, apiBranchId],
   );
 
   useEffect(() => {
@@ -115,11 +109,6 @@ export function DashboardPage() {
 
   if (!isManager) return <EmployeeNotice name={user?.fullName ?? ''} />;
 
-  const visibleBranches = companyWide ? branches : branches.filter((b) => b.id === user?.branchId);
-  const branchOptions = [
-    ...(companyWide ? [{ value: '', label: 'Tất cả chi nhánh' }] : []),
-    ...visibleBranches.map((b) => ({ value: String(b.id), label: b.name })),
-  ];
   const totals = data?.totals;
 
   return (
@@ -133,15 +122,7 @@ export function DashboardPage() {
         }
         actions={
           <>
-            <Selector
-              label="Chi nhánh"
-              isLabelHidden
-              width={220}
-              options={branchOptions}
-              value={companyWide ? branchId : String(user?.branchId ?? '')}
-              onChange={(v) => setBranchId(v ?? '')}
-              isDisabled={!companyWide}
-            />
+            <BranchSelector filter={branchFilter} />
             <DateInput label="Ngày" isLabelHidden width={180} value={date} onChange={(v) => setDate(v ?? todayIso())} format="date" />
             <IconButton
               label="Làm mới"
@@ -235,7 +216,7 @@ export function DashboardPage() {
               </ResponsiveContainer>
             </ChartCard>
 
-            {companyWide && branchBars.length > 1 ? (
+            {branchFilter.companyWide && branchBars.length > 1 ? (
               <ChartCard title="Theo chi nhánh" description="Số nhân viên được xếp lịch và đã chấm công trong ngày." height={Math.max(180, branchBars.length * 56)}>
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={branchBars} layout="vertical" margin={{ top: 4, right: 12, left: 8, bottom: 0 }}>

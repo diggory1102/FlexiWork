@@ -16,9 +16,9 @@ import { Badge, Notice } from '@/components/ui/Feedback';
 import { requestApi } from '@/services/requestApi';
 import { getErrorMessage } from '@/services/apiClient';
 import { toast } from '@/stores/toastStore';
-import { formatDate, formatDateTime } from '@/lib/format';
+import { formatDate, formatDateTime, formatTime } from '@/lib/format';
 import type { LeaveRequest } from '@/types/requests';
-import { categoryLabels, categoryTone, days, hours, scheduleLabel, statusLabels, statusTone, timeOf } from '../requestUi';
+import { categoryLabels, categoryTone, days, hours, scheduleLabel, statusLabels, statusTone } from '../requestUi';
 
 /** Một bước trong tiến trình xử lý đơn. */
 function Step({ state, title, detail }: { state: 'done' | 'failed' | 'waiting'; title: string; detail?: ReactNode }) {
@@ -143,7 +143,7 @@ export function RequestDetailDrawer({ request, open, onClose, onReviewed }: Prop
                       <>
                         <MetadataListItem label="Ngày">{formatDate(r.startAt)}</MetadataListItem>
                         <MetadataListItem label="Giờ">
-                          {timeOf(r.startAt)} – {timeOf(r.endAt)}
+                          {formatTime(r.startAt)} – {formatTime(r.endAt)}
                           {r.endAt?.slice(0, 10) !== r.startAt?.slice(0, 10) && ' (hôm sau)'}
                         </MetadataListItem>
                         <MetadataListItem label="Số giờ OT">{hours(r.durationHours ?? 0)} giờ</MetadataListItem>
@@ -164,7 +164,7 @@ export function RequestDetailDrawer({ request, open, onClose, onReviewed }: Prop
                           {r.attendanceLog.shiftName ?? '—'} · {formatDate(r.attendanceLog.workDate)}
                         </MetadataListItem>
                         <MetadataListItem label="Giờ vào / ra">
-                          {timeOf(r.attendanceLog.checkinTime)} / {timeOf(r.attendanceLog.checkoutTime)}
+                          {formatTime(r.attendanceLog.checkinTime)} / {formatTime(r.attendanceLog.checkoutTime)}
                         </MetadataListItem>
                         {r.attendanceLog.lateMinutes > 0 && <MetadataListItem label="Đi muộn">{r.attendanceLog.lateMinutes} phút</MetadataListItem>}
                         {r.attendanceLog.earlyMinutes > 0 && <MetadataListItem label="Về sớm">{r.attendanceLog.earlyMinutes} phút</MetadataListItem>}

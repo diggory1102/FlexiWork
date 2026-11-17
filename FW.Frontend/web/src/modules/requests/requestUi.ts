@@ -1,5 +1,5 @@
 import type { BadgeTone } from '@/components/ui/Feedback';
-import { formatDate } from '@/lib/format';
+import { formatDate, formatTime } from '@/lib/format';
 import { formatDayMonth } from '@/lib/dates';
 import type { LeaveRequest, RequestCategory, RequestSchedule, RequestStatus } from '@/types/requests';
 
@@ -39,9 +39,6 @@ export const statusTone: Record<RequestStatus, BadgeTone> = {
 export const days = (value: number) => Number(value.toFixed(1)).toLocaleString('vi-VN');
 export const hours = (value: number) => Number(value.toFixed(2)).toLocaleString('vi-VN');
 
-/** "HH:mm" từ chuỗi ISO. */
-export const timeOf = (iso: string | null | undefined) => (iso ? iso.slice(11, 16) : '—');
-
 export const scheduleLabel = (s: RequestSchedule | null) =>
   s ? `${s.shiftName ?? 'Ca'} ${formatDayMonth(s.workDate)} (${s.startTime}–${s.endTime})` : '—';
 
@@ -54,7 +51,7 @@ export function summarize(r: LeaveRequest): string {
         : `${formatDate(r.startDate)} → ${formatDate(r.endDate)} · ${days(r.durationDays)} ngày`;
     case 'overtime': {
       const overnight = r.endAt?.slice(0, 10) !== r.startAt?.slice(0, 10);
-      return `${formatDate(r.startAt)} · ${timeOf(r.startAt)}–${timeOf(r.endAt)}${overnight ? ' (hôm sau)' : ''} · ${hours(r.durationHours ?? 0)} giờ`;
+      return `${formatDate(r.startAt)} · ${formatTime(r.startAt)}–${formatTime(r.endAt)}${overnight ? ' (hôm sau)' : ''} · ${hours(r.durationHours ?? 0)} giờ`;
     }
     case 'shift_swap':
       return r.targetSchedule

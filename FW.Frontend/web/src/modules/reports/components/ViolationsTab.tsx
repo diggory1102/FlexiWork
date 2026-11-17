@@ -11,14 +11,13 @@ import { DataTable, Pagination, type Column } from '@/components/ui/DataTable';
 import { StatCard } from '@/components/ui/StatCard';
 import { BranchSelector, useBranchFilter } from '@/components/ui/BranchFilter';
 import { ChartCard, ChartTooltip, axisProps, chartColors, legendProps } from '@/components/charts/ChartCard';
+import { useApiData } from '@/hooks/useApiData';
 import { useDebounce } from '@/hooks/useDebounce';
 import { reportApi } from '@/services/reportApi';
-import { getErrorMessage } from '@/services/apiClient';
-import { toast } from '@/stores/toastStore';
 import { todayIso, formatCurrency } from '@/lib/format';
 import { formatMinutes } from '@/lib/dates';
 import { iso, monthStart, rangePresets } from '@/lib/dateRanges';
-import type { EmployeeViolation, ViolationReport } from '@/types/reports';
+import type { EmployeeViolation } from '@/types/reports';
 import { EmployeeViolationDrawer } from './EmployeeViolationDrawer';
 
 const PAGE_SIZE = 15;
@@ -34,8 +33,6 @@ export function ViolationsTab() {
   const [search, setSearch] = useState('');
   const debounced = useDebounce(search);
   const [pageIndex, setPageIndex] = useState(1);
-  const [report, setReport] = useState<ViolationReport | null>(null);
-  const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<EmployeeViolation | null>(null);
 
   const { apiBranchId } = branchFilter;
@@ -44,18 +41,10 @@ export function ViolationsTab() {
 
   useEffect(() => setPageIndex(1), [apiBranchId, fromDate, toDate, debounced]);
 
-  useEffect(() => {
-    let current = true;
-    setLoading(true);
-    reportApi
-      .violations({ branchId: apiBranchId, fromDate, toDate, search: debounced, pageIndex, pageSize: PAGE_SIZE })
-      .then(({ data }) => current && setReport(data))
-      .catch((err) => current && toast.error(getErrorMessage(err)))
-      .finally(() => current && setLoading(false));
-    return () => {
-      current = false;
-    };
-  }, [apiBranchId, fromDate, toDate, debounced, pageIndex]);
+  const { data: report, loading } = useApiData(
+    () => reportApi.violations({ branchId: apiBranchId, fromDate, toDate, search: debounced, pageIndex, pageSize: PAGE_SIZE }),
+    [apiBranchId, fromDate, toDate, debounced, pageIndex],
+  );
 
   const summary = report?.summary;
   const branchBars = useMemo(

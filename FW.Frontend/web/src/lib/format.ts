@@ -21,6 +21,9 @@ export function formatDateTime(value: string | null | undefined): string {
   return `${formatDate(value)} ${value.slice(11, 16)}`;
 }
 
+/** "HH:mm" từ chuỗi ISO (yyyy-MM-ddTHH:mm:ss); rỗng → "—". */
+export const formatTime = (value: string | null | undefined) => (value ? value.slice(11, 16) : '—');
+
 /** Ngày hôm nay dạng yyyy-MM-dd theo giờ máy người dùng. */
 export function todayIso(): ISODateString {
   const now = new Date();
