@@ -160,6 +160,13 @@ public record LeaveRequestDto(
     private static string? Time(TimeSpan? time) => time?.ToString(@"hh\:mm");
 }
 
+/// <summary>Một ca của đồng nghiệp có thể đổi lấy.</summary>
+public record SwapShiftOptionDto(long ScheduleId, int UserId, string EmployeeCode, string FullName, DateTime WorkDate, string ShiftName,
+    string StartTime, string EndTime);
+
+/// <summary>Lựa chọn cho đơn đổi ca: ca của đồng nghiệp cùng chi nhánh (±7 ngày quanh ca muốn đổi) và đồng nghiệp có thể làm thay.</summary>
+public record SwapOptionsDto(RequestScheduleDto Source, IReadOnlyList<SwapShiftOptionDto> Shifts, IReadOnlyList<RequestPersonDto> Colleagues);
+
 /// <summary>Quỹ phép năm của tôi. <see cref="AvailableDays"/> = còn lại − đang chờ duyệt.</summary>
 public record LeaveBalanceDto(int Year, decimal TotalDays, decimal UsedDays, decimal RemainingDays, decimal PendingDays, decimal AvailableDays,
     bool IsDefault);

@@ -26,6 +26,7 @@ export const TextField = forwardRef<TextInputInstance, TextFieldProps>(function 
       <View
         style={[
           styles.box,
+          props.multiline && styles.multiline,
           focused && styles.focused,
           !!error && styles.invalid,
           !editable && styles.disabled,
@@ -78,6 +79,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     backgroundColor: colors.surface,
   },
+  multiline: { height: undefined, minHeight: 110, alignItems: 'flex-start', paddingVertical: 4 },
   focused: { borderColor: colors.primary },
   invalid: { borderColor: colors.danger },
   disabled: { backgroundColor: colors.background },

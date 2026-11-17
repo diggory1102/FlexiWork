@@ -186,6 +186,11 @@ export function AttendanceScreen() {
             today.shifts.map((s) => <ShiftRow key={s.scheduleId} shift={s} />)
           )}
 
+          <Pressable onPress={() => router.push('/tasks')} style={({ pressed }) => [styles.historyLink, pressed && styles.pressed]} accessibilityRole="button">
+            <Ionicons name="checkbox-outline" size={20} color={colors.primary} />
+            <Text style={styles.historyText}>Công việc trong ca</Text>
+            <Ionicons name="chevron-forward" size={18} color={colors.muted} />
+          </Pressable>
           <Pressable onPress={() => router.push('/attendance-history')} style={({ pressed }) => [styles.historyLink, pressed && styles.pressed]} accessibilityRole="button">
             <Ionicons name="receipt-outline" size={20} color={colors.primary} />
             <Text style={styles.historyText}>Lịch sử chấm công</Text>
@@ -345,6 +350,16 @@ function ResultCard({ result, onClose }: { result: AttendanceResult; onClose: ()
       {result.warnings.map((w) => (
         <Notice key={w} tone="warning" message={w} />
       ))}
+      {result.action === 'check_in' && (
+        <Button
+          title="Xem công việc trong ca"
+          icon={<Ionicons name="checkbox-outline" size={18} color={colors.white} />}
+          onPress={() => {
+            onClose();
+            router.push('/tasks');
+          }}
+        />
+      )}
       <Button title="Đóng" variant="secondary" onPress={onClose} />
     </Card>
   );

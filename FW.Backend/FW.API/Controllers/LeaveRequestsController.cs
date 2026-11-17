@@ -69,6 +69,11 @@ public class LeaveRequestsController : ApiControllerBase
     public async Task<IActionResult> GetManaged([FromQuery] LeaveRequestFilter filter, CancellationToken cancellationToken) =>
         Success(await _requestService.GetManagedAsync(filter, cancellationToken));
 
+    /// <summary>Gợi ý cho đơn đổi ca: ca của đồng nghiệp cùng chi nhánh (±7 ngày) và đồng nghiệp có thể làm thay.</summary>
+    [HttpGet("swap-options")]
+    public async Task<IActionResult> GetSwapOptions([FromQuery] long sourceScheduleId, CancellationToken cancellationToken) =>
+        Success(await _requestService.GetSwapOptionsAsync(sourceScheduleId, cancellationToken));
+
     [HttpGet("{id:int}")]
     public async Task<IActionResult> GetById(int id, CancellationToken cancellationToken) =>
         Success(await _requestService.GetByIdAsync(id, cancellationToken));

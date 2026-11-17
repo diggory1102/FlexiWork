@@ -49,7 +49,9 @@ export default function RootLayout() {
 
         <Stack.Protected guard={signedIn && !mustChangePassword}>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="tasks" options={{ title: 'Công việc theo ca' }} />
+          <Stack.Screen name="tasks" options={{ title: 'Công việc trong ca' }} />
+          <Stack.Screen name="request-new" options={{ title: 'Tạo đơn' }} />
+          <Stack.Screen name="request/[id]" options={{ title: 'Chi tiết đơn' }} />
           <Stack.Screen name="chat" options={{ title: 'Tin nhắn' }} />
           <Stack.Screen name="face-id" options={{ title: 'Khuôn mặt (Face ID)' }} />
           <Stack.Screen name="attendance-history" options={{ title: 'Lịch sử chấm công' }} />

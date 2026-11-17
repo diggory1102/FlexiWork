@@ -39,6 +39,12 @@ public interface IRequestScheduleChecker
 
     /// <summary>OT là giờ làm ngoài ca: không được trùng ca đã xếp (nối tiếp ngay sau ca thì được).</summary>
     Task EnsureOvertimeOutsideShiftsAsync(int userId, DateTime startAt, DateTime endAt, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gợi ý cho màn hình đổi ca: ca đã công bố, chưa bắt đầu của đồng nghiệp cùng chi nhánh trong ±7 ngày quanh ca muốn đổi,
+    /// và đồng nghiệp đang làm việc ở chi nhánh đó (nhờ làm thay). Chưa kiểm tra chồng giờ — kiểm tra khi gửi đơn.
+    /// </summary>
+    Task<SwapOptionsDto> GetSwapOptionsAsync(int requesterId, long sourceScheduleId, CancellationToken cancellationToken = default);
 }
 
 /// <summary>Kiểm tra đơn đổi ca / OT với lịch làm việc hiện tại (Task 4.1, 4.2).</summary>
@@ -138,6 +144,44 @@ public class RequestScheduleChecker : IRequestScheduleChecker
             throw new BadRequestException($"Giờ OT trùng với {clash.Label} — OT chỉ tính phần làm ngoài ca đã xếp.");
         }
     }
+
+    public const int SwapWindowDays = 7;
+
+    public async Task<SwapOptionsDto> GetSwapOptionsAsync(int requesterId, long sourceScheduleId, CancellationToken cancellationToken = default)
+    {
+        var source = await LoadScheduleAsync(sourceScheduleId, cancellationToken);
+        if (source is null || source.Schedule.UserId != requesterId) throw new BadRequestException("Không tìm thấy ca của bạn.");
+        var now = _clock.Now;
+        Ensure(RequestRules.ValidateSwappable(source.Schedule, source.Shift, now, "Ca của bạn"));
+
+        var sourceDate = source.Schedule.WorkDate.Date;
+        var from = sourceDate.AddDays(-SwapWindowDays) < now.Date ? now.Date : sourceDate.AddDays(-SwapWindowDays);
+        var shifts = (await _schedules.GetDetailsAsync(new ScheduleQuery
+            {
+                BranchId = source.Schedule.BranchId, FromDate = from, ToDate = sourceDate.AddDays(SwapWindowDays), PublishedOnly = true
+            }, cancellationToken))
+            .Where(s => s.UserId != requesterId && s.Status == ScheduleStatus.Scheduled && s.WorkDate.Date + s.StartTime > now)
+            .Where(s => !(s.ShiftId == source.Schedule.ShiftId && s.WorkDate.Date == sourceDate))
+            .OrderBy(s => s.WorkDate).ThenBy(s => s.StartTime).ThenBy(s => s.FullName)
+            .Select(s => new SwapShiftOptionDto(s.Id, s.UserId, s.EmployeeCode, s.FullName, s.WorkDate, s.ShiftName,
+                s.StartTime.ToString(@"hh\:mm"), s.EndTime.ToString(@"hh\:mm")))
+            .ToList();
+
+        var colleagues = (await _users.GetPagedAsync(new UserFilter
+            {
+                BranchId = source.Schedule.BranchId, Status = UserStatus.Active, PageSize = PagedQueryMax
+            }, cancellationToken)).Items
+            .Where(u => u.Id != requesterId)
+            .OrderBy(u => u.FullName)
+            .Select(u => new RequestPersonDto(u.Id, u.EmployeeCode, u.FullName, u.AvatarUrl))
+            .ToList();
+
+        var sourceDto = new RequestScheduleDto(source.Schedule.Id, source.Schedule.WorkDate, source.Shift.Name,
+            source.Shift.StartTime.ToString(@"hh\:mm"), source.Shift.EndTime.ToString(@"hh\:mm"), source.Schedule.Status);
+        return new SwapOptionsDto(sourceDto, shifts, colleagues);
+    }
+
+    private const int PagedQueryMax = FW.Application.Common.Models.PagedQuery.MaxPageSize;
 
     // ------------------------------------------------------------------
 

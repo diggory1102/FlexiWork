@@ -39,6 +39,9 @@ public interface ILeaveRequestService
 
     /// <summary>Quỹ phép năm của tôi (mặc định năm nay).</summary>
     Task<LeaveBalanceDto> GetMyBalanceAsync(int? year, CancellationToken cancellationToken = default);
+
+    /// <summary>Gợi ý ca / đồng nghiệp để đổi ca của tôi.</summary>
+    Task<SwapOptionsDto> GetSwapOptionsAsync(long sourceScheduleId, CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -318,6 +321,9 @@ public class LeaveRequestService : ILeaveRequestService
     }
 
     // ------------------------------------------------------------------ Quỹ phép
+
+    public Task<SwapOptionsDto> GetSwapOptionsAsync(long sourceScheduleId, CancellationToken cancellationToken = default) =>
+        _checker.GetSwapOptionsAsync(CurrentUserId, sourceScheduleId, cancellationToken);
 
     public async Task<LeaveBalanceDto> GetMyBalanceAsync(int? year, CancellationToken cancellationToken = default) =>
         await GetBalanceAsync(CurrentUserId, year ?? _clock.Today.Year, cancellationToken);

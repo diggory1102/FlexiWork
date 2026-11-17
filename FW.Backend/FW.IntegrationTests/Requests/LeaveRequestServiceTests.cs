@@ -253,6 +253,15 @@ public partial class LeaveRequestServiceTests
         var aMorning = await NewScheduleAsync(s, a, morning, Day);
         var bAfternoon = await NewScheduleAsync(s, b, afternoon, Day.AddDays(1));
 
+        // Gợi ý: ca của đồng nghiệp cùng chi nhánh, đồng nghiệp làm thay (không có chính mình); chỉ cho ca của mình
+        var options = await As(s, a).GetSwapOptionsAsync(aMorning.Id);
+        Assert.Equal(aMorning.Id, options.Source.Id);
+        Assert.Contains(options.Shifts, o => o.ScheduleId == bAfternoon.Id && o.UserId == b.Id && o.StartTime == "13:00");
+        Assert.DoesNotContain(options.Shifts, o => o.UserId == a.Id);
+        Assert.Contains(options.Colleagues, c => c.Id == b.Id);
+        Assert.DoesNotContain(options.Colleagues, c => c.Id == a.Id);
+        await Assert.ThrowsAsync<BadRequestException>(() => As(s, b).GetSwapOptionsAsync(aMorning.Id));
+
         var swap = await As(s, a).CreateAsync(new CreateLeaveRequestForm
         {
             LeaveTypeId = Swap, Reason = "Trùng lịch thi", SourceScheduleId = aMorning.Id, TargetScheduleId = bAfternoon.Id

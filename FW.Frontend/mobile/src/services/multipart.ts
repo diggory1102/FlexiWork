@@ -30,6 +30,16 @@ export async function imageFormData(image: PickedImage, fields: Record<string, s
   return form;
 }
 
+/** FormData gồm các trường chữ và ảnh (nếu có) — dùng cho form có ảnh tùy chọn (đơn từ, checklist). */
+export async function formDataWith(fields: Record<string, string | number | boolean | null | undefined>, image?: PickedImage | null): Promise<FormData> {
+  if (image) return imageFormData(image, fields);
+  const form = new FormData();
+  for (const [key, value] of Object.entries(fields)) {
+    if (value !== null && value !== undefined && value !== '') form.append(key, String(value));
+  }
+  return form;
+}
+
 /** Native: axios cần khai báo multipart và giữ nguyên FormData; web: để trình duyệt tự đặt boundary. */
 export const multipartConfig =
   Platform.OS === 'web' ? undefined : { headers: { 'Content-Type': 'multipart/form-data' }, transformRequest: (data: unknown) => data };

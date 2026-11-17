@@ -266,8 +266,8 @@ flowchart TD
 
 > **Tổng quan Tiến độ Hiện tại:**
 > * **Giai đoạn đang thực hiện:** CẤP BẬC 4 - Đơn từ, Phê duyệt & Công việc theo ca (Cấp 3 đã xong)
-> * **Tiến độ tổng thể:** `26 / 53` Nhiệm vụ hoàn thành (`49%`)
-> * **Hành động tiếp theo:** **Task 4.4** — Mobile App: tạo & theo dõi đơn từ (nghỉ, đổi ca, OT, giải trình, trả lời đổi ca của đồng nghiệp, xem quỹ phép); checklist ca trực, tích hoàn thành và chụp ảnh minh chứng (chạy migration `007`, `008` trước khi push Task 4.2, 4.3). Việc nhỏ còn lại: kéo ghim trực tiếp trên bản đồ (Leaflet) — làm khi chốt nâng cấp Vite/React Router đang dở trong `package.json` của web.
+> * **Tiến độ tổng thể:** `27 / 53` Nhiệm vụ hoàn thành (`51%`)
+> * **Hành động tiếp theo:** **Task 4.5** — Web Admin: duyệt / từ chối đơn, quản lý loại đơn & quỹ phép, quản lý checklist mẫu, giám sát tiến độ task theo ca (hoàn thành là xong Cấp 4). Chạy migration `007`, `008` trước khi push Task 4.2 – 4.4. Việc nhỏ còn lại: kéo ghim trực tiếp trên bản đồ (Leaflet) — làm khi chốt nâng cấp Vite/React Router đang dở trong `package.json` của web.
 
 ### Các quyết định cần chốt
 
@@ -425,7 +425,7 @@ flowchart TD
 
 ---
 
-### 📌 CẤP BẬC 4: Đơn từ, Phê duyệt & Công việc theo ca `[3/5]`
+### 📌 CẤP BẬC 4: Đơn từ, Phê duyệt & Công việc theo ca `[4/5]`
 > 🎯 **Demo:** Nhân viên gửi đơn trên Mobile → Quản lý duyệt trên Web → quỹ phép và lịch tự cập nhật; checklist ca trực có ảnh minh chứng.
 
 - [x] **Task 4.1:** API Đơn từ: CRUD loại đơn (`leave_types`); tạo đơn nghỉ phép, đổi ca, OT (có giờ bắt đầu/kết thúc), giải trình đi muộn/về sớm kèm ảnh minh chứng. Bổ sung schema cho đơn OT.
@@ -444,7 +444,13 @@ flowchart TD
   - **Giao việc tự động lúc check-in** (cùng transaction với lượt chấm công; `UNIQUE(schedule_id, task_id)` nên chạy lại không trùng); việc mới thêm vào mẫu khi ca đang diễn ra được bổ sung khi nhân viên mở checklist. Check-in báo "Ca này có N việc trong checklist"; check-out nhắc "Còn N việc bắt buộc chưa hoàn thành" — **không chặn check-out, không đổi trạng thái chấm công** (tiến độ hiện cho Quản lý).
   - API `/api/shift-tasks`: `templates` (CRUD), `me` (checklist các ca của tôi hôm nay — ca chưa vào thì hiện **việc dự kiến**), `schedules/{id}` (người làm ca / Quản lý chi nhánh), `assignments/{id}/complete` (form-data: ghi chú + ảnh JPG/PNG/WEBP/HEIC ≤ 5 MB) và `uncomplete` (chỉ người được giao, chỉ khi ca đang diễn ra; bỏ tích xóa ảnh), `progress` (UC 6.4: từng ca trong ngày — tổng / xong / bắt buộc, %, số ca chưa vào, số việc bắt buộc còn dở; Quản lý chỉ chi nhánh mình). Quy tắc thuần ở `ShiftTaskRules` (Domain).
   - Test: +19 unit test (`ShiftTaskRulesTests`) + 2 bảng trong `EntitySchemaMappingTests`; +3 integration test (quyền mẫu checklist theo vai trò & chi nhánh; việc dự kiến → giao việc theo chi nhánh & chức vụ → tích kèm ảnh / bỏ tích / bổ sung việc mới / khóa sau check-out; tiến độ) + kiểm tra check-in giao việc & check-out nhắc việc trong test chấm công — tổng 74 integration, 249 unit; migration chạy 2 lần trên schema cũ khớp schema mới; gọi thử qua HTTP (form-data ảnh, 403 / 400).
-- [ ] **Task 4.4:** Mobile App: tạo & theo dõi đơn từ; to-do list ca trực, tích hoàn thành và chụp ảnh minh chứng.
+- [x] **Task 4.4:** Mobile App: tạo & theo dõi đơn từ; to-do list ca trực, tích hoàn thành và chụp ảnh minh chứng.
+  - *Đã làm (17/11/2026):* tab **Đơn từ** (UC 5.1, 5.2, 5.6): thẻ quỹ phép năm (còn xin được / tổng, đã dùng, đang chờ duyệt), nút **Tạo đơn mới**, mục **"Cần bạn trả lời"** (đồng nghiệp đề nghị đổi ca — Đồng ý / Từ chối có hộp xác nhận), danh sách đơn của tôi lọc Tất cả / Đang chờ / Đã duyệt / Từ chối-đã rút; kéo để tải lại.
+  - **Tạo đơn:** chọn loại đơn (nhóm theo Nghỉ / Đổi ca / OT / Giải trình) → form theo nhóm: *nghỉ* chọn ngày bằng lịch tháng (khóa ngày ngoài giới hạn 7 ngày trước), hiện phép còn xin được và tổng số ngày; *OT* chọn ngày + giờ (bước 15 phút, tự nhận ca qua đêm); *đổi ca* chọn ca của mình → "Đổi với ca khác" (ca đồng nghiệp cùng chi nhánh ±7 ngày) hoặc "Nhờ làm thay"; *giải trình* chọn lượt đi muộn / về sớm / chờ duyệt trong 7 ngày; lý do + ảnh minh chứng (chụp hoặc thư viện, ≤ 5 MB; bắt buộc với loại cấu hình như nghỉ ốm). Lỗi từ máy chủ hiện ngay trên form.
+  - **Chi tiết đơn:** nội dung theo nhóm, ảnh minh chứng (chạm để mở), **tiến trình** gửi → đồng nghiệp → Quản lý (kèm ghi chú), **Rút đơn** khi còn chờ, Đồng ý / Từ chối đổi ca.
+  - **Công việc trong ca** (UC 6.2, 6.3): checklist các ca hôm nay chia Đầu ca / Trong ca / Cuối ca, thanh tiến độ, nhãn Bắt buộc / Cần ảnh; ca chưa check-in hiện việc dự kiến kèm lối tắt tới Chấm công; chạm một việc → ghi chú + ảnh hiện trường → **Hoàn thành** (việc cần ảnh thiếu ảnh bị chặn), **Bỏ tích** có xác nhận; ca đã check-out khóa checklist. Lối vào: Trang chủ → Công việc, màn hình Chấm công ("Công việc trong ca" và nút sau khi check-in thành công).
+  - Backend bổ sung `GET /api/leave-requests/swap-options?sourceScheduleId=` (ca đồng nghiệp & người làm thay cho màn hình đổi ca; +1 đoạn kiểm tra trong integration test đổi ca). Component dùng chung mới: ô chọn ngày / giờ / ảnh (`Pickers`), `pickImage`, `formDataWith`; `TextField` hỗ trợ nhiều dòng.
+  - Kiểm tra: `tsc` sạch; chạy bản web khung iPhone 390×844 với backend thật (Chrome headless): xem quỹ phép, tạo đơn phép năm bằng lịch, đổi ca (2 chiều + nhờ làm thay), OT qua giờ, giải trình, nghỉ ốm thiếu ảnh → báo lỗi → chọn ảnh → gửi, rút đơn, đồng ý đổi ca, tích việc có / không ảnh (quỹ phép đổi 11 → 9 ngày theo đơn đang chờ). Chưa thử trên điện thoại thật: camera / thư viện ảnh dùng `expo-image-picker` (đã dùng ở ảnh đại diện).
 - [ ] **Task 4.5:** Web Admin: duyệt/từ chối đơn, quản lý loại đơn & quỹ phép; quản lý checklist mẫu; giám sát tiến độ task theo ca.
 
 ---
