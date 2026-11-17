@@ -1,3 +1,4 @@
+using FW.Application.Features.Exports;
 using FW.Application.Features.Payroll;
 using FW.Domain.Enums;
 using Microsoft.AspNetCore.Authorization;
@@ -14,10 +15,12 @@ namespace FW.API.Controllers;
 public class PayrollController : ApiControllerBase
 {
     private readonly IPayrollService _service;
+    private readonly IExportService _export;
 
-    public PayrollController(IPayrollService service)
+    public PayrollController(IPayrollService service, IExportService export)
     {
         _service = service;
+        _export = export;
     }
 
     /// <summary>Các kỳ lương (mới nhất trước), lọc theo năm.</summary>
@@ -52,6 +55,15 @@ public class PayrollController : ApiControllerBase
     {
         var result = await _service.SendAsync(id, request ?? new SendPayslipsRequest(), cancellationToken);
         return Success(result, result.Message);
+    }
+
+    /// <summary>Xuất bảng lương của kỳ ra Excel (.xlsx): bảng lương, chi tiết từng khoản, tổng hợp theo chi nhánh. Kỳ chưa chốt xuất được nhưng ghi rõ là bản nháp.</summary>
+    [HttpGet("periods/{id:int}/export")]
+    public async Task<IActionResult> Export(int id, CancellationToken cancellationToken)
+    {
+        var file = await _export.ExportPayrollAsync(id, cancellationToken);
+        Response.Headers.CacheControl = "no-store";
+        return File(file.Content, file.ContentType, file.FileName);
     }
 
     /// <summary>Phiếu lương của kỳ: branchId, status (draft / sent), search; phân trang.</summary>

@@ -6,6 +6,7 @@ using FW.Application.Features.Notifications;
 using FW.Application.Features.Organization;
 using FW.Application.Features.Requests;
 using FW.Application.Features.Scheduling;
+using FW.Application.Features.Exports;
 using FW.Application.Features.Payroll;
 using FW.Application.Features.Reports;
 using FW.Application.Features.Setup;
@@ -47,6 +48,7 @@ public static class DependencyInjection
         services.AddScoped<IPayrollConfigService, PayrollConfigService>();
         services.AddScoped<IPayrollService, PayrollService>();
         services.AddScoped<IPayslipService, PayslipService>();
+        services.AddScoped<IExportService, ExportService>();
         services.AddScoped<IDashboardService, DashboardService>();
         services.AddScoped<IViolationReportService, ViolationReportService>();
         services.AddScoped<ILeaveUsageReportService, LeaveUsageReportService>();

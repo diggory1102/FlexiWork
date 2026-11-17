@@ -1,3 +1,4 @@
+using FW.Application.Features.Exports;
 using FW.Application.Features.Timesheets;
 using FW.Domain.Enums;
 using Microsoft.AspNetCore.Authorization;
@@ -14,10 +15,12 @@ namespace FW.API.Controllers;
 public class TimesheetsController : ApiControllerBase
 {
     private readonly ITimesheetService _service;
+    private readonly IExportService _export;
 
-    public TimesheetsController(ITimesheetService service)
+    public TimesheetsController(ITimesheetService service, IExportService export)
     {
         _service = service;
+        _export = export;
     }
 
     /// <summary>Bảng công của nhân viên trong tháng: year, month (mặc định tháng này), branchId, status, search; phân trang.</summary>
@@ -25,6 +28,16 @@ public class TimesheetsController : ApiControllerBase
     [Authorize(Roles = RoleNames.Managers)]
     public async Task<IActionResult> GetTimesheets([FromQuery] TimesheetFilter filter, CancellationToken cancellationToken) =>
         Success(await _service.GetPagedAsync(filter, cancellationToken));
+
+    /// <summary>Xuất bảng công tháng ra Excel (.xlsx): year, month (mặc định tháng này), branchId. Quản lý chỉ xuất chi nhánh mình.</summary>
+    [HttpGet("export")]
+    [Authorize(Roles = RoleNames.Managers)]
+    public async Task<IActionResult> Export([FromQuery] ExportTimesheetsRequest request, CancellationToken cancellationToken)
+    {
+        var file = await _export.ExportTimesheetsAsync(request, cancellationToken);
+        Response.Headers.CacheControl = "no-store";
+        return File(file.Content, file.ContentType, file.FileName);
+    }
 
     /// <summary>Đếm bảng công theo trạng thái của tháng.</summary>
     [HttpGet("summary")]

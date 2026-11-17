@@ -1,12 +1,14 @@
 using FW.Application.Common.Interfaces;
 using FW.Application.Common.Interfaces.Persistence;
 using FW.Application.Common.Settings;
+using FW.Application.Features.Exports;
 using FW.Infrastructure.Database;
 using FW.Infrastructure.Repositories;
 using FW.Infrastructure.Security;
 using FW.Infrastructure.Services;
 using FW.Infrastructure.Services.Caching;
 using FW.Infrastructure.Services.Email;
+using FW.Infrastructure.Services.Export;
 using FW.Infrastructure.Services.FaceRecognition;
 using FW.Infrastructure.Services.FaceRecognition.Onnx;
 using FW.Infrastructure.Services.Geocoding;
@@ -164,6 +166,7 @@ public static class DependencyInjection
         services.AddScoped<IPayrollPeriodRepository, PayrollPeriodRepository>();
         services.AddScoped<IPayslipRepository, PayslipRepository>();
         services.AddScoped<IReportRepository, ReportRepository>();
+        services.AddSingleton<IExcelExporter, ExcelExporter>();
         services.AddScoped<IShiftTaskAssignmentRepository, ShiftTaskAssignmentRepository>();
 
         return services;
