@@ -35,5 +35,4 @@ export const outcomeTone: Record<ShiftOutcome, BadgeTone> = {
   upcoming: 'gray',
 };
 
-/** Số thập phân hiển thị gọn (tối đa 2 số lẻ, bỏ số 0 thừa): 21.5 → "21,5". */
-export const num = (value: number) => new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 2 }).format(value);
+export { formatNumber as num } from '@/lib/format';

@@ -125,7 +125,8 @@ function Sidebar() {
   );
 }
 
-const isActive = (to: string, pathname: string) => (to === '/' ? pathname === '/' : pathname.startsWith(to));
+/** Khớp đúng đường dẫn hoặc trang con ("/payroll" không được khớp "/payroll-config"). */
+const isActive = (to: string, pathname: string) => (to === '/' ? pathname === '/' : pathname === to || pathname.startsWith(`${to}/`));
 
 function MenuEntry({ item, pathname }: { item: MenuItem; pathname: string }) {
   const hasAnyRole = useAuthStore((s) => s.hasAnyRole);

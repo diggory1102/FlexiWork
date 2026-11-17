@@ -21,6 +21,10 @@ export function formatDateTime(value: string | null | undefined): string {
   return `${formatDate(value)} ${value.slice(11, 16)}`;
 }
 
+/** Số thập phân hiển thị gọn theo kiểu Việt Nam (tối đa 2 số lẻ): 21.5 → "21,5". */
+const decimal = new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 2 });
+export const formatNumber = (value: number) => decimal.format(value);
+
 /** "HH:mm" từ chuỗi ISO (yyyy-MM-ddTHH:mm:ss); rỗng → "—". */
 export const formatTime = (value: string | null | undefined) => (value ? value.slice(11, 16) : '—');
 

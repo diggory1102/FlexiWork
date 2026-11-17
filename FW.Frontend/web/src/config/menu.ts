@@ -8,6 +8,7 @@ import {
   Inbox,
   LayoutDashboard,
   MessagesSquare,
+  Wallet,
   Settings,
   Users,
 } from 'lucide-react';
@@ -64,6 +65,15 @@ export const menu: MenuItem[] = [
     children: [
       { label: 'Nhật ký chấm công', to: '/attendance' },
       { label: 'Bảng công', to: '/timesheets' },
+    ],
+  },
+  {
+    label: 'Lương',
+    icon: Wallet,
+    roles: RoleGroups.AdminOrHr,
+    children: [
+      { label: 'Bảng lương', to: '/payroll' },
+      { label: 'Cấu hình lương', to: '/payroll-config' },
     ],
   },
   { label: 'Công việc theo ca', to: '/tasks', icon: ClipboardCheck, roles: RoleGroups.Managers },

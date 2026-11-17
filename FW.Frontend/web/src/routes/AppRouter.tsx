@@ -20,6 +20,8 @@ import { LeaveBalancesPage } from '@/modules/requests/pages/LeaveBalancesPage';
 import { LeaveTypesPage } from '@/modules/requests/pages/LeaveTypesPage';
 import { TasksPage } from '@/modules/tasks/pages/TasksPage';
 import { TimesheetsPage } from '@/modules/timesheets/pages/TimesheetsPage';
+import { PayrollPage } from '@/modules/payroll/pages/PayrollPage';
+import { PayrollConfigPage } from '@/modules/payroll/pages/PayrollConfigPage';
 import { ReportsPage } from '@/modules/reports/pages/ReportsPage';
 import { ComingSoonPage } from '@/components/common/ComingSoonPage';
 import { NotFoundPage } from '@/components/common/NotFoundPage';
@@ -77,6 +79,8 @@ const router = createBrowserRouter([
                 element: <ProtectedRoute allowedRoles={RoleGroups.AdminOrHr} />,
                 children: [
                   { path: '/settings', element: <SettingsPage /> },
+                  { path: '/payroll', element: <PayrollPage /> },
+                  { path: '/payroll-config', element: <PayrollConfigPage /> },
                   { path: '/leave-types', element: <LeaveTypesPage /> },
                 ],
               },
