@@ -1,7 +1,7 @@
 # FlexiWork - Nhật ký Dự án & Kiến trúc Chức năng (Project Progress & Architecture)
 
 > **Tài liệu theo dõi tiến độ, kiến trúc chức năng và ma trận phân quyền hệ thống FlexiWork.**  
-> *Thời gian cập nhật: 15/11/2026*
+> *Thời gian cập nhật: 17/11/2026*
 
 ---
 
@@ -265,9 +265,9 @@ flowchart TD
 > * `[Tùy chọn]`: chỉ thực hiện khi còn thời gian; có thể đưa vào "Hướng phát triển" (Chương 5).
 
 > **Tổng quan Tiến độ Hiện tại:**
-> * **Giai đoạn đang thực hiện:** CẤP BẬC 3 - Lõi chấm công 3 lớp
-> * **Tiến độ tổng thể:** `22 / 53` Nhiệm vụ hoàn thành (`42%`)
-> * **Hành động tiếp theo:** **Task 3.5** — Web Admin: nhật ký chấm công, xem minh chứng, duyệt bản ghi chờ duyệt (chạy migration `005` trước khi push Task 3.1–3.4). Việc nhỏ còn lại: kéo ghim trực tiếp trên bản đồ (Leaflet) — làm khi chốt nâng cấp Vite/React Router đang dở trong `package.json` của web.
+> * **Giai đoạn đang thực hiện:** CẤP BẬC 4 - Đơn từ, Phê duyệt & Công việc theo ca (Cấp 3 đã xong)
+> * **Tiến độ tổng thể:** `23 / 53` Nhiệm vụ hoàn thành (`43%`)
+> * **Hành động tiếp theo:** **Task 4.1** — API Đơn từ (loại đơn, nghỉ phép, đổi ca, OT, giải trình đi muộn/về sớm). Việc nhỏ còn lại: kéo ghim trực tiếp trên bản đồ (Leaflet) — làm khi chốt nâng cấp Vite/React Router đang dở trong `package.json` của web.
 
 ### Các quyết định cần chốt
 
@@ -390,7 +390,7 @@ flowchart TD
 
 ---
 
-### 📌 CẤP BẬC 3: LÕI CHẤM CÔNG 3 LỚP (3-Factor Attendance Engine) `[4/5]`
+### 📌 CẤP BẬC 3: LÕI CHẤM CÔNG 3 LỚP (3-Factor Attendance Engine) `[5/5]`
 > 🎯 **Demo:** Nhân viên check-in/check-out trên điện thoại thật; Quản lý xem nhật ký kèm minh chứng trên Web.
 
 - [x] **Task 3.1:** Entity `AttendanceLog`; helper tính khoảng cách Haversine và xác minh Wi-Fi BSSID (kèm unit test).
@@ -416,7 +416,11 @@ flowchart TD
   - Tách camera selfie thành component dùng chung `SelfieCamera` (đăng ký Face ID + chấm công), tách `imageFormData` gửi ảnh kèm trường chữ.
   - Kiểm tra: chạy bản web (khung iPhone) với GPS và camera giả lập gọi API local + nhận diện ONNX thật: đứng cách 278 m → máy chủ từ chối; lại gần ~15 m → check-in (khớp 98%, Wi-Fi không đọc được → chờ duyệt), check-out sớm có hộp xác nhận, lịch sử hiện đúng. Bản web dùng `navigator.geolocation` trực tiếp vì `expo-location` trên web trả vị trí đã lưu.
   - Giới hạn Expo Go: **iPhone không đọc được BSSID** (cần quyền Access Wi-Fi Information của bản build riêng + tài khoản Apple Developer) → lượt chấm công trên iPhone qua Expo Go luôn chờ duyệt; Android đọc được khi đã cấp quyền vị trí.
-- [ ] **Task 3.5:** Web Admin: nhật ký chấm công có bộ lọc; xem chi tiết minh chứng; duyệt các bản ghi `pending_approval`.
+- [x] **Task 3.5:** Web Admin: nhật ký chấm công có bộ lọc; xem chi tiết minh chứng; duyệt các bản ghi `pending_approval`.
+  - *Đã làm (17/11/2026):* trang **Chấm công → Nhật ký chấm công** (`/attendance`): tab trạng thái Tất cả / **Chờ duyệt (số lượt)** / Hợp lệ / Không hợp lệ; lọc tên – mã nhân viên, khoảng ngày công (chọn nhanh: hôm nay, hôm qua, 7 / 30 ngày qua, tháng này, tháng trước; mặc định 7 ngày), chi nhánh (Admin/HR; Quản lý luôn là chi nhánh mình). Mỗi dòng: ngày công · ca, giờ vào / ra kèm nhãn đi muộn / về sớm, giờ làm, 3 biểu tượng lớp xác minh GPS · Wi-Fi · khuôn mặt (rê chuột xem khoảng cách, % khớp), trạng thái; lượt chờ duyệt có nút **Duyệt**.
+  - **Ngăn chi tiết** (trượt từ phải, danh sách vẫn thấy phía sau): cảnh báo lúc chấm công (sai / không đọc được Wi-Fi, một máy chấm cho nhiều người), giờ làm – đi muộn – về sớm, minh chứng **lượt vào / lượt ra**: ảnh selfie (bấm xem ảnh lớn, chuyển qua lại vào ↔ ra), khoảng cách tới tâm / bán kính / sai số GPS + mở Google Maps, Wi-Fi (BSSID, đúng / sai / không đọc được / chi nhánh không khai báo), % khớp khuôn mặt, mã thiết bị; thông tin người duyệt, thời điểm, ghi chú. Lượt chờ duyệt: ô ghi chú + nút **Từ chối / Chấp nhận** ở chân cố định (từ chối phải ghi lý do — báo lỗi ngay tại ô).
+  - Backend: thêm `branchRequiresWifi` vào bản ghi tra cứu (chi nhánh đang khai báo Wi-Fi) để phân biệt "sai Wi-Fi" với "không yêu cầu Wi-Fi" — không cần migration.
+  - Kiểm tra: dữ liệu mẫu trên CSDL `flexiwork_test` + Chrome headless 1600×900 (HR) và 1366×768 (Quản lý): lọc trạng thái / khoảng ngày, ngăn chi tiết, từ chối thiếu lý do, xem ảnh lớn, chấp nhận (số chờ duyệt giảm, trạng thái cập nhật), xem lượt đã từ chối; nút duyệt luôn nằm trong màn hình.
 
 ---
 

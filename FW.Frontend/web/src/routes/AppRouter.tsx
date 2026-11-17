@@ -14,6 +14,7 @@ import { ProfilePage } from '@/modules/profile/pages/ProfilePage';
 import { ShiftsPage } from '@/modules/shifts/pages/ShiftsPage';
 import { SchedulesPage } from '@/modules/schedules/pages/SchedulesPage';
 import { SettingsPage } from '@/modules/settings/pages/SettingsPage';
+import { AttendanceLogsPage } from '@/modules/attendance/pages/AttendanceLogsPage';
 import { ComingSoonPage } from '@/components/common/ComingSoonPage';
 import { NotFoundPage } from '@/components/common/NotFoundPage';
 import { useAuthStore } from '@/stores/authStore';
@@ -58,7 +59,7 @@ const router = createBrowserRouter([
                   comingSoon('/requests', 'Yêu cầu chờ duyệt', 'Cấp bậc 4 — Đơn từ & Phê duyệt'),
                   { path: '/shifts', element: <ShiftsPage /> },
                   { path: '/schedules', element: <SchedulesPage /> },
-                  comingSoon('/attendance', 'Nhật ký chấm công', 'Cấp bậc 3 — Chấm công 3 lớp'),
+                  { path: '/attendance', element: <AttendanceLogsPage /> },
                   comingSoon('/timesheets', 'Bảng công', 'Cấp bậc 5 — Tổng hợp bảng công'),
                   comingSoon('/tasks', 'Công việc theo ca', 'Cấp bậc 4 — Công việc theo ca'),
                   comingSoon('/chat', 'Truyền thông nội bộ', 'Cấp bậc 5 — Realtime'),

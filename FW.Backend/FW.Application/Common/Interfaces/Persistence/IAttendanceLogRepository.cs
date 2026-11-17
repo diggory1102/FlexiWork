@@ -26,6 +26,9 @@ public class AttendanceLogDetail : AttendanceLog
     public decimal BranchLongitude { get; set; }
     public int BranchRadius { get; set; }
 
+    /// <summary>Chi nhánh đang khai báo Wi-Fi (lớp 2 có áp dụng) — phân biệt "sai Wi-Fi" với "không yêu cầu Wi-Fi".</summary>
+    public bool BranchRequiresWifi { get; set; }
+
     /// <summary>Thông tin ca; null nếu lịch đã bị xóa.</summary>
     public string? ShiftCode { get; set; }
     public string? ShiftName { get; set; }

@@ -179,6 +179,8 @@ public class AttendanceLogServiceTests
         Assert.Equal("https://img.test/out.jpg", own.CheckOut!.ImageUrl);
         Assert.Equal(50, own.Branch.Radius);
         Assert.Equal(21.031584m, own.Branch.Latitude);
+        var branchHasWifi = (await new BranchWifiRepository(s).GetByBranchIdAsync(Branch1, activeOnly: true)).Count > 0;
+        Assert.Equal(branchHasWifi, own.Log.BranchRequiresWifi);
 
         Assert.True((await Service(s, Manager1).GetByIdAsync(log.Id)).CanReview);
         await Assert.ThrowsAsync<ForbiddenException>(() => Service(s, new TestUser(other.Id, Branch1, RoleNames.Employee)).GetByIdAsync(log.Id));

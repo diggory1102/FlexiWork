@@ -21,7 +21,9 @@ public class AttendanceLogRepository : BaseRepository<AttendanceLog, long>, IAtt
                u.`employee_code` AS EmployeeCode, u.`full_name` AS FullName, u.`avatar_url` AS AvatarUrl,
                b.`name` AS BranchName, b.`latitude` AS BranchLatitude, b.`longitude` AS BranchLongitude, b.`radius` AS BranchRadius,
                sh.`shift_code` AS ShiftCode, sh.`name` AS ShiftName, sh.`start_time` AS ShiftStartTime, sh.`end_time` AS ShiftEndTime,
-               rv.`full_name` AS ReviewerName
+               rv.`full_name` AS ReviewerName,
+               EXISTS (SELECT 1 FROM `branch_wifis` w
+                       WHERE w.`branch_id` = l.`branch_id` AND w.`is_deleted` = 0 AND w.`is_active` = 1) AS BranchRequiresWifi
         """;
 
     private const string DetailFrom = """

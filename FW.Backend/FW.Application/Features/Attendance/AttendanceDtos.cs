@@ -158,14 +158,15 @@ public record AttendanceLogItemDto(
     double? CheckinFaceScore,
     double? CheckoutFaceScore,
     string CheckinImageUrl,
-    string? CheckoutImageUrl)
+    string? CheckoutImageUrl,
+    bool BranchRequiresWifi)
 {
     public static AttendanceLogItemDto From(FW.Application.Common.Interfaces.Persistence.AttendanceLogDetail d) => new(
         d.Id, d.ScheduleId, d.UserId, d.EmployeeCode, d.FullName, d.AvatarUrl, d.BranchId, d.BranchName, d.WorkDate,
         d.ShiftCode, d.ShiftName, FormatTime(d.ShiftStartTime), FormatTime(d.ShiftEndTime),
         d.CheckinTime, d.CheckoutTime, d.LateMinutes, d.EarlyMinutes, d.ActualWorkHours, d.Status, d.Note,
         d.CheckinDistance, d.CheckoutDistance, d.CheckinWifiMatched, d.IsCheckedOut ? d.CheckoutWifiMatched : null,
-        d.CheckinFaceScore, d.CheckoutFaceScore, d.CheckinImageUrl, d.CheckoutImageUrl);
+        d.CheckinFaceScore, d.CheckoutFaceScore, d.CheckinImageUrl, d.CheckoutImageUrl, d.BranchRequiresWifi);
 
     private static string? FormatTime(TimeSpan? time) => time?.ToString(@"hh\:mm");
 }
