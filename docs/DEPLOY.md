@@ -120,7 +120,6 @@ Nhận diện khuôn mặt chạy ngay trong `flexiwork-api` bằng ONNX Runtime
 
 - **Chạy trên máy:** tải mô hình một lần: `powershell -ExecutionPolicy Bypass -File FW.Backend\scripts\download-face-models.ps1` (file `.onnx` không lưu trong repo).
 - **Tham số** (section `FaceRecognition`, đổi trên Render bằng biến `FaceRecognition__MatchThreshold`…): ngưỡng khớp mặc định `0.40` (hiệu chỉnh ở thực nghiệm Chương 4), kích thước ảnh phát hiện `640`.
-- **Phương án tách dịch vụ:** đặt `FaceRecognition__Engine=AiService` + `AiService__BaseUrl` để gọi microservice `FW.AiService` (FastAPI + InsightFace) thay vì chạy trong backend.
 - Mô hình InsightFace chỉ dùng cho nghiên cứu / phi thương mại — phù hợp phạm vi khóa luận.
 
 ## Bước 7b — Gợi ý địa điểm khi gõ (Geoapify) — tùy chọn
@@ -184,6 +183,7 @@ cd FW.Backend\FW.Infrastructure\Database\migrations
 | `010_monthly_timesheets.sql` | Bảng công tháng (Task 5.3): bảng `monthly_timesheets` cũ (chưa có dữ liệu) đổi tên thành `monthly_timesheets_backup_010` rồi tạo bảng mới (số ca, ngày công, giờ OT, vi phạm, nghỉ có / không lương, trạng thái nháp → xác nhận → khóa). **Chạy lại an toàn** — đã migrate thì tự bỏ qua. Cuối file in `1`, `0`, `1` (cột mới, số dòng, còn bảng sao lưu); sau đó kiểm tra bảng sao lưu 0 dòng rồi xóa bằng lệnh ở cuối file | ☐ |
 | `011_payroll_config.sql` | Cấu hình lương (Task 5.4): `users.base_salary`, `users.hourly_rate`; bảng `allowances`, `user_allowances`, `payroll_periods`, `payslips`, `payslip_items`; 3 phụ cấp mẫu + hệ số OT 1,5 (chỉ thêm khi chưa có). **Chạy lại an toàn**, mỗi câu ALTER một việc. Cuối file in `2`, `5`, `3`, `1`. Bảng kỳ lương / phiếu lương của Task 5.5 cũng tạo ở file này — Task 5.5 không có migration riêng | ☐ |
 | `012_chat_groups.sql` | Nhóm chat tùy chỉnh (UC 7.2): cột `conversations.created_by` (người tạo = quản trị nhóm; NULL với chat 1-1 và nhóm chi nhánh). **Chạy lại an toàn** | ☐ |
+| `013_attendance_checkout_adjust.sql` | Điều chỉnh giờ ra thủ công (Task 6.1): `attendance_logs.checkout_adjusted_by`, `checkout_adjusted_at`, `checkout_adjust_note`. **Chạy lại an toàn** | ☐ |
 
 ## Xử lý sự cố
 

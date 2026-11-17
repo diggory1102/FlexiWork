@@ -1,7 +1,7 @@
 namespace FW.Application.Common.Interfaces;
 
 /// <summary>
-/// Client giao tiếp với FW.AiService để trích xuất và đối soát vector khuôn mặt.
+/// Trích xuất và đối soát vector khuôn mặt (cài đặt: ONNX Runtime chạy ngay trong backend).
 /// </summary>
 public interface IFaceRecognitionService
 {

@@ -7,15 +7,6 @@ public class FaceRecognitionSettings
 {
     public const string SectionName = "FaceRecognition";
 
-    /// <summary>Chạy mô hình ngay trong backend (ONNX Runtime) — mặc định khi triển khai.</summary>
-    public const string OnnxEngine = "Onnx";
-
-    /// <summary>Gọi sang microservice FW.AiService (FastAPI + InsightFace) qua HTTP.</summary>
-    public const string AiServiceEngine = "AiService";
-
-    /// <summary><see cref="OnnxEngine"/> hoặc <see cref="AiServiceEngine"/>.</summary>
-    public string Engine { get; set; } = OnnxEngine;
-
     /// <summary>Thư mục chứa det_500m.onnx và w600k_mbf.onnx (bộ buffalo_sc); đường dẫn tương đối tính từ thư mục ứng dụng.</summary>
     public string ModelsPath { get; set; } = "models/buffalo_sc";
 

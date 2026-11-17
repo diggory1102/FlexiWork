@@ -4,7 +4,7 @@ namespace FW.Domain.Entities;
 
 /// <summary>
 /// Dữ liệu khuôn mặt mẫu của một nhân viên (bảng face_profiles, mỗi nhân viên tối đa một bản ghi).
-/// Vector đặc trưng do FW.AiService (InsightFace) trích xuất từ ảnh mẫu; khi chấm công, ảnh selfie được
+/// Vector đặc trưng do mô hình nhận diện (InsightFace buffalo_sc, ONNX) trích xuất từ ảnh mẫu; khi chấm công, ảnh selfie được
 /// so khớp với vector này. Đây là dữ liệu sinh trắc học — chỉ dùng cho chấm công, không trả về client.
 /// </summary>
 public class FaceProfile : BaseEntity, IAuditableEntity

@@ -15,7 +15,6 @@ FlexiWork/
 │   ├── FW.API/                 #   Controllers, Hubs (SignalR), Middlewares, Extensions
 │   ├── FW.UnitTests/           #   xUnit — kiểm thử logic tính công, đối soát ca
 │   └── Dockerfile
-├── FW.AiService/               # Python FastAPI + InsightFace — trích xuất & đối soát khuôn mặt
 ├── FW.Frontend/
 │   ├── web/                    # Web Admin: React 19 + TypeScript + Vite + Astryx (Meta) + Tailwind 4 + Zustand + Axios + SignalR
 │   └── mobile/                 # Mobile App: Expo (React Native) + TypeScript + Expo Router
@@ -39,7 +38,7 @@ FlexiWork/
 
 ```bash
 cp .env.example .env            # chỉnh MYSQL_ROOT_PASSWORD, JWT_SECRET
-docker compose up -d mysql redis ai-service
+docker compose up -d mysql redis
 ```
 
 Lần chạy đầu, MySQL tự động chạy `flexiwork_schema.sql` và `flexiwork_seed.sql`.

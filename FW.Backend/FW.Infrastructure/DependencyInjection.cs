@@ -35,7 +35,6 @@ public static class DependencyInjection
         services.Configure<BrevoSettings>(configuration.GetSection(BrevoSettings.SectionName));
         services.Configure<RedisSettings>(configuration.GetSection(RedisSettings.SectionName));
         services.Configure<CloudinarySettings>(configuration.GetSection(CloudinarySettings.SectionName));
-        services.Configure<AiServiceSettings>(configuration.GetSection(AiServiceSettings.SectionName));
 
         // 2. Database (MySQL + Dapper) — mỗi request dùng chung 1 DbSession (kết nối + transaction)
         DapperConfig.Configure();
@@ -104,7 +103,7 @@ public static class DependencyInjection
             services.AddSingleton<IFileStorageService, CloudinaryStorageService>();
         }
 
-        // 7. Nhận diện khuôn mặt: mặc định chạy ONNX ngay trong backend; "AiService" = gọi microservice FW.AiService
+        // 7. Nhận diện khuôn mặt chạy ngay trong backend bằng ONNX Runtime (bộ mô hình InsightFace buffalo_sc)
         services.Configure<AttendanceSettings>(configuration.GetSection(AttendanceSettings.SectionName));
 
         // Tra tọa độ từ địa chỉ: Nominatim (OpenStreetMap)
@@ -124,20 +123,7 @@ public static class DependencyInjection
             client.Timeout = TimeSpan.FromSeconds(settings.TimeoutSeconds);
         }).RemoveAllLoggers();
         services.Configure<FaceRecognitionSettings>(configuration.GetSection(FaceRecognitionSettings.SectionName));
-        var faceEngine = configuration[$"{FaceRecognitionSettings.SectionName}:Engine"] ?? FaceRecognitionSettings.OnnxEngine;
-        if (string.Equals(faceEngine, FaceRecognitionSettings.AiServiceEngine, StringComparison.OrdinalIgnoreCase))
-        {
-            services.AddHttpClient<IFaceRecognitionService, FaceRecognitionClient>((sp, client) =>
-            {
-                var settings = sp.GetRequiredService<IOptions<AiServiceSettings>>().Value;
-                client.BaseAddress = new Uri(settings.BaseUrl.TrimEnd('/') + "/");
-                client.Timeout = TimeSpan.FromSeconds(settings.TimeoutSeconds);
-            });
-        }
-        else
-        {
-            services.AddSingleton<IFaceRecognitionService, OnnxFaceRecognitionService>();
-        }
+        services.AddSingleton<IFaceRecognitionService, OnnxFaceRecognitionService>();
 
         // 8. Repositories (Dapper)
         services.AddScoped<IBranchRepository, BranchRepository>();
