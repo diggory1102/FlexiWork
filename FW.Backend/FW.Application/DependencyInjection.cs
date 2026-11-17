@@ -1,5 +1,6 @@
 using FW.Application.Features.Attendance;
 using FW.Application.Features.Auth;
+using FW.Application.Features.Chat;
 using FW.Application.Features.FaceId;
 using FW.Application.Features.Notifications;
 using FW.Application.Features.Organization;
@@ -39,6 +40,7 @@ public static class DependencyInjection
         services.AddScoped<ILeaveBalanceService, LeaveBalanceService>();
         services.AddScoped<IShiftTaskService, ShiftTaskService>();
         services.AddScoped<INotifier, Notifier>();
+        services.AddScoped<IChatService, ChatService>();
         services.AddScoped<INotificationService, NotificationService>();
 
         services.AddScoped<IUserService, UserService>();

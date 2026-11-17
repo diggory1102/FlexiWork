@@ -443,9 +443,11 @@ CREATE TABLE conversations (
     type VARCHAR(20) NOT NULL DEFAULT 'direct' COMMENT 'direct, group',
     title VARCHAR(150) NULL COMMENT 'Tên nhóm chat nếu là group',
     branch_id INT NULL COMMENT 'Gắn với chi nhánh cụ thể (nếu là nhóm chat chi nhánh)',
+    unique_key VARCHAR(60) NULL COMMENT 'direct:{id nhỏ}:{id lớn} hoặc branch:{id} — chống tạo trùng phòng chat',
     is_deleted TINYINT(1) NOT NULL DEFAULT 0,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (branch_id) REFERENCES branches(id) ON DELETE SET NULL
+    FOREIGN KEY (branch_id) REFERENCES branches(id) ON DELETE SET NULL,
+    UNIQUE KEY uq_conversation_key (unique_key)
 ) ENGINE=InnoDB COMMENT='Phòng chat trực tiếp hoặc nhóm';
 
 -- 7.2. Thành viên cuộc trò chuyện (Conversation Members)
@@ -453,6 +455,7 @@ CREATE TABLE conversation_members (
     conversation_id INT NOT NULL,
     user_id INT NOT NULL,
     joined_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    last_read_message_id BIGINT NOT NULL DEFAULT 0 COMMENT 'Tin nhắn mới nhất đã đọc — tin có id lớn hơn (của người khác) là chưa đọc',
     PRIMARY KEY (conversation_id, user_id),
     FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
@@ -465,11 +468,13 @@ CREATE TABLE messages (
     sender_id INT NOT NULL,
     content TEXT NULL,
     image_url VARCHAR(255) NULL,
+    image_public_id VARCHAR(255) NULL COMMENT 'Mã ảnh trên dịch vụ lưu ảnh (để xóa khi thu hồi tin nhắn)',
     is_deleted TINYINT(1) NOT NULL DEFAULT 0,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE,
     FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE,
-    INDEX idx_messages_conv_date (conversation_id, created_at)
+    INDEX idx_messages_conv_date (conversation_id, created_at),
+    INDEX idx_messages_conv_id (conversation_id, id)
 ) ENGINE=InnoDB COMMENT='Tin nhắn nội bộ hỗ trợ SignalR realtime';
 
 -- 7.4. Thông báo đẩy (Notifications)

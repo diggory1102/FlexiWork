@@ -180,6 +180,7 @@ cd FW.Backend\FW.Infrastructure\Database\migrations
 | `006_leave_requests_categories.sql` | Đơn từ (Task 4.1): `leave_types` thêm nhóm đơn (nghỉ / đổi ca / OT / giải trình), trừ phép năm, bật/tắt + loại "Giải trình đi muộn / về sớm"; `leave_requests` thêm chi nhánh xử lý, giờ OT, phản hồi đổi ca của đồng nghiệp, lượt chấm công được giải trình; `system_settings.annual_leave_days` = 12. **Chạy lại an toàn.** Mỗi câu ALTER chỉ làm một việc (TiDB không cho một câu vừa thêm cột vừa tham chiếu cột đó). Cuối file in danh sách 6 loại đơn và `6`, `9`, `2` (số cột / khóa ngoại mới) | ✅ |
 | `007_leave_balance_adjustments.sql` | Duyệt đơn (Task 4.2): bảng `leave_balance_adjustments` (lịch sử HR cộng / trừ quỹ phép kèm lý do). Trạng thái lịch mới `on_leave` không cần đổi cấu trúc. **Chạy lại an toàn.** Cuối file in `1` | ☐ |
 | `008_shift_task_checklists.sql` | Checklist công việc theo ca (Task 4.3): `shift_tasks` thêm chi nhánh, chức vụ, giai đoạn đầu / trong / cuối ca, thứ tự, bắt buộc ảnh; `shift_task_assignments` thêm mã ảnh, thời gian sửa, `UNIQUE(schedule_id, task_id)`. **Chạy lại an toàn**, mỗi câu ALTER một việc. Cuối file in `6`, `2`, `1` | ☐ |
+| `009_chat.sql` | Chat nội bộ (Task 5.2): `conversations.unique_key` (UNIQUE — chống tạo trùng phòng), `conversation_members.last_read_message_id` (số tin chưa đọc), `messages.image_public_id` + chỉ mục `(conversation_id, id)`. **Chạy lại an toàn**, mỗi câu ALTER một việc. Cuối file in `3`, `2` | ☐ |
 
 ## Xử lý sự cố
 

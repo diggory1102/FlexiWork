@@ -4,6 +4,7 @@ using FW.API.Middlewares;
 using FW.API.Services;
 using FW.Application;
 using FW.Application.Common.Interfaces;
+using FW.Application.Features.Chat;
 using FW.Application.Features.Setup;
 using Microsoft.AspNetCore.HttpOverrides;
 using FW.Infrastructure;
@@ -47,9 +48,10 @@ builder.Services.AddJwtAuthentication(builder.Configuration);
 builder.Services.AddCorsPolicy(builder.Configuration);
 builder.Services.AddSwaggerDocumentation();
 
-// 6. SignalR: NotificationHub (thông báo tức thì); ChatHub thêm ở Task 5.2
+// 6. SignalR: NotificationHub (thông báo tức thì) và ChatHub (chat nội bộ)
 builder.Services.AddSignalR();
 builder.Services.AddSingleton<INotificationPublisher, SignalRNotificationPublisher>();
+builder.Services.AddSingleton<IChatPublisher, SignalRChatPublisher>();
 
 var app = builder.Build();
 
@@ -106,6 +108,6 @@ app.UseAuthorization();
 
 app.MapControllers();
 app.MapHub<NotificationHub>("/hubs/notifications");
-// app.MapHub<ChatHub>("/hubs/chat");                    // Task 5.2
+app.MapHub<ChatHub>("/hubs/chat");
 
 app.Run();
