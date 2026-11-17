@@ -9,10 +9,10 @@ import { VStack } from '@astryxdesign/core/Stack';
 import { Heading, Text } from '@astryxdesign/core/Text';
 import { TextInput } from '@astryxdesign/core/TextInput';
 import { Modal } from '@/components/ui/Modal';
+import { useFormSubmit } from '@/hooks/useFormSubmit';
 import { PlaceSearch } from './PlaceSearch';
 import { FormError } from '@/components/ui/Feedback';
 import { branchApi } from '@/services/organizationApi';
-import { getErrorMessage } from '@/services/apiClient';
 import { toast } from '@/stores/toastStore';
 import { branchStatusLabels } from '@/lib/format';
 import type { Branch, BranchRequest, BranchStatus, GeocodeCandidate } from '@/types/organization';
@@ -75,8 +75,7 @@ interface Props {
 
 export function BranchFormModal({ open, branch, onClose, onSaved }: Props) {
   const [form, setForm] = useState<BranchRequest>(empty);
-  const [error, setError] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
+  const { saving, error, setError, run } = useFormSubmit();
   const [locating, setLocating] = useState(false);
 
   useEffect(() => {
@@ -112,22 +111,20 @@ export function BranchFormModal({ open, branch, onClose, onSaved }: Props) {
       address: f.address.trim() ? f.address : place.displayName.replace(/,\s*Việt Nam$/i, ''),
     }));
 
-  const submit = async (e: FormEvent) => {
+  const submit = (e: FormEvent) => {
     e.preventDefault();
     if (!form.branchCode.trim() || !form.name.trim() || !form.address.trim()) return setError('Vui lòng nhập mã, tên và địa chỉ chi nhánh.');
-    setSaving(true);
-    setError(null);
-    try {
-      const body = { ...form, phone: form.phone || null, email: form.email || null };
-      const { message } = branch ? await branchApi.update(branch.id, body) : await branchApi.create(body);
-      toast.success(message);
-      onSaved();
-      onClose();
-    } catch (err) {
-      setError(getErrorMessage(err));
-    } finally {
-      setSaving(false);
-    }
+    void run(
+      async () => {
+        const body = { ...form, phone: form.phone || null, email: form.email || null };
+        const { message } = branch ? await branchApi.update(branch.id, body) : await branchApi.create(body);
+        return message;
+      },
+      () => {
+        onSaved();
+        onClose();
+      },
+    );
   };
 
   return (

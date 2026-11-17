@@ -5,10 +5,9 @@ import { VStack } from '@astryxdesign/core/Stack';
 import { Switch } from '@astryxdesign/core/Switch';
 import { TextInput } from '@astryxdesign/core/TextInput';
 import { Modal } from '@/components/ui/Modal';
+import { useFormSubmit } from '@/hooks/useFormSubmit';
 import { FormError } from '@/components/ui/Feedback';
 import { leaveTypeApi } from '@/services/requestApi';
-import { getErrorMessage } from '@/services/apiClient';
-import { toast } from '@/stores/toastStore';
 import type { LeaveType, LeaveTypeRequest, RequestCategory } from '@/types/requests';
 import { categoryLabels } from '../requestUi';
 
@@ -41,8 +40,7 @@ interface Props {
 /** Thêm / sửa loại đơn (UC 1.4). Tên loại tùy HR đặt; cách xử lý đơn do nhóm quyết định. */
 export function LeaveTypeFormModal({ open, type, onClose, onSaved }: Props) {
   const [form, setForm] = useState<LeaveTypeRequest>(empty);
-  const [error, setError] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
+  const { saving, error, setError, run } = useFormSubmit();
 
   useEffect(() => {
     if (!open) return;
@@ -55,22 +53,20 @@ export function LeaveTypeFormModal({ open, type, onClose, onSaved }: Props) {
   const changeCategory = (category: RequestCategory) =>
     setForm((f) => ({ ...f, category, deductsBalance: category === 'leave' ? f.deductsBalance : false }));
 
-  const submit = async (e: FormEvent) => {
+  const submit = (e: FormEvent) => {
     e.preventDefault();
     if (!form.name.trim()) return setError('Vui lòng nhập tên loại đơn.');
-    setSaving(true);
-    setError(null);
-    try {
-      const body = { ...form, name: form.name.trim(), description: form.description?.trim() || null };
-      const { message } = type ? await leaveTypeApi.update(type.id, body) : await leaveTypeApi.create(body);
-      toast.success(message);
-      onSaved();
-      onClose();
-    } catch (err) {
-      setError(getErrorMessage(err));
-    } finally {
-      setSaving(false);
-    }
+    void run(
+      async () => {
+        const body = { ...form, name: form.name.trim(), description: form.description?.trim() || null };
+        const { message } = type ? await leaveTypeApi.update(type.id, body) : await leaveTypeApi.create(body);
+        return message;
+      },
+      () => {
+        onSaved();
+        onClose();
+      },
+    );
   };
 
   return (

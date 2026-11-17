@@ -1,6 +1,8 @@
 import { useEffect } from 'react';
 import { Selector } from '@astryxdesign/core/Selector';
+import { getErrorMessage } from '@/services/apiClient';
 import { useLookupStore } from '@/stores/lookupStore';
+import { toast } from '@/stores/toastStore';
 
 /**
  * Ô chọn chi nhánh dùng chung: "Tất cả chi nhánh" + danh sách từ lookupStore (tự nạp nếu chưa có).
@@ -22,7 +24,7 @@ export function BranchSelect({
   const { branches, load } = useLookupStore();
 
   useEffect(() => {
-    void load().catch(() => undefined);
+    void load().catch((err) => toast.error(getErrorMessage(err)));
   }, [load]);
 
   const locked = lockedTo != null;

@@ -9,14 +9,13 @@ import { Text } from '@astryxdesign/core/Text';
 import { RefreshCw } from 'lucide-react';
 import { Avatar, PageHeader, Toolbar } from '@/components/ui/Layout';
 import { ListCard, SearchInput } from '@/components/ui/ListCard';
+import { BranchSelect } from '@/components/ui/BranchSelect';
 import { Badge } from '@/components/ui/Feedback';
 import { DataTable, Pagination, type Column } from '@/components/ui/DataTable';
 import { usePagedList } from '@/hooks/usePagedList';
 import { useDebounce } from '@/hooks/useDebounce';
 import { requestApi } from '@/services/requestApi';
-import { getErrorMessage } from '@/services/apiClient';
 import { useAuthStore } from '@/stores/authStore';
-import { useLookupStore } from '@/stores/lookupStore';
 import { toast } from '@/stores/toastStore';
 import { formatDateTime, todayIso } from '@/lib/format';
 import { rangePresets } from '@/lib/dateRanges';
@@ -38,7 +37,6 @@ const categoryOptions = [
  */
 export function RequestsPage() {
   const isCompanyWide = useAuthStore((s) => s.hasAnyRole(RoleGroups.AdminOrHr));
-  const { branches, load: loadLookups } = useLookupStore();
   const { query, setQuery, page, rows, loading, error, reload } = usePagedList<LeaveRequest, LeaveRequestFilter>(requestApi.list, {
     pageSize: 20,
     status: 'pending',
@@ -54,9 +52,6 @@ export function RequestsPage() {
   const today = todayIso();
 
   useEffect(() => setQuery({ search: debounced }), [debounced, setQuery]);
-  useEffect(() => {
-    if (isCompanyWide) void loadLookups().catch((err) => toast.error(getErrorMessage(err)));
-  }, [isCompanyWide, loadLookups]);
   useEffect(() => {
     if (error) toast.error(error);
   }, [error]);
@@ -209,14 +204,7 @@ export function RequestsPage() {
             weekStartsOn="mon"
           />
           {isCompanyWide && (
-            <Selector
-              label="Chi nhánh"
-              isLabelHidden
-              width={220}
-              options={[{ value: '', label: 'Tất cả chi nhánh' }, ...branches.map((b) => ({ value: String(b.id), label: b.name }))]}
-              value={String(query.branchId ?? '')}
-              onChange={(v) => setQuery({ branchId: v ? Number(v) : '' })}
-            />
+            <BranchSelect width={220} value={query.branchId ?? ''} onChange={(branchId) => setQuery({ branchId })} />
           )}
         </Toolbar>
         <DataTable columns={columns} rows={rows} rowKey={(r) => r.id} loading={loading} emptyText={emptyText} onRowClick={openRow} />

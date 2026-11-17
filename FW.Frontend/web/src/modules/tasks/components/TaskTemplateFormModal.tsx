@@ -8,13 +8,13 @@ import { Switch } from '@astryxdesign/core/Switch';
 import { TextArea } from '@astryxdesign/core/TextArea';
 import { TextInput } from '@astryxdesign/core/TextInput';
 import { Modal } from '@/components/ui/Modal';
+import { useFormSubmit } from '@/hooks/useFormSubmit';
 import { FormError } from '@/components/ui/Feedback';
 import { shiftApi } from '@/services/schedulingApi';
 import { taskApi } from '@/services/taskApi';
 import { getErrorMessage } from '@/services/apiClient';
 import { useAuthStore } from '@/stores/authStore';
 import { useLookupStore } from '@/stores/lookupStore';
-import { toast } from '@/stores/toastStore';
 import { Roles } from '@/types/auth';
 import type { Shift } from '@/types/scheduling';
 import type { TaskPhase, TaskTemplate, TaskTemplateRequest } from '@/types/tasks';
@@ -54,8 +54,7 @@ export function TaskTemplateFormModal({ open, task, defaultShiftId, onClose, onS
 
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [form, setForm] = useState<TaskTemplateRequest>(empty(null));
-  const [error, setError] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
+  const { saving, error, setError, run } = useFormSubmit();
 
   useEffect(() => {
     if (!open) return;
@@ -88,23 +87,21 @@ export function TaskTemplateFormModal({ open, task, defaultShiftId, onClose, onS
   const lockedBranchId = shift?.branchId ?? (isAdmin ? undefined : ownBranchId);
   const effectiveBranchId = lockedBranchId ?? form.branchId;
 
-  const submit = async (e: FormEvent) => {
+  const submit = (e: FormEvent) => {
     e.preventDefault();
     if (!form.shiftId) return setError('Vui lòng chọn ca.');
     if (!form.title.trim()) return setError('Vui lòng nhập tên việc.');
-    setSaving(true);
-    setError(null);
-    try {
-      const body = { ...form, branchId: effectiveBranchId ?? null, title: form.title.trim(), description: form.description?.trim() || null };
-      const { message } = task ? await taskApi.updateTemplate(task.id, body) : await taskApi.createTemplate(body);
-      toast.success(message);
-      onSaved();
-      onClose();
-    } catch (err) {
-      setError(getErrorMessage(err));
-    } finally {
-      setSaving(false);
-    }
+    void run(
+      async () => {
+        const body = { ...form, branchId: effectiveBranchId ?? null, title: form.title.trim(), description: form.description?.trim() || null };
+        const { message } = task ? await taskApi.updateTemplate(task.id, body) : await taskApi.createTemplate(body);
+        return message;
+      },
+      () => {
+        onSaved();
+        onClose();
+      },
+    );
   };
 
   const branchName = branches.find((b) => b.id === effectiveBranchId)?.name;

@@ -1,15 +1,16 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Button } from '@astryxdesign/core/Button';
 import { Icon } from '@astryxdesign/core/Icon';
-import { IconButton } from '@astryxdesign/core/IconButton';
 import { Selector } from '@astryxdesign/core/Selector';
 import { HStack, VStack } from '@astryxdesign/core/Stack';
 import { Text } from '@astryxdesign/core/Text';
-import { Pencil, Plus, Trash2 } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { Toolbar } from '@/components/ui/Layout';
 import { ListCard } from '@/components/ui/ListCard';
 import { Badge } from '@/components/ui/Feedback';
 import { ConfirmDialog } from '@/components/ui/Modal';
+import { RowActions } from '@/components/ui/RowActions';
+import { useDeleteDialog } from '@/hooks/useDeleteDialog';
 import { DataTable, type Column } from '@/components/ui/DataTable';
 import { shiftApi } from '@/services/schedulingApi';
 import { taskApi } from '@/services/taskApi';
@@ -38,8 +39,6 @@ export function TaskTemplatesTab() {
   const [tasks, setTasks] = useState<TaskTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<TaskTemplate | null | undefined>(undefined); // undefined = đóng, null = tạo mới
-  const [deleting, setDeleting] = useState<TaskTemplate | null>(null);
-  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     void loadLookups().catch(() => undefined);
@@ -61,19 +60,7 @@ export function TaskTemplatesTab() {
   }, [shiftId, branchId]);
   useEffect(() => void load(), [load]);
 
-  const confirmDelete = async () => {
-    if (!deleting) return;
-    setBusy(true);
-    try {
-      toast.success((await taskApi.removeTemplate(deleting.id)).message);
-      setDeleting(null);
-      void load();
-    } catch (err) {
-      toast.error(getErrorMessage(err));
-    } finally {
-      setBusy(false);
-    }
-  };
+  const del = useDeleteDialog((item: TaskTemplate) => taskApi.removeTemplate(item.id), () => void load());
 
   const columns: Column<TaskTemplate>[] = [
     {
@@ -133,20 +120,7 @@ export function TaskTemplatesTab() {
       header: '',
       width: 100,
       align: 'end',
-      render: (t) =>
-        t.canEdit && (
-          <HStack gap={0.5} hAlign="end">
-            <IconButton variant="ghost" size="sm" label="Sửa" tooltip="Sửa" icon={<Icon icon={Pencil} />} onClick={() => setEditing(t)} />
-            <IconButton
-              variant="ghost"
-              size="sm"
-              label="Xóa"
-              tooltip="Xóa"
-              icon={<Icon icon={Trash2} color="error" />}
-              onClick={() => setDeleting(t)}
-            />
-          </HStack>
-        ),
+      render: (t) => t.canEdit && <RowActions onEdit={() => setEditing(t)} onDelete={() => del.ask(t)} />,
     },
   ];
 
@@ -195,17 +169,14 @@ export function TaskTemplatesTab() {
         onSaved={() => void load()}
       />
       <ConfirmDialog
-        open={!!deleting}
+        {...del.dialog}
         title="Xóa việc khỏi checklist"
         message={
           <>
-            Xóa việc <b>{deleting?.title}</b>? Các ca đã giao việc này vẫn giữ lịch sử; ca sau sẽ không còn được giao.
+            Xóa việc <b>{del.target?.title}</b>? Các ca đã giao việc này vẫn giữ lịch sử; ca sau sẽ không còn được giao.
           </>
         }
         confirmText="Xóa"
-        loading={busy}
-        onConfirm={() => void confirmDelete()}
-        onClose={() => setDeleting(null)}
       />
     </>
   );

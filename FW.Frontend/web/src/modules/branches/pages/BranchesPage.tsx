@@ -10,11 +10,11 @@ import { PageHeader, Toolbar } from '@/components/ui/Layout';
 import { ListCard, SearchInput } from '@/components/ui/ListCard';
 import { Badge } from '@/components/ui/Feedback';
 import { ConfirmDialog } from '@/components/ui/Modal';
+import { useDeleteDialog } from '@/hooks/useDeleteDialog';
 import { DataTable, Pagination, type Column } from '@/components/ui/DataTable';
 import { usePagedList } from '@/hooks/usePagedList';
 import { useDebounce } from '@/hooks/useDebounce';
 import { branchApi } from '@/services/organizationApi';
-import { getErrorMessage } from '@/services/apiClient';
 import { useAuthStore } from '@/stores/authStore';
 import { useLookupStore } from '@/stores/lookupStore';
 import { toast } from '@/stores/toastStore';
@@ -40,8 +40,6 @@ export function BranchesPage() {
   const debounced = useDebounce(search);
   const [editing, setEditing] = useState<Branch | null | undefined>(undefined); // undefined = đóng, null = tạo mới
   const [wifiBranch, setWifiBranch] = useState<Branch | null>(null);
-  const [deleting, setDeleting] = useState<Branch | null>(null);
-  const [deletingBusy, setDeletingBusy] = useState(false);
 
   useEffect(() => setQuery({ search: debounced }), [debounced, setQuery]);
   useEffect(() => {
@@ -53,20 +51,7 @@ export function BranchesPage() {
     void reload();
   };
 
-  const confirmDelete = async () => {
-    if (!deleting) return;
-    setDeletingBusy(true);
-    try {
-      const { message } = await branchApi.remove(deleting.id);
-      toast.success(message);
-      setDeleting(null);
-      afterChange();
-    } catch (err) {
-      toast.error(getErrorMessage(err));
-    } finally {
-      setDeletingBusy(false);
-    }
-  };
+  const del = useDeleteDialog((item: Branch) => branchApi.remove(item.id), afterChange);
 
   const columns: Column<Branch>[] = [
     { key: 'code', header: 'Mã', width: 120, render: (b) => <span className="font-mono text-sm font-medium">{b.branchCode}</span> },
@@ -116,7 +101,7 @@ export function BranchesPage() {
             {isAdmin && (
               <>
                 <IconButton variant="ghost" size="sm" label="Sửa" tooltip="Sửa" icon={<Icon icon={Pencil} />} onClick={() => setEditing(b)} />
-                <IconButton variant="ghost" size="sm" label="Xóa" tooltip="Xóa" icon={<Icon icon={Trash2} color="error" />} onClick={() => setDeleting(b)} />
+                <IconButton variant="ghost" size="sm" label="Xóa" tooltip="Xóa" icon={<Icon icon={Trash2} color="error" />} onClick={() => del.ask(b)} />
               </>
             )}
           </HStack>
@@ -151,17 +136,14 @@ export function BranchesPage() {
       <BranchFormModal open={editing !== undefined} branch={editing ?? null} onClose={() => setEditing(undefined)} onSaved={afterChange} />
       <BranchWifiModal branch={wifiBranch} canEdit={isAdmin} onClose={() => setWifiBranch(null)} />
       <ConfirmDialog
-        open={!!deleting}
+        {...del.dialog}
         title="Xóa chi nhánh"
         message={
           <>
-            Xóa chi nhánh <b>{deleting?.name}</b> và toàn bộ Wi-Fi của chi nhánh? Không thể xóa nếu chi nhánh vẫn còn nhân sự.
+            Xóa chi nhánh <b>{del.target?.name}</b> và toàn bộ Wi-Fi của chi nhánh? Không thể xóa nếu chi nhánh vẫn còn nhân sự.
           </>
         }
         confirmText="Xóa"
-        loading={deletingBusy}
-        onConfirm={confirmDelete}
-        onClose={() => setDeleting(null)}
       />
     </>
   );

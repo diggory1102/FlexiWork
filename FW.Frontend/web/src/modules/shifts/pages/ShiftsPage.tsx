@@ -1,21 +1,21 @@
 import { useEffect, useState } from 'react';
 import { Button } from '@astryxdesign/core/Button';
 import { Icon } from '@astryxdesign/core/Icon';
-import { IconButton } from '@astryxdesign/core/IconButton';
 import { Selector } from '@astryxdesign/core/Selector';
 import { HStack, VStack } from '@astryxdesign/core/Stack';
 import { Switch } from '@astryxdesign/core/Switch';
 import { Text } from '@astryxdesign/core/Text';
-import { Moon, Pencil, Plus, Settings2, Trash2 } from 'lucide-react';
+import { Moon, Plus, Settings2 } from 'lucide-react';
 import { PageHeader, Toolbar } from '@/components/ui/Layout';
 import { ListCard, SearchInput } from '@/components/ui/ListCard';
 import { Badge } from '@/components/ui/Feedback';
 import { ConfirmDialog } from '@/components/ui/Modal';
+import { RowActions } from '@/components/ui/RowActions';
+import { useDeleteDialog } from '@/hooks/useDeleteDialog';
 import { DataTable, Pagination, type Column } from '@/components/ui/DataTable';
 import { usePagedList } from '@/hooks/usePagedList';
 import { useDebounce } from '@/hooks/useDebounce';
 import { shiftApi } from '@/services/schedulingApi';
-import { getErrorMessage } from '@/services/apiClient';
 import { useAuthStore } from '@/stores/authStore';
 import { useLookupStore } from '@/stores/lookupStore';
 import { toast } from '@/stores/toastStore';
@@ -41,8 +41,6 @@ export function ShiftsPage() {
   const [search, setSearch] = useState('');
   const debounced = useDebounce(search);
   const [editing, setEditing] = useState<Shift | null | undefined>(undefined); // undefined = đóng, null = tạo mới
-  const [deleting, setDeleting] = useState<Shift | null>(null);
-  const [deletingBusy, setDeletingBusy] = useState(false);
 
   useEffect(() => void loadLookups().catch(() => undefined), [loadLookups]);
   useEffect(() => setQuery({ search: debounced }), [debounced, setQuery]);
@@ -52,20 +50,7 @@ export function ShiftsPage() {
 
   const branchName = (id: number | null) => branches.find((b) => b.id === id)?.name ?? `Chi nhánh #${id}`;
 
-  const confirmDelete = async () => {
-    if (!deleting) return;
-    setDeletingBusy(true);
-    try {
-      const { message } = await shiftApi.remove(deleting.id);
-      toast.success(message);
-      setDeleting(null);
-      void reload();
-    } catch (err) {
-      toast.error(getErrorMessage(err));
-    } finally {
-      setDeletingBusy(false);
-    }
-  };
+  const del = useDeleteDialog((item: Shift) => shiftApi.remove(item.id), () => void reload());
 
   const columns: Column<Shift>[] = [
     {
@@ -132,13 +117,7 @@ export function ShiftsPage() {
       header: '',
       width: 100,
       align: 'end',
-      render: (s) =>
-        s.canEdit && (
-          <HStack gap={0.5} hAlign="end">
-            <IconButton variant="ghost" size="sm" label="Sửa" tooltip="Sửa" icon={<Icon icon={Pencil} />} onClick={() => setEditing(s)} />
-            <IconButton variant="ghost" size="sm" label="Xóa" tooltip="Xóa" icon={<Icon icon={Trash2} color="error" />} onClick={() => setDeleting(s)} />
-          </HStack>
-        ),
+      render: (s) => s.canEdit && <RowActions onEdit={() => setEditing(s)} onDelete={() => del.ask(s)} />,
     },
   ];
 
@@ -193,17 +172,14 @@ export function ShiftsPage() {
 
       <ShiftFormModal open={editing !== undefined} shift={editing ?? null} onClose={() => setEditing(undefined)} onSaved={() => void reload()} />
       <ConfirmDialog
-        open={!!deleting}
+        {...del.dialog}
         title="Xóa ca làm việc"
         message={
           <>
-            Xóa ca <b>{deleting?.shiftCode}</b> – {deleting?.name}? Lịch đã qua vẫn giữ nguyên; không xóa được nếu ca còn lịch từ hôm nay trở đi.
+            Xóa ca <b>{del.target?.shiftCode}</b> – {del.target?.name}? Lịch đã qua vẫn giữ nguyên; không xóa được nếu ca còn lịch từ hôm nay trở đi.
           </>
         }
         confirmText="Xóa"
-        loading={deletingBusy}
-        onConfirm={confirmDelete}
-        onClose={() => setDeleting(null)}
       />
     </>
   );

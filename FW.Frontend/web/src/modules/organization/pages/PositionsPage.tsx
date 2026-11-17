@@ -1,22 +1,23 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Button } from '@astryxdesign/core/Button';
 import { Icon } from '@astryxdesign/core/Icon';
-import { IconButton } from '@astryxdesign/core/IconButton';
 import { NumberInput } from '@astryxdesign/core/NumberInput';
-import { HStack, VStack } from '@astryxdesign/core/Stack';
+import { VStack } from '@astryxdesign/core/Stack';
 import { Text } from '@astryxdesign/core/Text';
 import { TextArea } from '@astryxdesign/core/TextArea';
 import { TextInput } from '@astryxdesign/core/TextInput';
-import { Pencil, Plus, Trash2 } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { PageHeader, Toolbar } from '@/components/ui/Layout';
 import { ListCard, SearchInput } from '@/components/ui/ListCard';
 import { FormError } from '@/components/ui/Feedback';
 import { ConfirmDialog, Modal } from '@/components/ui/Modal';
+import { RowActions } from '@/components/ui/RowActions';
 import { DataTable, Pagination, type Column } from '@/components/ui/DataTable';
 import { usePagedList } from '@/hooks/usePagedList';
 import { useDebounce } from '@/hooks/useDebounce';
+import { useDeleteDialog } from '@/hooks/useDeleteDialog';
+import { useFormSubmit } from '@/hooks/useFormSubmit';
 import { positionApi } from '@/services/organizationApi';
-import { getErrorMessage } from '@/services/apiClient';
 import { useAuthStore } from '@/stores/authStore';
 import { useLookupStore } from '@/stores/lookupStore';
 import { toast } from '@/stores/toastStore';
@@ -33,8 +34,6 @@ export function PositionsPage() {
   const [search, setSearch] = useState('');
   const debounced = useDebounce(search);
   const [editing, setEditing] = useState<Position | null | undefined>(undefined);
-  const [deleting, setDeleting] = useState<Position | null>(null);
-  const [busy, setBusy] = useState(false);
 
   useEffect(() => setQuery({ search: debounced }), [debounced, setQuery]);
   useEffect(() => {
@@ -46,19 +45,7 @@ export function PositionsPage() {
     void reload();
   };
 
-  const confirmDelete = async () => {
-    if (!deleting) return;
-    setBusy(true);
-    try {
-      toast.success((await positionApi.remove(deleting.id)).message);
-      setDeleting(null);
-      afterChange();
-    } catch (err) {
-      toast.error(getErrorMessage(err));
-    } finally {
-      setBusy(false);
-    }
-  };
+  const del = useDeleteDialog((item: Position) => positionApi.remove(item.id), afterChange);
 
   const columns: Column<Position>[] = [
     { key: 'title', header: 'Chức danh', render: (p) => <Text weight="medium">{p.title}</Text> },
@@ -79,13 +66,7 @@ export function PositionsPage() {
       header: '',
       width: 110,
       align: 'end',
-      render: (p) =>
-        canEdit && (
-          <HStack gap={0.5} hAlign="end">
-            <IconButton variant="ghost" size="sm" label="Sửa" tooltip="Sửa" icon={<Icon icon={Pencil} />} onClick={() => setEditing(p)} />
-            <IconButton variant="ghost" size="sm" label="Xóa" tooltip="Xóa" icon={<Icon icon={Trash2} color="error" />} onClick={() => setDeleting(p)} />
-          </HStack>
-        ),
+      render: (p) => canEdit && <RowActions onEdit={() => setEditing(p)} onDelete={() => del.ask(p)} />,
     },
   ];
 
@@ -106,17 +87,14 @@ export function PositionsPage() {
 
       <PositionFormModal position={editing} onClose={() => setEditing(undefined)} onSaved={afterChange} />
       <ConfirmDialog
-        open={!!deleting}
+        {...del.dialog}
         title="Xóa chức vụ"
         message={
           <>
-            Xóa chức vụ <b>{deleting?.title}</b>? Không thể xóa nếu vẫn còn nhân sự giữ chức danh này.
+            Xóa chức vụ <b>{del.target?.title}</b>? Không thể xóa nếu vẫn còn nhân sự giữ chức danh này.
           </>
         }
         confirmText="Xóa"
-        loading={busy}
-        onConfirm={confirmDelete}
-        onClose={() => setDeleting(null)}
       />
     </>
   );
@@ -124,31 +102,25 @@ export function PositionsPage() {
 
 function PositionFormModal({ position, onClose, onSaved }: { position: Position | null | undefined; onClose: () => void; onSaved: () => void }) {
   const [form, setForm] = useState<PositionRequest>({ title: '', baseSalaryPerHour: 0, description: '' });
-  const [error, setError] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
+  const { saving, error, setError, run } = useFormSubmit();
 
   useEffect(() => {
     if (position === undefined) return;
     setError(null);
     setForm(position ? { title: position.title, baseSalaryPerHour: position.baseSalaryPerHour, description: position.description ?? '' } : { title: '', baseSalaryPerHour: 0, description: '' });
-  }, [position]);
+  }, [position, setError]);
 
-  const submit = async (e: FormEvent) => {
+  const submit = (e: FormEvent) => {
     e.preventDefault();
     if (!form.title.trim()) return setError('Vui lòng nhập tên chức danh.');
-    setSaving(true);
-    setError(null);
-    try {
-      const body = { ...form, description: form.description || null };
-      const { message } = position ? await positionApi.update(position.id, body) : await positionApi.create(body);
-      toast.success(message);
-      onSaved();
-      onClose();
-    } catch (err) {
-      setError(getErrorMessage(err));
-    } finally {
-      setSaving(false);
-    }
+    const body = { ...form, description: form.description || null };
+    void run(
+      async () => (position ? await positionApi.update(position.id, body) : await positionApi.create(body)).message,
+      () => {
+        onSaved();
+        onClose();
+      },
+    );
   };
 
   return (

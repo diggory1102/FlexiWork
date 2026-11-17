@@ -5,18 +5,17 @@ import { DateInput } from '@astryxdesign/core/DateInput';
 import { Grid } from '@astryxdesign/core/Grid';
 import { Icon } from '@astryxdesign/core/Icon';
 import { ProgressBar } from '@astryxdesign/core/ProgressBar';
-import { Selector } from '@astryxdesign/core/Selector';
 import { HStack, VStack } from '@astryxdesign/core/Stack';
 import { Text } from '@astryxdesign/core/Text';
 import { RefreshCw } from 'lucide-react';
 import { Avatar, Toolbar } from '@/components/ui/Layout';
 import { ListCard } from '@/components/ui/ListCard';
+import { BranchSelect } from '@/components/ui/BranchSelect';
 import { Badge } from '@/components/ui/Feedback';
 import { DataTable, type Column } from '@/components/ui/DataTable';
 import { taskApi } from '@/services/taskApi';
 import { getErrorMessage } from '@/services/apiClient';
 import { useAuthStore } from '@/stores/authStore';
-import { useLookupStore } from '@/stores/lookupStore';
 import { toast } from '@/stores/toastStore';
 import { todayIso } from '@/lib/format';
 import { scheduleStatusLabels } from '@/modules/schedules/scheduleUi';
@@ -52,17 +51,12 @@ function Summary({ label, value, hint, tone }: { label: string; value: string; h
 /** Tiến độ checklist các ca trong ngày (UC 6.4): tỷ lệ hoàn thành từng nhân viên và toàn chi nhánh. */
 export function TaskProgressTab() {
   const isCompanyWide = useAuthStore((s) => s.hasAnyRole(RoleGroups.AdminOrHr));
-  const { branches, load: loadLookups } = useLookupStore();
   const [date, setDate] = useState(todayIso());
   const [branchId, setBranchId] = useState<number | ''>('');
   const [data, setData] = useState<TaskProgress | null>(null);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<ScheduleProgress | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
-
-  useEffect(() => {
-    if (isCompanyWide) void loadLookups().catch(() => undefined);
-  }, [isCompanyWide, loadLookups]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -183,14 +177,7 @@ export function TaskProgressTab() {
           <Toolbar>
             <DateInput label="Ngày" isLabelHidden width={190} format="date" value={date} onChange={(v) => setDate(v ?? todayIso())} />
             {isCompanyWide && (
-              <Selector
-                label="Chi nhánh"
-                isLabelHidden
-                width={220}
-                options={[{ value: '', label: 'Tất cả chi nhánh' }, ...branches.map((b) => ({ value: String(b.id), label: b.name }))]}
-                value={String(branchId)}
-                onChange={(v) => setBranchId(v ? Number(v) : '')}
-              />
+              <BranchSelect width={220} value={branchId} onChange={setBranchId} />
             )}
             <Button label="Làm mới" variant="secondary" icon={<Icon icon={RefreshCw} />} onClick={() => void load()} />
           </Toolbar>

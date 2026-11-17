@@ -8,6 +8,7 @@ import { Text } from '@astryxdesign/core/Text';
 import { KeyRound, Lock, Pencil, Plus, ShieldCheck, Trash2, Unlock } from 'lucide-react';
 import { Avatar, PageHeader, Toolbar } from '@/components/ui/Layout';
 import { ListCard, SearchInput } from '@/components/ui/ListCard';
+import { BranchSelect } from '@/components/ui/BranchSelect';
 import { Badge } from '@/components/ui/Feedback';
 import { ConfirmDialog } from '@/components/ui/Modal';
 import { DataTable, Pagination, type Column } from '@/components/ui/DataTable';
@@ -48,7 +49,7 @@ export function EmployeesPage() {
   const hasAnyRole = useAuthStore((s) => s.hasAnyRole);
   const canManage = hasAnyRole(RoleGroups.AdminOrHr);
   const isAdmin = hasAnyRole([Roles.Admin]);
-  const { branches, departments, load: loadLookups } = useLookupStore();
+  const { departments, load: loadLookups } = useLookupStore();
   const { query, setQuery, page, rows, loading, error, reload } = usePagedList<User, UserFilter>(userApi.list, { pageSize: 20 });
 
   const [search, setSearch] = useState('');
@@ -193,14 +194,7 @@ export function EmployeesPage() {
         <Toolbar>
           <SearchInput placeholder="Tìm mã, họ tên, email, SĐT…" value={search} onChange={setSearch} />
           {canManage && (
-            <Selector
-              label="Chi nhánh"
-              isLabelHidden
-              width={210}
-              options={[{ value: '', label: 'Tất cả chi nhánh' }, ...branches.map((b) => ({ value: String(b.id), label: b.name }))]}
-              value={String(query.branchId ?? '')}
-              onChange={(v) => setQuery({ branchId: toId(v) })}
-            />
+            <BranchSelect width={210} value={query.branchId ?? ''} onChange={(branchId) => setQuery({ branchId })} />
           )}
           <Selector
             label="Phòng ban"
