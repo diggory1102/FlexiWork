@@ -63,6 +63,29 @@ public class ChatController : ApiControllerBase
     public async Task<IActionResult> MarkRead(int id, [FromBody] MarkReadRequest? request, CancellationToken cancellationToken) =>
         Success(await _chatService.MarkReadAsync(id, request?.UpToMessageId, cancellationToken));
 
+    /// <summary>Tạo nhóm chat tùy chỉnh (UC 7.2): {title, memberIds}. Người tạo là quản trị nhóm.</summary>
+    [HttpPost("conversations/group")]
+    public async Task<IActionResult> CreateGroup([FromBody] CreateGroupRequest request, CancellationToken cancellationToken) =>
+        Created(await _chatService.CreateGroupAsync(request, cancellationToken), "Đã tạo nhóm chat.");
+
+    /// <summary>Đổi tên nhóm tùy chỉnh (quản trị nhóm): {title}.</summary>
+    [HttpPut("conversations/{id:int}")]
+    public async Task<IActionResult> RenameGroup(int id, [FromBody] RenameGroupRequest request, CancellationToken cancellationToken) =>
+        Success(await _chatService.RenameGroupAsync(id, request, cancellationToken), "Đã đổi tên nhóm.");
+
+    /// <summary>Thêm thành viên vào nhóm tùy chỉnh (quản trị nhóm): {userIds}.</summary>
+    [HttpPost("conversations/{id:int}/members")]
+    public async Task<IActionResult> AddMembers(int id, [FromBody] AddMembersRequest request, CancellationToken cancellationToken) =>
+        Success(await _chatService.AddMembersAsync(id, request, cancellationToken), "Đã thêm thành viên.");
+
+    /// <summary>Xóa thành viên khỏi nhóm (quản trị nhóm), hoặc tự rời nhóm khi userId là chính mình.</summary>
+    [HttpDelete("conversations/{id:int}/members/{userId:int}")]
+    public async Task<IActionResult> RemoveMember(int id, int userId, CancellationToken cancellationToken)
+    {
+        await _chatService.RemoveMemberAsync(id, userId, cancellationToken);
+        return Success("Đã cập nhật thành viên nhóm.");
+    }
+
     /// <summary>Thu hồi tin nhắn của chính mình.</summary>
     [HttpDelete("messages/{id:long}")]
     public async Task<IActionResult> DeleteMessage(long id, CancellationToken cancellationToken)

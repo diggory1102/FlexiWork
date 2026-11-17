@@ -31,6 +31,10 @@ export interface Conversation {
   lastMessage: LastMessage | null;
   unreadCount: number;
   lastActivityAt: string;
+  /** Nhóm tùy chỉnh (UC 7.2): đổi tên / thêm / xóa thành viên được. Nhóm chi nhánh do hệ thống quản lý. */
+  isCustomGroup: boolean;
+  /** Quản trị nhóm tùy chỉnh (người tạo, hoặc người kế nhiệm); null với phòng khác. */
+  ownerId: number | null;
 }
 
 export interface ChatMember {
@@ -90,4 +94,5 @@ export interface ConversationReadEvent {
 }
 
 export const MAX_MESSAGE_LENGTH = 2000;
+export const MAX_GROUP_TITLE_LENGTH = 100;
 export const MAX_IMAGE_BYTES = 5 * 1024 * 1024;

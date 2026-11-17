@@ -20,7 +20,7 @@ public class ChatRepository : BaseRepository<Message, long>, IChatRepository
 
     public Task<Conversation?> GetConversationAsync(int id, CancellationToken cancellationToken = default) =>
         QuerySingleOrDefaultAsync<Conversation>(
-            "SELECT `id` AS Id, `type` AS Type, `title` AS Title, `branch_id` AS BranchId, `unique_key` AS UniqueKey, `is_deleted` AS IsDeleted, `created_at` AS CreatedAt " +
+            "SELECT `id` AS Id, `type` AS Type, `title` AS Title, `branch_id` AS BranchId, `created_by` AS CreatedBy, `unique_key` AS UniqueKey, `is_deleted` AS IsDeleted, `created_at` AS CreatedAt " +
             "FROM `conversations` WHERE `id` = @Id AND `is_deleted` = 0", new { Id = id }, cancellationToken);
 
     public async Task<int> GetOrCreateDirectAsync(int userA, int userB, CancellationToken cancellationToken = default)
@@ -89,7 +89,7 @@ public class ChatRepository : BaseRepository<Message, long>, IChatRepository
     // ---------------------------------------------------------------- Danh sách phòng của tôi
 
     private const string RowSelect = """
-        SELECT c.`id` AS Id, c.`type` AS Type, c.`title` AS Title, c.`branch_id` AS BranchId, c.`created_at` AS CreatedAt,
+        SELECT c.`id` AS Id, c.`type` AS Type, c.`title` AS Title, c.`branch_id` AS BranchId, c.`created_by` AS CreatedBy, c.`created_at` AS CreatedAt,
                (SELECT COUNT(*) FROM `conversation_members` x WHERE x.`conversation_id` = c.`id`) AS MemberCount,
                (SELECT COUNT(*) FROM `messages` m
                  WHERE m.`conversation_id` = c.`id` AND m.`id` > cm.`last_read_message_id` AND m.`sender_id` <> @Me AND m.`is_deleted` = 0) AS UnreadCount,
@@ -151,4 +151,46 @@ public class ChatRepository : BaseRepository<Message, long>, IChatRepository
             JOIN `conversations` c ON c.`id` = m.`conversation_id` AND c.`is_deleted` = 0
             WHERE m.`id` > cm.`last_read_message_id` AND m.`sender_id` <> @U AND m.`is_deleted` = 0
             """, new { U = userId }, cancellationToken);
+
+    // ---------------------------------------------------------------- Nhóm tùy chỉnh (UC 7.2)
+
+    public async Task<int> CreateGroupAsync(string title, int createdBy, IReadOnlyCollection<int> memberIds, CancellationToken cancellationToken = default)
+    {
+        // Nhóm tùy chỉnh không có unique_key (được phép trùng tên) và không gắn chi nhánh
+        var id = await ExecuteScalarAsync<int>("""
+            INSERT INTO `conversations` (`type`, `title`, `created_by`) VALUES (@Type, @Title, @CreatedBy);
+            SELECT LAST_INSERT_ID();
+            """, new { Type = ConversationType.Group, Title = title, CreatedBy = createdBy }, cancellationToken);
+        var everyone = memberIds.Append(createdBy).Distinct().Select(userId => new { Id = id, UserId = userId }).ToList();
+        await ExecuteAsync("INSERT INTO `conversation_members` (`conversation_id`, `user_id`) VALUES (@Id, @UserId)", everyone, cancellationToken);
+        return id;
+    }
+
+    public Task RenameGroupAsync(int conversationId, string title, CancellationToken cancellationToken = default) =>
+        ExecuteAsync("UPDATE `conversations` SET `title` = @Title WHERE `id` = @Id AND `is_deleted` = 0", new { Id = conversationId, Title = title }, cancellationToken);
+
+    public async Task<int> AddMembersAsync(int conversationId, IReadOnlyCollection<int> userIds, CancellationToken cancellationToken = default)
+    {
+        if (userIds.Count == 0) return 0;
+        // Đánh dấu đã đọc tới tin hiện có để người mới vào không bị "chưa đọc" cả lịch sử
+        return await ExecuteAsync("""
+            INSERT IGNORE INTO `conversation_members` (`conversation_id`, `user_id`, `last_read_message_id`)
+            SELECT @Id, u.`id`, COALESCE((SELECT MAX(m.`id`) FROM `messages` m WHERE m.`conversation_id` = @Id), 0)
+            FROM `users` u WHERE u.`id` IN @UserIds
+            """, new { Id = conversationId, UserIds = userIds.ToArray() }, cancellationToken);
+    }
+
+    public async Task<bool> RemoveMemberAsync(int conversationId, int userId, CancellationToken cancellationToken = default) =>
+        await ExecuteAsync("DELETE FROM `conversation_members` WHERE `conversation_id` = @C AND `user_id` = @U", new { C = conversationId, U = userId }, cancellationToken) == 1;
+
+    public async Task<int?> GetOldestMemberAsync(int conversationId, int excludingUserId, CancellationToken cancellationToken = default) =>
+        (await QueryAsync<int>("""
+            SELECT `user_id` FROM `conversation_members` WHERE `conversation_id` = @C AND `user_id` <> @U ORDER BY `joined_at`, `user_id` LIMIT 1
+            """, new { C = conversationId, U = excludingUserId }, cancellationToken)).Select(x => (int?)x).FirstOrDefault();
+
+    public Task SetGroupOwnerAsync(int conversationId, int userId, CancellationToken cancellationToken = default) =>
+        ExecuteAsync("UPDATE `conversations` SET `created_by` = @U WHERE `id` = @C", new { C = conversationId, U = userId }, cancellationToken);
+
+    public Task DeleteConversationAsync(int conversationId, CancellationToken cancellationToken = default) =>
+        ExecuteAsync("UPDATE `conversations` SET `is_deleted` = 1 WHERE `id` = @C", new { C = conversationId }, cancellationToken);
 }

@@ -22,6 +22,9 @@ public class ChatHub : Hub
     /// <summary>Phòng đã được đọc ở một thiết bị khác của mình: <c>{ conversationId, unreadCount }</c>.</summary>
     public const string ConversationReadMethod = "ConversationRead";
 
+    /// <summary>Nhóm chat thay đổi (thành viên, tên): <c>{ conversationId }</c> — client nạp lại danh sách phòng.</summary>
+    public const string ConversationUpdatedMethod = "ConversationUpdated";
+
     public static string GroupFor(int userId) => $"User_{userId}";
 
     public override async Task OnConnectedAsync()

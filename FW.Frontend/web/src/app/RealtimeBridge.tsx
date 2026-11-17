@@ -55,6 +55,8 @@ export function RealtimeBridge() {
       emitChat({ kind: 'deleted', event });
       refreshChat(); // xem trước tin cuối có thể đã đổi
     });
+    // Nhóm thay đổi (tạo mới, đổi tên, thêm / xóa thành viên, có người rời): nạp lại danh sách phòng
+    chat.on('ConversationUpdated', refreshChat);
     chat.on('ConversationRead', (event: ConversationReadEvent) => useChatStore.getState().setUnread(event.conversationId, event.unreadCount));
     chat.onreconnected(refreshChat);
 

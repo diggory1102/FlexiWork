@@ -9,6 +9,10 @@ public class ConversationRow
     public string Type { get; set; } = string.Empty;
     public string? Title { get; set; }
     public int? BranchId { get; set; }
+
+    /// <summary>Người tạo nhóm tùy chỉnh (quản trị nhóm); null với chat 1-1 và nhóm chi nhánh.</summary>
+    public int? CreatedBy { get; set; }
+
     public DateTime CreatedAt { get; set; }
     public int MemberCount { get; set; }
     public int UnreadCount { get; set; }
@@ -83,4 +87,24 @@ public interface IChatRepository : IGenericRepository<Message, long>
     Task<bool> SoftDeleteMessageAsync(long messageId, int senderId, CancellationToken cancellationToken = default);
 
     Task<int> CountUnreadTotalAsync(int userId, CancellationToken cancellationToken = default);
+
+    // ---------------------------------------------------------------- Nhóm tùy chỉnh (UC 7.2)
+
+    /// <summary>Tạo nhóm tùy chỉnh do <paramref name="createdBy"/> quản trị; thành viên gồm người tạo và <paramref name="memberIds"/>. Gọi trong giao dịch.</summary>
+    Task<int> CreateGroupAsync(string title, int createdBy, IReadOnlyCollection<int> memberIds, CancellationToken cancellationToken = default);
+
+    Task RenameGroupAsync(int conversationId, string title, CancellationToken cancellationToken = default);
+
+    /// <summary>Thêm thành viên (bỏ qua người đã có); người mới không thấy lịch sử cũ là "chưa đọc". Trả về số người thật sự được thêm.</summary>
+    Task<int> AddMembersAsync(int conversationId, IReadOnlyCollection<int> userIds, CancellationToken cancellationToken = default);
+
+    Task<bool> RemoveMemberAsync(int conversationId, int userId, CancellationToken cancellationToken = default);
+
+    /// <summary>Thành viên vào nhóm sớm nhất (loại trừ một người) — người kế nhiệm khi quản trị nhóm rời đi; null nếu không còn ai.</summary>
+    Task<int?> GetOldestMemberAsync(int conversationId, int excludingUserId, CancellationToken cancellationToken = default);
+
+    Task SetGroupOwnerAsync(int conversationId, int userId, CancellationToken cancellationToken = default);
+
+    /// <summary>Xóa mềm phòng chat (nhóm không còn thành viên).</summary>
+    Task DeleteConversationAsync(int conversationId, CancellationToken cancellationToken = default);
 }

@@ -183,6 +183,7 @@ cd FW.Backend\FW.Infrastructure\Database\migrations
 | `009_chat.sql` | Chat nội bộ (Task 5.2): `conversations.unique_key` (UNIQUE — chống tạo trùng phòng), `conversation_members.last_read_message_id` (số tin chưa đọc), `messages.image_public_id` + chỉ mục `(conversation_id, id)`. **Chạy lại an toàn**, mỗi câu ALTER một việc. Cuối file in `3`, `2` | ☐ |
 | `010_monthly_timesheets.sql` | Bảng công tháng (Task 5.3): bảng `monthly_timesheets` cũ (chưa có dữ liệu) đổi tên thành `monthly_timesheets_backup_010` rồi tạo bảng mới (số ca, ngày công, giờ OT, vi phạm, nghỉ có / không lương, trạng thái nháp → xác nhận → khóa). **Chạy lại an toàn** — đã migrate thì tự bỏ qua. Cuối file in `1`, `0`, `1` (cột mới, số dòng, còn bảng sao lưu); sau đó kiểm tra bảng sao lưu 0 dòng rồi xóa bằng lệnh ở cuối file | ☐ |
 | `011_payroll_config.sql` | Cấu hình lương (Task 5.4): `users.base_salary`, `users.hourly_rate`; bảng `allowances`, `user_allowances`, `payroll_periods`, `payslips`, `payslip_items`; 3 phụ cấp mẫu + hệ số OT 1,5 (chỉ thêm khi chưa có). **Chạy lại an toàn**, mỗi câu ALTER một việc. Cuối file in `2`, `5`, `3`, `1`. Bảng kỳ lương / phiếu lương của Task 5.5 cũng tạo ở file này — Task 5.5 không có migration riêng | ☐ |
+| `012_chat_groups.sql` | Nhóm chat tùy chỉnh (UC 7.2): cột `conversations.created_by` (người tạo = quản trị nhóm; NULL với chat 1-1 và nhóm chi nhánh). **Chạy lại an toàn** | ☐ |
 
 ## Xử lý sự cố
 

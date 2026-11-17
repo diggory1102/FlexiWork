@@ -21,6 +21,9 @@ public class SignalRChatPublisher : IChatPublisher
         _hub.Clients.Groups(userIds.Select(ChatHub.GroupFor).ToList())
             .SendAsync(ChatHub.MessageDeletedMethod, new { conversationId, messageId }, cancellationToken);
 
+    public Task ConversationUpdatedAsync(IReadOnlyCollection<int> userIds, int conversationId, CancellationToken cancellationToken = default) =>
+        _hub.Clients.Groups(userIds.Select(ChatHub.GroupFor).ToList()).SendAsync(ChatHub.ConversationUpdatedMethod, new { conversationId }, cancellationToken);
+
     public Task ConversationReadAsync(int userId, int conversationId, int unreadCount, CancellationToken cancellationToken = default) =>
         _hub.Clients.Group(ChatHub.GroupFor(userId)).SendAsync(ChatHub.ConversationReadMethod, new { conversationId, unreadCount }, cancellationToken);
 }

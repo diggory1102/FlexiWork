@@ -14,4 +14,7 @@ public interface IChatPublisher
 
     /// <summary>Người dùng đã đọc một phòng (đồng bộ số chưa đọc giữa các thiết bị của chính họ).</summary>
     Task ConversationReadAsync(int userId, int conversationId, int unreadCount, CancellationToken cancellationToken = default);
+
+    /// <summary>Nhóm chat thay đổi (tạo mới, đổi tên, thêm / xóa thành viên, người rời nhóm): các thiết bị nạp lại danh sách phòng. Gồm cả người vừa bị bỏ khỏi nhóm.</summary>
+    Task ConversationUpdatedAsync(IReadOnlyCollection<int> userIds, int conversationId, CancellationToken cancellationToken = default);
 }

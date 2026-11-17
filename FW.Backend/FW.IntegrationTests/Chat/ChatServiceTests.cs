@@ -11,7 +11,7 @@ namespace FW.IntegrationTests.Chat;
 
 /// <summary>
 /// Chat nội bộ (Task 5.2) trên MySQL thật: chat 1-1 (mở trùng phòng, gửi, lịch sử phân trang, chưa đọc), ảnh và thu hồi tin, nhóm chi nhánh
-/// tự đồng bộ thành viên, quyền theo thành viên / chi nhánh, danh bạ. Mỗi test tạo người dùng và chi nhánh riêng để không lẫn nhau.
+/// tự đồng bộ thành viên, quyền theo thành viên / chi nhánh, danh bạ, nhóm tùy chỉnh (Task 5.8, UC 7.2). Mỗi test tạo người dùng và chi nhánh riêng để không lẫn nhau.
 /// </summary>
 [Collection(DatabaseCollection.Name)]
 public class ChatServiceTests
@@ -30,6 +30,7 @@ public class ChatServiceTests
         public List<(IReadOnlyCollection<int> Users, ChatMessageDto Message)> Created { get; } = new();
         public List<(IReadOnlyCollection<int> Users, int ConversationId, long MessageId)> Deleted { get; } = new();
         public List<(int UserId, int ConversationId, int Unread)> Read { get; } = new();
+        public List<(IReadOnlyCollection<int> Users, int ConversationId)> Updated { get; } = new();
         public bool Throw { get; set; }
 
         public Task MessageCreatedAsync(IReadOnlyCollection<int> userIds, ChatMessageDto message, CancellationToken cancellationToken = default)
@@ -48,6 +49,12 @@ public class ChatServiceTests
         public Task ConversationReadAsync(int userId, int conversationId, int unreadCount, CancellationToken cancellationToken = default)
         {
             Read.Add((userId, conversationId, unreadCount));
+            return Task.CompletedTask;
+        }
+
+        public Task ConversationUpdatedAsync(IReadOnlyCollection<int> userIds, int conversationId, CancellationToken cancellationToken = default)
+        {
+            Updated.Add((userIds, conversationId));
             return Task.CompletedTask;
         }
     }
@@ -88,7 +95,7 @@ public class ChatServiceTests
 
     private static ChatService As(DbSession s, User user, RecordingPublisher? publisher = null, MemoryStorage? storage = null) => new(
         new ChatRepository(s), new UserRepository(s), new BranchRepository(s), new PositionRepository(s), publisher ?? new RecordingPublisher(),
-        storage ?? new MemoryStorage(), new TestUser(user), NullLogger<ChatService>.Instance);
+        storage ?? new MemoryStorage(), new TestUser(user), s, NullLogger<ChatService>.Instance);
 
     // ------------------------------------------------------------------ dữ liệu
 
@@ -328,5 +335,143 @@ public class ChatServiceTests
         Assert.Empty((await chat.GetContactsAsync(new ChatContactFilter { Search = me.EmployeeCode })).Items); // không tự nhắn cho mình
         Assert.Empty((await chat.GetContactsAsync(new ChatContactFilter { Search = left.EmployeeCode })).Items); // đã nghỉ việc
         Assert.True((await chat.GetContactsAsync(new ChatContactFilter { PageSize = 1000 })).PageSize <= ChatService.MaxContactPageSize);
+    }
+
+    // ------------------------------------------------------------------ nhóm tùy chỉnh (UC 7.2)
+
+    [SkippableFact]
+    public async Task Custom_group_is_created_by_anyone_and_validates_title_and_members()
+    {
+        Skip.IfNot(_db.IsAvailable, _db.SkipReason);
+        await using var s = _db.CreateSession();
+        var owner = await NewUserAsync(s);
+        var b = await NewUserAsync(s);
+        var c = await NewUserAsync(s);
+        var outsider = await NewUserAsync(s);
+        var gone = await NewUserAsync(s, status: UserStatus.Suspended);
+        var publisher = new RecordingPublisher();
+        var chat = As(s, owner, publisher);
+
+        // Tạo nhóm: tên được cắt khoảng trắng, người tạo tự là thành viên và quản trị nhóm, trùng / chính mình bị bỏ qua
+        var group = await chat.CreateGroupAsync(new CreateGroupRequest { Title = "  Nhóm Quầy bar  ", MemberIds = new List<int> { b.Id, c.Id, b.Id, owner.Id } });
+        Assert.Equal(("Nhóm Quầy bar", ConversationType.Group, 3, true, (int?)owner.Id), (group.Title, group.Type, group.MemberCount, group.IsCustomGroup, group.OwnerId));
+        Assert.Null(group.BranchId);
+        Assert.Equal(new[] { owner.Id, b.Id, c.Id }.OrderBy(x => x), publisher.Updated.Single().Users.OrderBy(x => x)); // mọi thành viên được báo để nạp lại danh sách
+
+        // Mọi thành viên thấy nhóm; người ngoài không đọc / gửi được; nhóm tùy chỉnh trùng tên vẫn tạo được
+        Assert.Contains(await As(s, b).GetConversationsAsync(), x => x.Id == group.Id && x.OwnerId == owner.Id && x.IsCustomGroup);
+        Assert.DoesNotContain(await As(s, outsider).GetConversationsAsync(), x => x.Id == group.Id);
+        await Assert.ThrowsAsync<ForbiddenException>(() => As(s, outsider).GetMessagesAsync(group.Id, null, 10));
+        var twin = await chat.CreateGroupAsync(new CreateGroupRequest { Title = "Nhóm Quầy bar", MemberIds = new List<int> { b.Id } });
+        Assert.NotEqual(group.Id, twin.Id);
+
+        // Chat trong nhóm: người nhận có tin chưa đọc, người gửi thì không
+        await chat.SendTextAsync(group.Id, new SendMessageRequest { Content = "Chào cả nhóm" });
+        Assert.Equal(1, Assert.Single(await As(s, c).GetConversationsAsync(), x => x.Id == group.Id).UnreadCount);
+        Assert.Equal(0, Assert.Single(await chat.GetConversationsAsync(), x => x.Id == group.Id).UnreadCount);
+
+        // Kiểm tra đầu vào
+        await Assert.ThrowsAsync<BadRequestException>(() => chat.CreateGroupAsync(new CreateGroupRequest { Title = " x ", MemberIds = new List<int> { b.Id } }));
+        await Assert.ThrowsAsync<BadRequestException>(() => chat.CreateGroupAsync(new CreateGroupRequest { Title = new string('a', 101), MemberIds = new List<int> { b.Id } }));
+        await Assert.ThrowsAsync<BadRequestException>(() => chat.CreateGroupAsync(new CreateGroupRequest { Title = "Nhóm trống", MemberIds = new List<int>() }));
+        await Assert.ThrowsAsync<BadRequestException>(() => chat.CreateGroupAsync(new CreateGroupRequest { Title = "Chỉ mình tôi", MemberIds = new List<int> { owner.Id } }));
+        await Assert.ThrowsAsync<BadRequestException>(() => chat.CreateGroupAsync(new CreateGroupRequest { Title = "Có người nghỉ", MemberIds = new List<int> { b.Id, gone.Id } }));
+        await Assert.ThrowsAsync<BadRequestException>(() => chat.CreateGroupAsync(new CreateGroupRequest { Title = "Không tồn tại", MemberIds = new List<int> { -9 } }));
+        var tooMany = Enumerable.Range(1, ChatService.MaxGroupMembers).ToList();
+        await Assert.ThrowsAsync<BadRequestException>(() => chat.CreateGroupAsync(new CreateGroupRequest { Title = "Quá đông", MemberIds = tooMany }));
+    }
+
+    [SkippableFact]
+    public async Task Only_the_group_admin_renames_and_adds_members_and_branch_groups_are_off_limits()
+    {
+        Skip.IfNot(_db.IsAvailable, _db.SkipReason);
+        await using var s = _db.CreateSession();
+        var branch = await NewBranchAsync(s);
+        var owner = await NewUserAsync(s, branch);
+        var member = await NewUserAsync(s, branch);
+        var newcomer = await NewUserAsync(s);
+        var gone = await NewUserAsync(s, status: UserStatus.Left);
+        var publisher = new RecordingPublisher();
+        var chat = As(s, owner, publisher);
+        var group = await chat.CreateGroupAsync(new CreateGroupRequest { Title = "Nhóm cũ", MemberIds = new List<int> { member.Id } });
+        await chat.SendTextAsync(group.Id, new SendMessageRequest { Content = "Tin cũ" });
+
+        // Đổi tên: chỉ quản trị nhóm; mọi thành viên được báo
+        publisher.Updated.Clear();
+        Assert.Equal("Nhóm mới", (await chat.RenameGroupAsync(group.Id, new RenameGroupRequest { Title = " Nhóm mới " })).Title);
+        Assert.Equal(new[] { owner.Id, member.Id }.OrderBy(x => x), publisher.Updated.Single().Users.OrderBy(x => x));
+        Assert.Equal("Nhóm mới", Assert.Single(await As(s, member).GetConversationsAsync(), x => x.Id == group.Id).Title);
+        await Assert.ThrowsAsync<ForbiddenException>(() => As(s, member).RenameGroupAsync(group.Id, new RenameGroupRequest { Title = "Tôi đổi" }));
+        await Assert.ThrowsAsync<BadRequestException>(() => chat.RenameGroupAsync(group.Id, new RenameGroupRequest { Title = "x" }));
+
+        // Thêm thành viên: người mới không bị tính "chưa đọc" cả lịch sử, vẫn đọc được lịch sử; người đã có / không hợp lệ bị từ chối
+        publisher.Updated.Clear();
+        var detail = await chat.AddMembersAsync(group.Id, new AddMembersRequest { UserIds = new List<int> { newcomer.Id, member.Id, newcomer.Id } });
+        Assert.Equal(3, detail.Members.Count);
+        Assert.Equal(3, detail.Conversation.MemberCount);
+        Assert.Contains(newcomer.Id, publisher.Updated.Single().Users);
+        var forNewcomer = Assert.Single(await As(s, newcomer).GetConversationsAsync(), x => x.Id == group.Id);
+        Assert.Equal(0, forNewcomer.UnreadCount);
+        Assert.Equal(new[] { "Tin cũ" }, (await As(s, newcomer).GetMessagesAsync(group.Id, null, 10)).Items.Select(m => m.Content));
+        await Assert.ThrowsAsync<BadRequestException>(() => chat.AddMembersAsync(group.Id, new AddMembersRequest { UserIds = new List<int> { member.Id } }));
+        await Assert.ThrowsAsync<BadRequestException>(() => chat.AddMembersAsync(group.Id, new AddMembersRequest { UserIds = new List<int> { gone.Id } }));
+        await Assert.ThrowsAsync<ForbiddenException>(() => As(s, member).AddMembersAsync(group.Id, new AddMembersRequest { UserIds = new List<int> { gone.Id } }));
+        await Assert.ThrowsAsync<ForbiddenException>(() => As(s, gone).AddMembersAsync(group.Id, new AddMembersRequest { UserIds = new List<int> { gone.Id } })); // người ngoài nhóm
+
+        // Nhóm chi nhánh và chat 1-1 do hệ thống quản lý: không đổi tên / thêm / xóa thành viên
+        var branchGroup = Assert.Single(await chat.GetConversationsAsync(), x => x.BranchId == branch);
+        Assert.False(branchGroup.IsCustomGroup);
+        Assert.Null(branchGroup.OwnerId);
+        await Assert.ThrowsAsync<BadRequestException>(() => chat.RenameGroupAsync(branchGroup.Id, new RenameGroupRequest { Title = "Tên khác" }));
+        await Assert.ThrowsAsync<BadRequestException>(() => chat.AddMembersAsync(branchGroup.Id, new AddMembersRequest { UserIds = new List<int> { newcomer.Id } }));
+        await Assert.ThrowsAsync<BadRequestException>(() => chat.RemoveMemberAsync(branchGroup.Id, member.Id));
+        var direct = await chat.GetOrCreateDirectAsync(member.Id);
+        Assert.False(direct.IsCustomGroup);
+        await Assert.ThrowsAsync<BadRequestException>(() => chat.RenameGroupAsync(direct.Id, new RenameGroupRequest { Title = "Đổi tên chat 1-1" }));
+    }
+
+    [SkippableFact]
+    public async Task Removing_and_leaving_hand_the_group_over_or_close_it()
+    {
+        Skip.IfNot(_db.IsAvailable, _db.SkipReason);
+        await using var s = _db.CreateSession();
+        var owner = await NewUserAsync(s);
+        var b = await NewUserAsync(s);
+        var c = await NewUserAsync(s);
+        var stranger = await NewUserAsync(s);
+        var publisher = new RecordingPublisher();
+        var chat = As(s, owner, publisher);
+        var group = await chat.CreateGroupAsync(new CreateGroupRequest { Title = "Nhóm tạm", MemberIds = new List<int> { b.Id } });
+        await chat.AddMembersAsync(group.Id, new AddMembersRequest { UserIds = new List<int> { c.Id } }); // vào sau b
+
+        // Quản trị nhóm xóa thành viên: người đó mất quyền ngay và vẫn được báo để bỏ phòng khỏi danh sách
+        publisher.Updated.Clear();
+        await chat.RemoveMemberAsync(group.Id, c.Id);
+        Assert.Contains(c.Id, publisher.Updated.Single().Users);
+        Assert.DoesNotContain(await As(s, c).GetConversationsAsync(), x => x.Id == group.Id);
+        await Assert.ThrowsAsync<ForbiddenException>(() => As(s, c).GetMessagesAsync(group.Id, null, 10));
+        Assert.Equal(2, (await chat.GetConversationAsync(group.Id)).Members.Count);
+
+        // Quyền xóa: thành viên thường không xóa được người khác; xóa người không ở trong nhóm bị từ chối
+        await Assert.ThrowsAsync<ForbiddenException>(() => As(s, b).RemoveMemberAsync(group.Id, owner.Id));
+        await Assert.ThrowsAsync<BadRequestException>(() => chat.RemoveMemberAsync(group.Id, stranger.Id));
+        await Assert.ThrowsAsync<ForbiddenException>(() => As(s, stranger).RemoveMemberAsync(group.Id, stranger.Id)); // người ngoài nhóm
+
+        // Thêm lại người đã bị xóa: hợp lệ; thành viên thường tự rời nhóm không đổi quản trị
+        await chat.AddMembersAsync(group.Id, new AddMembersRequest { UserIds = new List<int> { c.Id } });
+        await As(s, c).RemoveMemberAsync(group.Id, c.Id);
+        Assert.Equal(owner.Id, (await chat.GetConversationAsync(group.Id)).Conversation.OwnerId);
+
+        // Quản trị nhóm rời đi: thành viên vào sớm nhất (b) kế nhiệm; sau đó b quản trị được nhóm
+        await chat.RemoveMemberAsync(group.Id, owner.Id);
+        Assert.DoesNotContain(await chat.GetConversationsAsync(), x => x.Id == group.Id);
+        var asB = As(s, b);
+        Assert.Equal(b.Id, Assert.Single(await asB.GetConversationsAsync(), x => x.Id == group.Id).OwnerId);
+        Assert.Equal("Do b đổi", (await asB.RenameGroupAsync(group.Id, new RenameGroupRequest { Title = "Do b đổi" })).Title);
+
+        // Người cuối cùng rời đi: nhóm đóng lại
+        await asB.RemoveMemberAsync(group.Id, b.Id);
+        Assert.DoesNotContain(await asB.GetConversationsAsync(), x => x.Id == group.Id);
+        await Assert.ThrowsAsync<NotFoundException>(() => asB.GetConversationAsync(group.Id));
     }
 }

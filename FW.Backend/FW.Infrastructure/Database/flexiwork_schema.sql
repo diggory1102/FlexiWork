@@ -450,6 +450,7 @@ CREATE TABLE conversations (
     type VARCHAR(20) NOT NULL DEFAULT 'direct' COMMENT 'direct, group',
     title VARCHAR(150) NULL COMMENT 'Tên nhóm chat nếu là group',
     branch_id INT NULL COMMENT 'Gắn với chi nhánh cụ thể (nếu là nhóm chat chi nhánh)',
+    created_by INT NULL COMMENT 'Người tạo nhóm chat tùy chỉnh (quản trị nhóm, UC 7.2); NULL với chat 1-1 và nhóm chi nhánh',
     unique_key VARCHAR(60) NULL COMMENT 'direct:{id nhỏ}:{id lớn} hoặc branch:{id} — chống tạo trùng phòng chat',
     is_deleted TINYINT(1) NOT NULL DEFAULT 0,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,

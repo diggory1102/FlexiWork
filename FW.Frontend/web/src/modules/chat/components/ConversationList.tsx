@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react';
-import { Button } from '@astryxdesign/core/Button';
+import { IconButton } from '@astryxdesign/core/IconButton';
 import { Icon } from '@astryxdesign/core/Icon';
 import { HStack, VStack } from '@astryxdesign/core/Stack';
 import { Heading, Text } from '@astryxdesign/core/Text';
-import { SquarePen, Users } from 'lucide-react';
+import { SquarePen, Users, UsersRound } from 'lucide-react';
 import { Avatar } from '@/components/ui/Layout';
 import { SearchInput } from '@/components/ui/ListCard';
 import { Spinner } from '@/components/ui/Feedback';
@@ -30,12 +30,14 @@ export function ConversationList({
   activeId,
   onSelect,
   onNew,
+  onNewGroup,
 }: {
   conversations: Conversation[];
   loading: boolean;
   activeId: number | null;
   onSelect: (id: number) => void;
   onNew: () => void;
+  onNewGroup: () => void;
 }) {
   const [search, setSearch] = useState('');
   const filtered = useMemo(() => {
@@ -47,7 +49,10 @@ export function ConversationList({
     <VStack className="h-full min-h-0 border-r border-border">
       <HStack hAlign="between" vAlign="center" padding={3}>
         <Heading level={3}>Tin nhắn</Heading>
-        <Button label="Chat mới" variant="secondary" size="sm" icon={<Icon icon={SquarePen} />} onClick={onNew} />
+        <HStack gap={1}>
+          <IconButton label="Chat mới" tooltip="Chat mới (1-1)" variant="secondary" icon={<Icon icon={SquarePen} />} onClick={onNew} />
+          <IconButton label="Tạo nhóm" tooltip="Tạo nhóm chat" variant="secondary" icon={<Icon icon={UsersRound} />} onClick={onNewGroup} />
+        </HStack>
       </HStack>
       <div className="px-3 pb-3">
         <SearchInput placeholder="Tìm cuộc trò chuyện…" value={search} onChange={setSearch} width="100%" />
@@ -60,7 +65,7 @@ export function ConversationList({
         )}
         {!loading && filtered.length === 0 && (
           <Text type="supporting" className="block p-6 text-center">
-            {search ? 'Không tìm thấy cuộc trò chuyện nào.' : 'Chưa có cuộc trò chuyện nào. Bấm “Chat mới” để bắt đầu.'}
+            {search ? 'Không tìm thấy cuộc trò chuyện nào.' : 'Chưa có cuộc trò chuyện nào. Bấm “Chat mới” hoặc “Tạo nhóm” để bắt đầu.'}
           </Text>
         )}
         {filtered.map((c) => (

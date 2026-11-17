@@ -37,6 +37,7 @@ export function NewChatModal({ open, onClose, onOpened }: { open: boolean; onClo
 
   return (
     <Modal open={open} onClose={onClose} title="Chat mới" description="Chọn một người để nhắn tin." size="sm" footer={<Button label="Đóng" variant="secondary" onClick={onClose} />}>
+      {open && (
       <VStack gap={3}>
         <SearchInput
           placeholder="Tìm theo tên hoặc mã nhân viên…"
@@ -68,6 +69,7 @@ export function NewChatModal({ open, onClose, onOpened }: { open: boolean; onClo
         </VStack>
         {data && <Pagination page={data} onChange={setPageIndex} />}
       </VStack>
+      )}
     </Modal>
   );
 }

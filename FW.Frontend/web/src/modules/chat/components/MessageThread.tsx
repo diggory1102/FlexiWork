@@ -5,7 +5,7 @@ import { IconButton } from '@astryxdesign/core/IconButton';
 import { Lightbox } from '@astryxdesign/core/Lightbox';
 import { HStack, VStack } from '@astryxdesign/core/Stack';
 import { Text } from '@astryxdesign/core/Text';
-import { ImagePlus, SendHorizontal, Undo2 } from 'lucide-react';
+import { ImagePlus, Info, SendHorizontal, Undo2 } from 'lucide-react';
 import { Avatar } from '@/components/ui/Layout';
 import { Notice, Spinner } from '@/components/ui/Feedback';
 import { ConfirmDialog } from '@/components/ui/Modal';
@@ -17,6 +17,7 @@ import { toast } from '@/stores/toastStore';
 import { MAX_IMAGE_BYTES, MAX_MESSAGE_LENGTH, type ChatMessage, type Conversation } from '@/types/chat';
 import { dayLabel, groupMessages } from '../chatUi';
 import { ConversationAvatar } from './ConversationList';
+import { GroupInfoDrawer } from './GroupInfoDrawer';
 
 const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'];
 const NEAR_BOTTOM_PX = 160;
@@ -33,6 +34,7 @@ export function MessageThread({ conversation, myId }: { conversation: Conversati
   const [sending, setSending] = useState(false);
   const [recalling, setRecalling] = useState<ChatMessage | null>(null);
   const [photo, setPhoto] = useState<string | null>(null);
+  const [showInfo, setShowInfo] = useState(false);
   const scroller = useRef<HTMLDivElement>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const stickToBottom = useRef(true);
@@ -180,8 +182,11 @@ export function MessageThread({ conversation, myId }: { conversation: Conversati
           <Text weight="semibold" maxLines={1}>
             {conversation.title}
           </Text>
-          <Text type="supporting">{isGroupChat ? `${conversation.memberCount} thành viên` : 'Chat trực tiếp'}</Text>
+          <Text type="supporting">{isGroupChat ? `${conversation.memberCount} thành viên${conversation.isCustomGroup ? '' : ' · nhóm chi nhánh'}` : 'Chat trực tiếp'}</Text>
         </VStack>
+        {isGroupChat && (
+          <IconButton variant="ghost" label="Thông tin nhóm" tooltip="Thông tin nhóm" icon={<Icon icon={Info} />} className="ml-auto" onClick={() => setShowInfo(true)} />
+        )}
       </HStack>
 
       <div ref={scroller} className="min-h-0 flex-1 overflow-y-auto px-4 py-3" aria-live="polite">
@@ -270,6 +275,7 @@ export function MessageThread({ conversation, myId }: { conversation: Conversati
         onConfirm={() => void recall()}
         onClose={() => setRecalling(null)}
       />
+      {isGroupChat && <GroupInfoDrawer conversation={conversation} myId={myId} open={showInfo} onClose={() => setShowInfo(false)} />}
       {photo && <Lightbox isOpen onOpenChange={(isOpen) => !isOpen && setPhoto(null)} media={{ src: photo, alt: 'Ảnh trong cuộc trò chuyện' }} hasZoom />}
     </VStack>
   );

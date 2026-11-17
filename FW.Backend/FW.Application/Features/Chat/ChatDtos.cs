@@ -12,6 +12,8 @@ public record ChatUserDto(int Id, string FullName, string? AvatarUrl);
 public record LastMessageDto(long Id, int SenderId, string SenderName, string Preview, DateTime CreatedAt);
 
 /// <summary>Một phòng chat trong danh sách của tôi. Chat trực tiếp: <see cref="Title"/> / <see cref="AvatarUrl"/> là của người kia.</summary>
+/// <param name="IsCustomGroup">Nhóm tùy chỉnh (UC 7.2): đổi tên / thêm / xóa thành viên được. Nhóm chi nhánh do hệ thống quản lý.</param>
+/// <param name="OwnerId">Quản trị nhóm tùy chỉnh (người tạo, hoặc người kế nhiệm khi người tạo rời nhóm); null với phòng khác.</param>
 public record ConversationDto(
     int Id,
     string Type,
@@ -22,7 +24,9 @@ public record ConversationDto(
     ChatUserDto? OtherUser,
     LastMessageDto? LastMessage,
     int UnreadCount,
-    DateTime LastActivityAt)
+    DateTime LastActivityAt,
+    bool IsCustomGroup,
+    int? OwnerId)
 {
     public static ConversationDto From(ConversationRow r)
     {
@@ -32,7 +36,8 @@ public record ConversationDto(
             ? new LastMessageDto(messageId, r.LastSenderId ?? 0, r.LastSenderName ?? "—", Preview(r.LastContent, r.LastHasImage), r.LastMessageAt ?? r.CreatedAt)
             : null;
         return new ConversationDto(r.Id, r.Type, isDirect ? other?.FullName ?? "Người dùng" : r.Title ?? "Nhóm chat", other?.AvatarUrl,
-            r.BranchId, r.MemberCount, other, last, r.UnreadCount, r.LastMessageAt ?? r.CreatedAt);
+            r.BranchId, r.MemberCount, other, last, r.UnreadCount, r.LastMessageAt ?? r.CreatedAt,
+            r.Type == ConversationType.Group && r.BranchId is null, r.CreatedBy);
     }
 
     public static string Preview(string? content, bool hasImage)
@@ -64,6 +69,30 @@ public class SendMessageRequest
     [Required(ErrorMessage = "Vui lòng nhập nội dung tin nhắn.")]
     [MaxLength(ChatService.MaxContentLength, ErrorMessage = "Tin nhắn tối đa 2000 ký tự.")]
     public string Content { get; set; } = string.Empty;
+}
+
+public class CreateGroupRequest
+{
+    [Required(ErrorMessage = "Vui lòng nhập tên nhóm.")]
+    [StringLength(ChatService.MaxGroupTitleLength, MinimumLength = 2, ErrorMessage = "Tên nhóm từ 2 đến 100 ký tự.")]
+    public string Title { get; set; } = string.Empty;
+
+    /// <summary>Các thành viên ban đầu (không cần ghi người tạo — luôn có trong nhóm).</summary>
+    [Required(ErrorMessage = "Vui lòng chọn thành viên.")]
+    public List<int> MemberIds { get; set; } = new();
+}
+
+public class RenameGroupRequest
+{
+    [Required(ErrorMessage = "Vui lòng nhập tên nhóm.")]
+    [StringLength(ChatService.MaxGroupTitleLength, MinimumLength = 2, ErrorMessage = "Tên nhóm từ 2 đến 100 ký tự.")]
+    public string Title { get; set; } = string.Empty;
+}
+
+public class AddMembersRequest
+{
+    [Required(ErrorMessage = "Vui lòng chọn thành viên.")]
+    public List<int> UserIds { get; set; } = new();
 }
 
 public class OpenDirectRequest

@@ -37,6 +37,20 @@ public interface IChatService
 
     /// <summary>Tìm người để nhắn tin (mọi nhân sự đang hoạt động trừ chính mình).</summary>
     Task<PaginatedResult<ChatContactDto>> GetContactsAsync(ChatContactFilter filter, CancellationToken cancellationToken = default);
+
+    // ------------------------------------------------------------------ Nhóm tùy chỉnh (UC 7.2)
+
+    /// <summary>Tạo nhóm chat tùy chỉnh: tôi là quản trị nhóm.</summary>
+    Task<ConversationDto> CreateGroupAsync(CreateGroupRequest request, CancellationToken cancellationToken = default);
+
+    /// <summary>Đổi tên nhóm (quản trị nhóm).</summary>
+    Task<ConversationDto> RenameGroupAsync(int conversationId, RenameGroupRequest request, CancellationToken cancellationToken = default);
+
+    /// <summary>Thêm thành viên (quản trị nhóm). Người đã có trong nhóm được bỏ qua.</summary>
+    Task<ConversationDetailDto> AddMembersAsync(int conversationId, AddMembersRequest request, CancellationToken cancellationToken = default);
+
+    /// <summary>Xóa một thành viên khỏi nhóm (quản trị nhóm), hoặc tự rời nhóm khi <paramref name="userId"/> là chính mình.</summary>
+    Task RemoveMemberAsync(int conversationId, int userId, CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -50,6 +64,8 @@ public class ChatService : IChatService
     public const int DefaultPageSize = 30;
     public const int MaxPageSize = 100;
     public const int MaxContactPageSize = 50;
+    public const int MaxGroupTitleLength = 100;
+    public const int MaxGroupMembers = 100;
     public const long MaxImageBytes = 5 * 1024 * 1024;
     public const string StorageFolder = "chat";
     private static readonly IReadOnlyList<string> AllowedImageTypes = new[] { "image/jpeg", "image/png", "image/webp", "image/heic", "image/heif" };
@@ -61,11 +77,13 @@ public class ChatService : IChatService
     private readonly IChatPublisher _publisher;
     private readonly IFileStorageService _storage;
     private readonly ICurrentUserService _currentUser;
+    private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<ChatService> _logger;
 
     public ChatService(IChatRepository chat, IUserRepository users, IBranchRepository branches, IPositionRepository positions,
-        IChatPublisher publisher, IFileStorageService storage, ICurrentUserService currentUser, ILogger<ChatService> logger)
+        IChatPublisher publisher, IFileStorageService storage, ICurrentUserService currentUser, IUnitOfWork unitOfWork, ILogger<ChatService> logger)
     {
+        _unitOfWork = unitOfWork;
         _chat = chat;
         _users = users;
         _branches = branches;
@@ -227,6 +245,109 @@ public class ChatService : IChatService
             u.BranchId is { } b && branches.TryGetValue(b, out var branch) ? branch : null,
             u.PositionId is { } p && positions.TryGetValue(p, out var position) ? position : null)).ToList();
         return PaginatedResult<ChatContactDto>.Create(contacts, page.TotalCount - (page.Items.Count - contacts.Count), page.PageIndex, page.PageSize);
+    }
+
+    // ------------------------------------------------------------------ Nhóm tùy chỉnh (UC 7.2)
+
+    public async Task<ConversationDto> CreateGroupAsync(CreateGroupRequest request, CancellationToken cancellationToken = default)
+    {
+        var me = CurrentUserId;
+        var title = NormalizeGroupTitle(request.Title);
+        var memberIds = request.MemberIds.Where(id => id != me).Distinct().ToList();
+        if (memberIds.Count == 0) throw new BadRequestException("Nhóm cần có ít nhất một thành viên khác ngoài bạn.");
+        if (memberIds.Count + 1 > MaxGroupMembers) throw new BadRequestException($"Nhóm tối đa {MaxGroupMembers} thành viên.");
+        await EnsureActiveUsersAsync(memberIds, cancellationToken);
+
+        var id = await _unitOfWork.ExecuteInTransactionAsync(ct => _chat.CreateGroupAsync(title, me, memberIds, ct), cancellationToken);
+        await PublishUpdatedAsync(memberIds.Append(me).ToList(), id);
+        return ConversationDto.From(await _chat.GetConversationRowAsync(id, me, cancellationToken) ?? throw new NotFoundException("Phòng chat", id));
+    }
+
+    public async Task<ConversationDto> RenameGroupAsync(int conversationId, RenameGroupRequest request, CancellationToken cancellationToken = default)
+    {
+        await RequireGroupOwnerAsync(conversationId, cancellationToken);
+        await _chat.RenameGroupAsync(conversationId, NormalizeGroupTitle(request.Title), cancellationToken);
+        await PublishUpdatedAsync(await _chat.GetMemberIdsAsync(conversationId, cancellationToken), conversationId);
+        return ConversationDto.From(await _chat.GetConversationRowAsync(conversationId, CurrentUserId, cancellationToken) ?? throw new NotFoundException("Phòng chat", conversationId));
+    }
+
+    public async Task<ConversationDetailDto> AddMembersAsync(int conversationId, AddMembersRequest request, CancellationToken cancellationToken = default)
+    {
+        await RequireGroupOwnerAsync(conversationId, cancellationToken);
+        var existing = await _chat.GetMemberIdsAsync(conversationId, cancellationToken);
+        var newIds = request.UserIds.Distinct().Where(id => !existing.Contains(id)).ToList();
+        if (newIds.Count == 0) throw new BadRequestException("Những người này đã ở trong nhóm.");
+        if (existing.Count + newIds.Count > MaxGroupMembers) throw new BadRequestException($"Nhóm tối đa {MaxGroupMembers} thành viên.");
+        await EnsureActiveUsersAsync(newIds, cancellationToken);
+
+        await _chat.AddMembersAsync(conversationId, newIds, cancellationToken);
+        await PublishUpdatedAsync(await _chat.GetMemberIdsAsync(conversationId, cancellationToken), conversationId);
+        return await GetConversationAsync(conversationId, cancellationToken);
+    }
+
+    public async Task RemoveMemberAsync(int conversationId, int userId, CancellationToken cancellationToken = default)
+    {
+        var me = CurrentUserId;
+        var group = await RequireMemberAsync(conversationId, cancellationToken);
+        if (!group.IsCustomGroup) throw new BadRequestException("Chỉ nhóm chat tùy chỉnh mới thêm / xóa thành viên được; nhóm chi nhánh do hệ thống quản lý.");
+        var before = await _chat.GetMemberIdsAsync(conversationId, cancellationToken);
+
+        if (userId != me)
+        {
+            if (group.CreatedBy != me) throw new ForbiddenException("Chỉ quản trị nhóm mới xóa được thành viên khác.");
+            if (!before.Contains(userId)) throw new BadRequestException("Người này không ở trong nhóm.");
+            await _chat.RemoveMemberAsync(conversationId, userId, cancellationToken);
+        }
+        else
+        {
+            await _unitOfWork.ExecuteInTransactionAsync(async ct =>
+            {
+                await _chat.RemoveMemberAsync(conversationId, me, ct);
+                if (group.CreatedBy != me) return;
+                // Quản trị nhóm rời đi: người vào nhóm sớm nhất kế nhiệm; hết người thì đóng nhóm
+                if (await _chat.GetOldestMemberAsync(conversationId, me, ct) is { } successor) await _chat.SetGroupOwnerAsync(conversationId, successor, ct);
+                else await _chat.DeleteConversationAsync(conversationId, ct);
+            }, cancellationToken);
+        }
+
+        await PublishUpdatedAsync(before, conversationId); // gồm cả người vừa rời / bị xóa để thiết bị của họ bỏ phòng khỏi danh sách
+    }
+
+    private static string NormalizeGroupTitle(string? title)
+    {
+        var value = title?.Trim() ?? string.Empty;
+        if (value.Length < 2 || value.Length > MaxGroupTitleLength) throw new BadRequestException($"Tên nhóm từ 2 đến {MaxGroupTitleLength} ký tự.");
+        return value;
+    }
+
+    private async Task EnsureActiveUsersAsync(IReadOnlyCollection<int> userIds, CancellationToken cancellationToken)
+    {
+        foreach (var id in userIds)
+        {
+            var user = await _users.GetByIdAsync(id, cancellationToken);
+            if (user is null || user.Status != UserStatus.Active) throw new BadRequestException("Có người không tồn tại hoặc đã ngừng làm việc.");
+        }
+    }
+
+    /// <summary>Phòng phải là nhóm tùy chỉnh và tôi là quản trị nhóm.</summary>
+    private async Task<Conversation> RequireGroupOwnerAsync(int conversationId, CancellationToken cancellationToken)
+    {
+        var group = await RequireMemberAsync(conversationId, cancellationToken);
+        if (!group.IsCustomGroup) throw new BadRequestException("Chỉ nhóm chat tùy chỉnh mới đổi tên / thêm thành viên được; nhóm chi nhánh do hệ thống quản lý.");
+        if (group.CreatedBy != CurrentUserId) throw new ForbiddenException("Chỉ quản trị nhóm (người tạo nhóm) mới thực hiện được thao tác này.");
+        return group;
+    }
+
+    private async Task PublishUpdatedAsync(IReadOnlyCollection<int> userIds, int conversationId)
+    {
+        try
+        {
+            await _publisher.ConversationUpdatedAsync(userIds, conversationId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Không đẩy được sự kiện cập nhật nhóm chat {ConversationId}", conversationId);
+        }
     }
 
     // ------------------------------------------------------------------ Tiện ích
