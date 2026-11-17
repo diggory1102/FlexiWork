@@ -158,6 +158,9 @@ public static class DependencyInjection
         services.AddScoped<INotificationRepository, NotificationRepository>();
         services.AddScoped<IChatRepository, ChatRepository>();
         services.AddScoped<ITimesheetRepository, TimesheetRepository>();
+        services.AddScoped<IAllowanceRepository, AllowanceRepository>();
+        services.AddScoped<IUserAllowanceRepository, UserAllowanceRepository>();
+        services.AddScoped<IPayrollConfigRepository, PayrollConfigRepository>();
         services.AddScoped<IShiftTaskAssignmentRepository, ShiftTaskAssignmentRepository>();
 
         return services;

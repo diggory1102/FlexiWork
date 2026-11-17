@@ -37,6 +37,11 @@ public class EntitySchemaMappingTests
         { typeof(MonthlyTimesheet), "monthly_timesheets" },
         { typeof(Conversation), "conversations" },
         { typeof(Message), "messages" },
+        { typeof(Allowance), "allowances" },
+        { typeof(UserAllowance), "user_allowances" },
+        { typeof(PayrollPeriod), "payroll_periods" },
+        { typeof(Payslip), "payslips" },
+        { typeof(PayslipItem), "payslip_items" },
     };
 
     [Theory]

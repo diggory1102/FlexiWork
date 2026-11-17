@@ -112,7 +112,19 @@ ON DUPLICATE KEY UPDATE description = description;
 
 INSERT INTO system_settings (setting_key, setting_value, description) VALUES
 ('standard_work_days', '26', 'Số công chuẩn trong tháng (dùng tính lương nhân viên toàn thời gian)'),
-('annual_leave_days', '12', 'Số ngày phép năm mặc định của mỗi nhân viên (khi chưa khởi tạo quỹ phép riêng)')
+('annual_leave_days', '12', 'Số ngày phép năm mặc định của mỗi nhân viên (khi chưa khởi tạo quỹ phép riêng)'),
+('overtime_multiplier', '1.5', 'Hệ số tiền làm thêm giờ (OT) so với đơn giá giờ')
 ON DUPLICATE KEY UPDATE setting_key = setting_key;
+
+-- 14. Phụ cấp mặc định (HR sửa được trên Web Admin)
+INSERT INTO allowances (id, name, basis, amount, apply_to_all, description) VALUES
+(1, 'Phụ cấp ca đêm', 'night_shift', 30000, 1, 'Mỗi ca đêm đã làm'),
+(2, 'Phụ cấp ca gãy', 'split_day', 20000, 1, 'Mỗi ngày làm ca gãy'),
+(3, 'Phụ cấp ăn trưa', 'monthly', 500000, 0, 'Cố định theo tháng, gán riêng cho từng nhân viên')
+ON DUPLICATE KEY UPDATE name = VALUES(name);
+
+-- Lương cơ bản mẫu cho nhân viên toàn thời gian (theo chức vụ)
+UPDATE users SET base_salary = CASE position_id WHEN 1 THEN 40000000 WHEN 2 THEN 20000000 WHEN 3 THEN 15000000 ELSE 9000000 END
+WHERE employment_type = 'full_time' AND base_salary IS NULL;
 
 SET FOREIGN_KEY_CHECKS = 1;

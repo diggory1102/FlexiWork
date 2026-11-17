@@ -15,6 +15,11 @@ USE flexiwork_db;
 -- Tắt kiểm tra khóa ngoại tạm thời để khởi tạo/reset an toàn
 SET FOREIGN_KEY_CHECKS = 0;
 
+DROP TABLE IF EXISTS payslip_items;
+DROP TABLE IF EXISTS payslips;
+DROP TABLE IF EXISTS payroll_periods;
+DROP TABLE IF EXISTS user_allowances;
+DROP TABLE IF EXISTS allowances;
 DROP TABLE IF EXISTS monthly_timesheets;
 DROP TABLE IF EXISTS notifications;
 DROP TABLE IF EXISTS messages;
@@ -119,6 +124,8 @@ CREATE TABLE users (
     position_id INT NULL,
     employment_type VARCHAR(20) NOT NULL DEFAULT 'full_time' COMMENT 'Loại hợp đồng: full_time, part_time',
     hire_date DATE NULL COMMENT 'Ngày vào làm',
+    base_salary DECIMAL(14, 0) NULL COMMENT 'Lương cơ bản tháng (toàn thời gian); NULL = chưa cấu hình',
+    hourly_rate DECIMAL(12, 2) NULL COMMENT 'Đơn giá giờ riêng (bán thời gian); NULL = theo chức vụ',
     status VARCHAR(20) NOT NULL DEFAULT 'active' COMMENT 'active, suspended, left',
     must_change_password TINYINT(1) NOT NULL DEFAULT 0 COMMENT '1: Bắt buộc đổi mật khẩu tạm ở lần đăng nhập tới',
     password_changed_at DATETIME NULL COMMENT 'Lần đổi mật khẩu gần nhất (UTC) — JWT cấp trước thời điểm này bị thu hồi',
@@ -543,3 +550,103 @@ CREATE TABLE monthly_timesheets (
     INDEX idx_timesheet_month (year, month, status),
     INDEX idx_timesheet_branch_month (branch_id, year, month)
 ) ENGINE=InnoDB COMMENT='Bảng tổng hợp công tháng phục vụ chốt lương';
+
+
+-- =============================================================================
+-- 9. NHÓM BẢNG LƯƠNG (Task 5.4 – 5.5): phụ cấp, kỳ lương, phiếu lương
+-- =============================================================================
+
+-- 9.1. Danh mục phụ cấp (Allowances)
+CREATE TABLE allowances (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    basis VARCHAR(20) NOT NULL DEFAULT 'monthly' COMMENT 'Cách tính: monthly (cố định tháng), night_shift (mỗi ca đêm), split_day (mỗi ngày ca gãy)',
+    amount DECIMAL(12, 0) NOT NULL DEFAULT 0 COMMENT 'Mức tiền mặc định (VNĐ) cho một đơn vị của basis',
+    apply_to_all TINYINT(1) NOT NULL DEFAULT 0 COMMENT '1: mọi nhân viên đều được hưởng; 0: chỉ người được gán',
+    is_active TINYINT(1) NOT NULL DEFAULT 1,
+    description VARCHAR(255) NULL,
+    is_deleted TINYINT(1) NOT NULL DEFAULT 0,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NULL ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB COMMENT='Danh mục phụ cấp do HR cấu hình';
+
+-- 9.2. Phụ cấp gán riêng cho nhân viên (User Allowances)
+CREATE TABLE user_allowances (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    allowance_id INT NOT NULL,
+    amount DECIMAL(12, 0) NULL COMMENT 'Mức tiền riêng; NULL = dùng mức của danh mục',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NULL ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_user_allowance (user_id, allowance_id),
+    CONSTRAINT fk_user_allowance_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_user_allowance_allowance FOREIGN KEY (allowance_id) REFERENCES allowances(id) ON DELETE CASCADE
+) ENGINE=InnoDB COMMENT='Phụ cấp gán riêng cho từng nhân viên (có thể ghi đè mức tiền)';
+
+-- 9.3. Kỳ lương (Payroll Periods)
+CREATE TABLE payroll_periods (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    month TINYINT NOT NULL,
+    year SMALLINT NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'draft' COMMENT 'draft: tính lại được; finalized: đã chốt',
+    standard_work_days DECIMAL(5, 2) NOT NULL DEFAULT 26.00 COMMENT 'Số công chuẩn tại lúc tính',
+    overtime_multiplier DECIMAL(4, 2) NOT NULL DEFAULT 1.50 COMMENT 'Hệ số OT tại lúc tính',
+    employee_count INT NOT NULL DEFAULT 0,
+    total_net DECIMAL(16, 0) NOT NULL DEFAULT 0 COMMENT 'Tổng thực nhận của kỳ',
+    calculated_at DATETIME NULL,
+    created_by INT NULL,
+    finalized_by INT NULL,
+    finalized_at DATETIME NULL,
+    note VARCHAR(255) NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NULL ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_payroll_period (year, month),
+    CONSTRAINT fk_period_created_by FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
+    CONSTRAINT fk_period_finalized_by FOREIGN KEY (finalized_by) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB COMMENT='Kỳ lương tháng';
+
+-- 9.4. Phiếu lương (Payslips)
+CREATE TABLE payslips (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    period_id INT NOT NULL,
+    user_id INT NOT NULL,
+    branch_id INT NULL,
+    timesheet_id BIGINT NULL,
+    employment_type VARCHAR(20) NOT NULL DEFAULT 'full_time',
+    base_salary DECIMAL(14, 0) NOT NULL DEFAULT 0 COMMENT 'Lương cơ bản tháng tại lúc tính',
+    hourly_rate DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT 'Đơn giá giờ tại lúc tính',
+    standard_work_days DECIMAL(5, 2) NOT NULL DEFAULT 0,
+    work_days DECIMAL(6, 2) NOT NULL DEFAULT 0,
+    work_hours DECIMAL(7, 2) NOT NULL DEFAULT 0,
+    overtime_hours DECIMAL(7, 2) NOT NULL DEFAULT 0,
+    basic_pay DECIMAL(14, 0) NOT NULL DEFAULT 0 COMMENT 'Lương theo công thực tế',
+    allowance_total DECIMAL(14, 0) NOT NULL DEFAULT 0,
+    overtime_pay DECIMAL(14, 0) NOT NULL DEFAULT 0,
+    penalty_total DECIMAL(14, 0) NOT NULL DEFAULT 0 COMMENT 'Tổng tiền phạt (số dương)',
+    net_pay DECIMAL(14, 0) NOT NULL DEFAULT 0 COMMENT 'Thực nhận = lương + phụ cấp + OT - phạt',
+    status VARCHAR(20) NOT NULL DEFAULT 'draft' COMMENT 'draft: chưa gửi; sent: đã gửi nhân viên',
+    sent_at DATETIME NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NULL ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_payslip_period_user (period_id, user_id),
+    CONSTRAINT fk_payslip_period FOREIGN KEY (period_id) REFERENCES payroll_periods(id) ON DELETE CASCADE,
+    CONSTRAINT fk_payslip_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_payslip_branch FOREIGN KEY (branch_id) REFERENCES branches(id) ON DELETE SET NULL,
+    CONSTRAINT fk_payslip_timesheet FOREIGN KEY (timesheet_id) REFERENCES monthly_timesheets(id) ON DELETE SET NULL,
+    INDEX idx_payslip_user (user_id, period_id)
+) ENGINE=InnoDB COMMENT='Phiếu lương của một nhân viên trong kỳ (ảnh chụp số liệu lúc tính)';
+
+-- 9.5. Dòng chi tiết của phiếu lương (Payslip Items)
+CREATE TABLE payslip_items (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    payslip_id BIGINT NOT NULL,
+    kind VARCHAR(20) NOT NULL COMMENT 'basic, allowance, overtime, penalty, adjustment',
+    name VARCHAR(100) NOT NULL,
+    quantity DECIMAL(10, 2) NOT NULL DEFAULT 1,
+    unit_amount DECIMAL(14, 2) NOT NULL DEFAULT 0,
+    amount DECIMAL(14, 0) NOT NULL DEFAULT 0 COMMENT 'Thành tiền; khoản trừ là số âm',
+    note VARCHAR(255) NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_payslip_item_payslip FOREIGN KEY (payslip_id) REFERENCES payslips(id) ON DELETE CASCADE,
+    INDEX idx_payslip_items (payslip_id, kind)
+) ENGINE=InnoDB COMMENT='Từng khoản trên phiếu lương';

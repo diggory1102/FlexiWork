@@ -29,6 +29,12 @@ public class User : BaseAuditableEntity
     /// <summary>Ngày vào làm (chỉ dùng phần ngày).</summary>
     public DateTime? HireDate { get; set; }
 
+    /// <summary>Lương cơ bản tháng (VNĐ, toàn thời gian); null = chưa cấu hình. Chỉ Admin/HR xem được (Task 5.4).</summary>
+    public decimal? BaseSalary { get; set; }
+
+    /// <summary>Đơn giá giờ riêng (VNĐ); null = theo chức vụ.</summary>
+    public decimal? HourlyRate { get; set; }
+
     /// <summary>Giá trị thuộc <see cref="UserStatus"/>.</summary>
     public string Status { get; set; } = UserStatus.Active;
 

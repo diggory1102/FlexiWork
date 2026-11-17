@@ -6,6 +6,7 @@ using FW.Application.Features.Notifications;
 using FW.Application.Features.Organization;
 using FW.Application.Features.Requests;
 using FW.Application.Features.Scheduling;
+using FW.Application.Features.Payroll;
 using FW.Application.Features.Setup;
 using FW.Application.Features.ShiftTasks;
 using FW.Application.Features.Timesheets;
@@ -42,6 +43,7 @@ public static class DependencyInjection
         services.AddScoped<IShiftTaskService, ShiftTaskService>();
         services.AddScoped<INotifier, Notifier>();
         services.AddScoped<ITimesheetService, TimesheetService>();
+        services.AddScoped<IPayrollConfigService, PayrollConfigService>();
         services.AddScoped<ITimesheetGuard, TimesheetGuard>();
         services.AddScoped<IChatService, ChatService>();
         services.AddScoped<INotificationService, NotificationService>();
