@@ -4,6 +4,7 @@ using FW.Application.Common.Interfaces.Persistence;
 using FW.Application.Common.Models;
 using FW.Application.Common.Security;
 using FW.Application.Features.Notifications;
+using FW.Application.Features.Timesheets;
 using FW.Domain.Enums;
 
 namespace FW.Application.Features.Attendance;
@@ -34,13 +35,16 @@ public class AttendanceLogService : IAttendanceLogService
 
     private readonly IAttendanceLogRepository _logs;
     private readonly INotifier _notifier;
+    private readonly ITimesheetGuard _guard;
     private readonly ICurrentUserService _currentUser;
     private readonly IDateTimeProvider _clock;
 
-    public AttendanceLogService(IAttendanceLogRepository logs, INotifier notifier, ICurrentUserService currentUser, IDateTimeProvider clock)
+    public AttendanceLogService(IAttendanceLogRepository logs, INotifier notifier, ITimesheetGuard guard, ICurrentUserService currentUser,
+        IDateTimeProvider clock)
     {
         _logs = logs;
         _notifier = notifier;
+        _guard = guard;
         _currentUser = currentUser;
         _clock = clock;
     }
@@ -95,6 +99,8 @@ public class AttendanceLogService : IAttendanceLogService
         {
             throw new BadRequestException("Vui lòng ghi lý do từ chối.");
         }
+
+        await _guard.EnsureEditableAsync(log.UserId, log.WorkDate, log.WorkDate, cancellationToken);
 
         log.Status = approved ? AttendanceStatus.Valid : AttendanceStatus.Invalid;
         log.ReviewedBy = CurrentUserId;

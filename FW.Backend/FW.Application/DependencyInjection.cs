@@ -8,6 +8,7 @@ using FW.Application.Features.Requests;
 using FW.Application.Features.Scheduling;
 using FW.Application.Features.Setup;
 using FW.Application.Features.ShiftTasks;
+using FW.Application.Features.Timesheets;
 using FW.Application.Features.Users;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -40,6 +41,8 @@ public static class DependencyInjection
         services.AddScoped<ILeaveBalanceService, LeaveBalanceService>();
         services.AddScoped<IShiftTaskService, ShiftTaskService>();
         services.AddScoped<INotifier, Notifier>();
+        services.AddScoped<ITimesheetService, TimesheetService>();
+        services.AddScoped<ITimesheetGuard, TimesheetGuard>();
         services.AddScoped<IChatService, ChatService>();
         services.AddScoped<INotificationService, NotificationService>();
 

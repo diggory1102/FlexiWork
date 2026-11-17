@@ -144,4 +144,8 @@ public class UserRepository : BaseRepository<User>, IUserRepository
             """;
         return QueryAsync<int>(sql, new { Role = roleName, Active = FW.Domain.Enums.UserStatus.Active, BranchId = branchId }, cancellationToken);
     }
+
+    public Task<IReadOnlyList<int>> GetIdsByBranchAsync(int? branchId, CancellationToken cancellationToken = default) =>
+        QueryAsync<int>("SELECT `id` FROM `users` WHERE `is_deleted` = 0 AND (@BranchId IS NULL OR `branch_id` = @BranchId) ORDER BY `id`",
+            new { BranchId = branchId }, cancellationToken);
 }

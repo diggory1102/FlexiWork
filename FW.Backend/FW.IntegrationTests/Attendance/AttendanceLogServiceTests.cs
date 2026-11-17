@@ -1,6 +1,7 @@
 using FW.Application.Common.Exceptions;
 using FW.Application.Common.Interfaces;
 using FW.Application.Features.Attendance;
+using FW.Application.Features.Timesheets;
 using FW.Domain.Entities;
 using FW.Domain.Enums;
 using FW.Infrastructure.Database;
@@ -52,7 +53,7 @@ public class AttendanceLogServiceTests
     }
 
     private static AttendanceLogService Service(DbSession s, ICurrentUserService user, RecordingNotifier? notes = null) =>
-        new(new AttendanceLogRepository(s), notes ?? new RecordingNotifier(), user, new FixedClock());
+        new(new AttendanceLogRepository(s), notes ?? new RecordingNotifier(), new TimesheetGuard(new TimesheetRepository(s)), user, new FixedClock());
 
     private static readonly TestUser Manager1 = new(ManagerId, Branch1, RoleNames.Manager);
     private static readonly TestUser Hr = new(HrId, null, RoleNames.Hr);

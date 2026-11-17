@@ -2,6 +2,7 @@ using FW.Application.Common.Exceptions;
 using FW.Application.Common.Interfaces;
 using FW.Application.Features.Requests;
 using FW.Application.Features.Scheduling;
+using FW.Application.Features.Timesheets;
 using FW.Domain.Entities;
 using FW.Domain.Enums;
 using FW.Infrastructure.Database;
@@ -21,7 +22,7 @@ public partial class LeaveRequestServiceTests
     private static readonly TestUser Hr = new(HrId, null, RoleNames.Hr);
 
     private static LeaveApprovalService Approval(DbSession s, ICurrentUserService user, RecordingNotifier? notes = null) => new(
-        new LeaveRequestRepository(s), notes ?? new RecordingNotifier(), new LeaveBalanceRepository(s), new ScheduleRepository(s), new AttendanceLogRepository(s),
+        new LeaveRequestRepository(s), notes ?? new RecordingNotifier(), new TimesheetGuard(new TimesheetRepository(s)), new LeaveBalanceRepository(s), new ScheduleRepository(s), new AttendanceLogRepository(s),
         new SystemSettingRepository(s), Checker(s), s, user, new FixedClock(), NullLogger<LeaveApprovalService>.Instance);
 
     private static LeaveBalanceService Balances(DbSession s, ICurrentUserService user) => new(

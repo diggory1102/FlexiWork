@@ -4,6 +4,7 @@ using FW.Application.Common.Exceptions;
 using FW.Application.Common.Interfaces;
 using FW.Application.Common.Interfaces.Persistence;
 using FW.Application.Features.Notifications;
+using FW.Application.Features.Timesheets;
 using FW.Domain.Entities;
 using FW.Domain.Enums;
 using FW.Domain.Services;
@@ -48,6 +49,7 @@ public class LeaveApprovalService : ILeaveApprovalService
 
     private readonly ILeaveRequestRepository _requests;
     private readonly INotifier _notifier;
+    private readonly ITimesheetGuard _guard;
     private readonly ILeaveBalanceRepository _balances;
     private readonly IScheduleRepository _schedules;
     private readonly IAttendanceLogRepository _logs;
@@ -61,6 +63,7 @@ public class LeaveApprovalService : ILeaveApprovalService
     public LeaveApprovalService(
         ILeaveRequestRepository requests,
         INotifier notifier,
+        ITimesheetGuard guard,
         ILeaveBalanceRepository balances,
         IScheduleRepository schedules,
         IAttendanceLogRepository logs,
@@ -73,6 +76,7 @@ public class LeaveApprovalService : ILeaveApprovalService
     {
         _requests = requests;
         _notifier = notifier;
+        _guard = guard;
         _balances = balances;
         _schedules = schedules;
         _logs = logs;
@@ -113,6 +117,12 @@ public class LeaveApprovalService : ILeaveApprovalService
         }
         else
         {
+            // Duyệt làm thay đổi số liệu bảng công của các tháng đụng tới — chặn nếu đã khóa
+            await _guard.EnsureEditableAsync(request.UserId, request.StartDate, request.EndDate, cancellationToken);
+            if (request.TargetUserId is { } colleagueId)
+            {
+                await _guard.EnsureEditableAsync(colleagueId, request.StartDate, request.EndDate, cancellationToken);
+            }
             message = request.Category switch
             {
                 RequestCategory.Leave => await ApproveLeaveAsync(request, me, now, note, cancellationToken),

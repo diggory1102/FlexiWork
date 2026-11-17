@@ -95,9 +95,25 @@ public interface ILeaveRequestRepository : IGenericRepository<LeaveRequest>
     Task<bool> TryCompleteReviewAsync(int id, string status, int reviewerId, DateTime reviewedAt, string? note,
         CancellationToken cancellationToken = default);
 
+    /// <summary>Đơn OT đã duyệt của những nhân viên này có ngày bắt đầu trong khoảng ngày (OT qua nửa đêm tính theo ngày bắt đầu).</summary>
+    Task<IReadOnlyList<ApprovedOvertime>> GetApprovedOvertimeAsync(DateTime fromDate, DateTime toDate, IReadOnlyCollection<int> userIds,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>Mã các lượt chấm công (trong danh sách) đã có đơn giải trình được duyệt.</summary>
+    Task<IReadOnlyList<long>> GetApprovedExplanationLogIdsAsync(IReadOnlyCollection<long> attendanceLogIds, CancellationToken cancellationToken = default);
+
     /// <summary>Các đơn nghỉ đã duyệt của những nhân viên này giao với khoảng ngày.</summary>
     Task<IReadOnlyList<ApprovedLeave>> GetApprovedLeavesAsync(IEnumerable<int> userIds, DateTime fromDate, DateTime toDate,
         CancellationToken cancellationToken = default);
+}
+
+/// <summary>Đơn làm thêm giờ đã duyệt.</summary>
+public class ApprovedOvertime
+{
+    public int UserId { get; set; }
+    public DateTime StartAt { get; set; }
+    public DateTime EndAt { get; set; }
+    public decimal DurationHours { get; set; }
 }
 
 /// <summary>Khoảng ngày nghỉ đã được duyệt của một nhân viên.</summary>
@@ -107,6 +123,9 @@ public class ApprovedLeave
     public DateTime StartDate { get; set; }
     public DateTime EndDate { get; set; }
     public string LeaveTypeName { get; set; } = string.Empty;
+
+    /// <summary>Nghỉ có hưởng lương.</summary>
+    public bool IsPaid { get; set; }
 
     public bool Covers(DateTime date) => StartDate.Date <= date.Date && date.Date <= EndDate.Date;
 }

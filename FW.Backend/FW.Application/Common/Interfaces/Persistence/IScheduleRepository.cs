@@ -73,6 +73,10 @@ public interface IScheduleRepository : IGenericRepository<Schedule, long>
     /// <summary>Chuyển ca sang người khác (đổi ca) — chỉ khi ca vẫn thuộc <paramref name="fromUserId"/> và chưa chấm công.</summary>
     Task<bool> TryReassignAsync(long scheduleId, int fromUserId, int toUserId, CancellationToken cancellationToken = default);
 
+    /// <summary>Ca đã công bố, chưa hủy của các nhân viên trong khoảng ngày — dữ liệu nguồn của bảng công tháng.</summary>
+    Task<IReadOnlyList<Schedule>> GetPublishedAsync(DateTime fromDate, DateTime toDate, IReadOnlyCollection<int> userIds,
+        CancellationToken cancellationToken = default);
+
     /// <summary>Số ca nháp của từng nhân viên trong chi nhánh / khoảng ngày — biết ai sắp được công bố lịch để báo cho họ.</summary>
     Task<IReadOnlyDictionary<int, int>> GetDraftCountsByUserAsync(int branchId, DateTime fromDate, DateTime toDate,
         CancellationToken cancellationToken = default);

@@ -34,6 +34,7 @@ public class EntitySchemaMappingTests
         { typeof(ShiftTask), "shift_tasks" },
         { typeof(ShiftTaskAssignment), "shift_task_assignments" },
         { typeof(Notification), "notifications" },
+        { typeof(MonthlyTimesheet), "monthly_timesheets" },
         { typeof(Conversation), "conversations" },
         { typeof(Message), "messages" },
     };

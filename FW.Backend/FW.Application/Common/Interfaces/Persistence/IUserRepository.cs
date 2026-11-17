@@ -40,6 +40,9 @@ public interface IUserRepository : IGenericRepository<User>
     /// <summary>Thay thế toàn bộ vai trò của người dùng (chạy trong transaction).</summary>
     Task SetRolesAsync(int userId, IEnumerable<int> roleIds, CancellationToken cancellationToken = default);
 
+    /// <summary>Mã mọi nhân sự (kể cả đã nghỉ việc — vẫn cần bảng công) thuộc chi nhánh; null = toàn doanh nghiệp.</summary>
+    Task<IReadOnlyList<int>> GetIdsByBranchAsync(int? branchId, CancellationToken cancellationToken = default);
+
     /// <summary>Mã các tài khoản đang hoạt động có vai trò này; <paramref name="branchId"/> null = mọi chi nhánh (dùng chọn người nhận thông báo).</summary>
     Task<IReadOnlyList<int>> GetActiveIdsByRoleAsync(string roleName, int? branchId = null, CancellationToken cancellationToken = default);
 }

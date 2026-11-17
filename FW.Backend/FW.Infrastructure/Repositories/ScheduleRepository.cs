@@ -161,4 +161,15 @@ public class ScheduleRepository : BaseRepository<Schedule, long>, IScheduleRepos
             new { BranchId = branchId, FromDate = fromDate.Date, ToDate = toDate.Date, Cancelled = ScheduleStatus.Cancelled }, cancellationToken);
         return rows.ToDictionary(r => r.UserId, r => (int)r.Total);
     }
+
+    public Task<IReadOnlyList<Schedule>> GetPublishedAsync(DateTime fromDate, DateTime toDate, IReadOnlyCollection<int> userIds,
+        CancellationToken cancellationToken = default)
+    {
+        if (userIds.Count == 0) return Task.FromResult<IReadOnlyList<Schedule>>(Array.Empty<Schedule>());
+        return QueryAsync<Schedule>($"""
+            {SelectFrom}
+            WHERE `work_date` BETWEEN @FromDate AND @ToDate AND `is_published` = 1 AND `status` <> @Cancelled AND `user_id` IN @Ids
+            ORDER BY `work_date`, `id`
+            """, new { FromDate = fromDate.Date, ToDate = toDate.Date, Cancelled = ScheduleStatus.Cancelled, Ids = userIds }, cancellationToken);
+    }
 }

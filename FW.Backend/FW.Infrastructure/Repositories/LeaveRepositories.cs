@@ -228,13 +228,40 @@ public class LeaveRequestRepository : BaseRepository<LeaveRequest>, ILeaveReques
         }, cancellationToken) == 1;
     }
 
+    public Task<IReadOnlyList<ApprovedOvertime>> GetApprovedOvertimeAsync(DateTime fromDate, DateTime toDate, IReadOnlyCollection<int> userIds,
+        CancellationToken cancellationToken = default)
+    {
+        if (userIds.Count == 0) return Task.FromResult<IReadOnlyList<ApprovedOvertime>>(Array.Empty<ApprovedOvertime>());
+        const string sql = """
+            SELECT r.`user_id` AS UserId, r.`start_at` AS StartAt, r.`end_at` AS EndAt, COALESCE(r.`duration_hours`, 0) AS DurationHours
+            FROM `leave_requests` r JOIN `leave_types` t ON t.`id` = r.`leave_type_id`
+            WHERE r.`user_id` IN @Ids AND r.`is_deleted` = 0 AND t.`category` = @Category AND r.`status` = @Approved
+              AND r.`start_date` BETWEEN @FromDate AND @ToDate AND r.`start_at` IS NOT NULL AND r.`end_at` IS NOT NULL
+            ORDER BY r.`start_at`
+            """;
+        return QueryAsync<ApprovedOvertime>(sql, new
+        {
+            Ids = userIds, Category = RequestCategory.Overtime, Approved = RequestStatus.Approved, FromDate = fromDate.Date, ToDate = toDate.Date
+        }, cancellationToken);
+    }
+
+    public Task<IReadOnlyList<long>> GetApprovedExplanationLogIdsAsync(IReadOnlyCollection<long> attendanceLogIds, CancellationToken cancellationToken = default)
+    {
+        if (attendanceLogIds.Count == 0) return Task.FromResult<IReadOnlyList<long>>(Array.Empty<long>());
+        const string sql = """
+            SELECT DISTINCT r.`attendance_log_id` FROM `leave_requests` r
+            WHERE r.`attendance_log_id` IN @Ids AND r.`is_deleted` = 0 AND r.`status` = @Approved
+            """;
+        return QueryAsync<long>(sql, new { Ids = attendanceLogIds, Approved = RequestStatus.Approved }, cancellationToken);
+    }
+
     public async Task<IReadOnlyList<ApprovedLeave>> GetApprovedLeavesAsync(IEnumerable<int> userIds, DateTime fromDate, DateTime toDate,
         CancellationToken cancellationToken = default)
     {
         var ids = userIds.Distinct().ToArray();
         if (ids.Length == 0) return Array.Empty<ApprovedLeave>();
         const string sql = """
-            SELECT r.`user_id` AS UserId, r.`start_date` AS StartDate, r.`end_date` AS EndDate, t.`name` AS LeaveTypeName
+            SELECT r.`user_id` AS UserId, r.`start_date` AS StartDate, r.`end_date` AS EndDate, t.`name` AS LeaveTypeName, t.`is_paid` AS IsPaid
             FROM `leave_requests` r JOIN `leave_types` t ON t.`id` = r.`leave_type_id`
             WHERE r.`user_id` IN @Ids AND r.`is_deleted` = 0 AND t.`category` = @Category AND r.`status` = @Approved
               AND r.`start_date` <= @ToDate AND r.`end_date` >= @FromDate
