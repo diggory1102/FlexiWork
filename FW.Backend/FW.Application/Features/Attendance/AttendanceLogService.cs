@@ -3,6 +3,7 @@ using FW.Application.Common.Interfaces;
 using FW.Application.Common.Interfaces.Persistence;
 using FW.Application.Common.Models;
 using FW.Application.Common.Security;
+using FW.Application.Features.Notifications;
 using FW.Domain.Enums;
 
 namespace FW.Application.Features.Attendance;
@@ -32,12 +33,14 @@ public class AttendanceLogService : IAttendanceLogService
     public const int DefaultBranchRangeDays = 7;
 
     private readonly IAttendanceLogRepository _logs;
+    private readonly INotifier _notifier;
     private readonly ICurrentUserService _currentUser;
     private readonly IDateTimeProvider _clock;
 
-    public AttendanceLogService(IAttendanceLogRepository logs, ICurrentUserService currentUser, IDateTimeProvider clock)
+    public AttendanceLogService(IAttendanceLogRepository logs, INotifier notifier, ICurrentUserService currentUser, IDateTimeProvider clock)
     {
         _logs = logs;
+        _notifier = notifier;
         _currentUser = currentUser;
         _clock = clock;
     }
@@ -98,6 +101,14 @@ public class AttendanceLogService : IAttendanceLogService
         log.ReviewedAt = _clock.Now;
         log.ReviewNote = note;
         await _logs.UpdateAsync(log, cancellationToken);
+
+        var day = log.WorkDate.ToString("dd/MM");
+        await _notifier.NotifyAsync(new[] { log.UserId }, NotificationType.Attendance,
+            approved ? "Lượt chấm công đã được chấp nhận" : "Lượt chấm công bị từ chối",
+            approved
+                ? $"Lượt chấm công ngày {day} đã được chấp nhận và tính công.{(note is null ? string.Empty : $" Ghi chú: {note}")}"
+                : $"Lượt chấm công ngày {day} bị từ chối: {note}. Lượt này không được tính công — bạn có thể gửi đơn giải trình.",
+            log.Id.ToString(), cancellationToken);
 
         return AttendanceLogDetailDto.From(await LoadAsync(id, cancellationToken), canReview: false);
     }

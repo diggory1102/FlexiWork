@@ -3,6 +3,7 @@ using System.Globalization;
 using FW.Application.Common.Exceptions;
 using FW.Application.Common.Interfaces;
 using FW.Application.Common.Interfaces.Persistence;
+using FW.Application.Features.Notifications;
 using FW.Domain.Entities;
 using FW.Domain.Enums;
 using FW.Domain.Services;
@@ -46,6 +47,7 @@ public class LeaveApprovalService : ILeaveApprovalService
     public const decimal MaxTotalLeaveDays = 99.9m; // giới hạn của cột DECIMAL(3, 1)
 
     private readonly ILeaveRequestRepository _requests;
+    private readonly INotifier _notifier;
     private readonly ILeaveBalanceRepository _balances;
     private readonly IScheduleRepository _schedules;
     private readonly IAttendanceLogRepository _logs;
@@ -58,6 +60,7 @@ public class LeaveApprovalService : ILeaveApprovalService
 
     public LeaveApprovalService(
         ILeaveRequestRepository requests,
+        INotifier notifier,
         ILeaveBalanceRepository balances,
         IScheduleRepository schedules,
         IAttendanceLogRepository logs,
@@ -69,6 +72,7 @@ public class LeaveApprovalService : ILeaveApprovalService
         ILogger<LeaveApprovalService> logger)
     {
         _requests = requests;
+        _notifier = notifier;
         _balances = balances;
         _schedules = schedules;
         _logs = logs;
@@ -122,7 +126,21 @@ public class LeaveApprovalService : ILeaveApprovalService
         _logger.LogInformation("Người dùng {ReviewerId} {Action} đơn {RequestId} ({Category})",
             me, approved ? "duyệt" : "từ chối", request.Id, request.Category);
         var detail = await _requests.GetDetailByIdAsync(id, cancellationToken) ?? throw new NotFoundException("Đơn", id);
-        return new ReviewResultDto(LeaveRequestDto.From(detail, me, RequestAccess.CanReview(_currentUser, detail)), message);
+        var result = LeaveRequestDto.From(detail, me, RequestAccess.CanReview(_currentUser, detail));
+
+        var reference = result.Id.ToString();
+        var reviewer = result.ApproverName ?? "Quản lý";
+        var summary = $"{result.LeaveTypeName}: {RequestNotices.Describe(result)}";
+        var reviewNote = note is null ? string.Empty : $" Ghi chú: {note}";
+        await _notifier.NotifyAsync(new[] { result.Employee.Id }, NotificationType.LeaveApproval,
+            approved ? "Đơn của bạn đã được duyệt" : "Đơn của bạn bị từ chối",
+            $"{summary}. {(approved ? "Duyệt" : "Từ chối")} bởi {reviewer}.{reviewNote}", reference, cancellationToken);
+        if (approved && result.Category == RequestCategory.ShiftSwap && result.TargetUser is { } colleague)
+        {
+            await _notifier.NotifyAsync(new[] { colleague.Id }, NotificationType.LeaveApproval, "Đổi ca đã được duyệt",
+                $"{result.Employee.FullName}: {RequestNotices.Describe(result)}. Lịch của bạn đã được cập nhật.", reference, cancellationToken);
+        }
+        return new ReviewResultDto(result, message);
     }
 
     // ------------------------------------------------------------------ Từng nhóm đơn

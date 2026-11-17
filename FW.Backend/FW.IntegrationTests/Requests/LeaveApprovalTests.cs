@@ -6,6 +6,7 @@ using FW.Domain.Entities;
 using FW.Domain.Enums;
 using FW.Infrastructure.Database;
 using FW.Infrastructure.Repositories;
+using FW.IntegrationTests.Notifications;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace FW.IntegrationTests.Requests;
@@ -19,8 +20,8 @@ public partial class LeaveRequestServiceTests
     private static readonly TestUser Manager1 = new(ManagerId, Branch1, RoleNames.Manager);
     private static readonly TestUser Hr = new(HrId, null, RoleNames.Hr);
 
-    private static LeaveApprovalService Approval(DbSession s, ICurrentUserService user) => new(
-        new LeaveRequestRepository(s), new LeaveBalanceRepository(s), new ScheduleRepository(s), new AttendanceLogRepository(s),
+    private static LeaveApprovalService Approval(DbSession s, ICurrentUserService user, RecordingNotifier? notes = null) => new(
+        new LeaveRequestRepository(s), notes ?? new RecordingNotifier(), new LeaveBalanceRepository(s), new ScheduleRepository(s), new AttendanceLogRepository(s),
         new SystemSettingRepository(s), Checker(s), s, user, new FixedClock(), NullLogger<LeaveApprovalService>.Instance);
 
     private static LeaveBalanceService Balances(DbSession s, ICurrentUserService user) => new(
@@ -69,7 +70,7 @@ public partial class LeaveRequestServiceTests
 
         // Xếp thêm ca vào ngày đã duyệt nghỉ → bị chặn
         var schedules = new ScheduleService(new ScheduleRepository(s), new ShiftRepository(s), new BranchRepository(s), new UserRepository(s),
-            new LeaveRequestRepository(s), s, new TestUser(HrId, null, RoleNames.Hr), new FixedClock());
+            new LeaveRequestRepository(s), new RecordingNotifier(), s, new TestUser(HrId, null, RoleNames.Hr), new FixedClock());
         var afternoon = await NewShiftAsync(s, 13, 17);
         var blocked = await Assert.ThrowsAsync<BadRequestException>(() => schedules.CreateAsync(new CreateSchedulesRequest
         {

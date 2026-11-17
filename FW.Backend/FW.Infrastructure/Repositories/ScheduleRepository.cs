@@ -148,4 +148,17 @@ public class ScheduleRepository : BaseRepository<Schedule, long>, IScheduleRepos
         return await ExecuteAsync(sql, new { Id = scheduleId, FromUserId = fromUserId, ToUserId = toUserId, Scheduled = ScheduleStatus.Scheduled },
             cancellationToken) == 1;
     }
+
+    public async Task<IReadOnlyDictionary<int, int>> GetDraftCountsByUserAsync(int branchId, DateTime fromDate, DateTime toDate,
+        CancellationToken cancellationToken = default)
+    {
+        const string sql = """
+            SELECT `user_id` AS UserId, COUNT(*) AS Total FROM `schedules`
+            WHERE `branch_id` = @BranchId AND `work_date` BETWEEN @FromDate AND @ToDate AND `is_published` = 0 AND `status` <> @Cancelled
+            GROUP BY `user_id`
+            """;
+        var rows = await QueryAsync<(int UserId, long Total)>(sql,
+            new { BranchId = branchId, FromDate = fromDate.Date, ToDate = toDate.Date, Cancelled = ScheduleStatus.Cancelled }, cancellationToken);
+        return rows.ToDictionary(r => r.UserId, r => (int)r.Total);
+    }
 }

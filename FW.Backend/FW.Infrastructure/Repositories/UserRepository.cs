@@ -132,4 +132,16 @@ public class UserRepository : BaseRepository<User>, IUserRepository
             }
         }, cancellationToken);
     }
+
+    public Task<IReadOnlyList<int>> GetActiveIdsByRoleAsync(string roleName, int? branchId = null, CancellationToken cancellationToken = default)
+    {
+        const string sql = """
+            SELECT u.`id` FROM `users` u
+            JOIN `user_roles` ur ON ur.`user_id` = u.`id` JOIN `roles` r ON r.`id` = ur.`role_id`
+            WHERE r.`role_name` = @Role AND u.`is_deleted` = 0 AND u.`status` = @Active
+              AND (@BranchId IS NULL OR u.`branch_id` = @BranchId)
+            ORDER BY u.`id`
+            """;
+        return QueryAsync<int>(sql, new { Role = roleName, Active = FW.Domain.Enums.UserStatus.Active, BranchId = branchId }, cancellationToken);
+    }
 }

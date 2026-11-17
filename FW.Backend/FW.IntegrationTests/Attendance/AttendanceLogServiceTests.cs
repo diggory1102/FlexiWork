@@ -5,6 +5,7 @@ using FW.Domain.Entities;
 using FW.Domain.Enums;
 using FW.Infrastructure.Database;
 using FW.Infrastructure.Repositories;
+using FW.IntegrationTests.Notifications;
 
 namespace FW.IntegrationTests.Attendance;
 
@@ -50,8 +51,8 @@ public class AttendanceLogServiceTests
         public DateTime UtcNow => Now.AddHours(-7);
     }
 
-    private static AttendanceLogService Service(DbSession s, ICurrentUserService user) =>
-        new(new AttendanceLogRepository(s), user, new FixedClock());
+    private static AttendanceLogService Service(DbSession s, ICurrentUserService user, RecordingNotifier? notes = null) =>
+        new(new AttendanceLogRepository(s), notes ?? new RecordingNotifier(), user, new FixedClock());
 
     private static readonly TestUser Manager1 = new(ManagerId, Branch1, RoleNames.Manager);
     private static readonly TestUser Hr = new(HrId, null, RoleNames.Hr);
@@ -159,6 +160,31 @@ public class AttendanceLogServiceTests
         await Assert.ThrowsAsync<BadRequestException>(() => hr.GetLogsAsync(new AttendanceLogFilter { FromDate = Day2, ToDate = Day1 }));
         await Assert.ThrowsAsync<BadRequestException>(() => hr.GetLogsAsync(new AttendanceLogFilter { FromDate = Day1, ToDate = Day1.AddDays(400) }));
         await Assert.ThrowsAsync<BadRequestException>(() => hr.GetLogsAsync(Range(status: "late")));
+    }
+
+    [SkippableFact]
+    public async Task Reviewing_a_pending_log_notifies_the_employee_with_the_outcome()
+    {
+        Skip.IfNot(_db.IsAvailable, _db.SkipReason);
+        await using var s = _db.CreateSession();
+        var notes = new RecordingNotifier();
+        var a = await NewEmployeeAsync(s, Branch1);
+        var accepted = await NewLogAsync(s, a.Id, Branch1, Day1, AttendanceStatus.PendingApproval);
+        var rejected = await NewLogAsync(s, a.Id, Branch1, Day2, AttendanceStatus.PendingApproval);
+        var manager = Service(s, Manager1, notes);
+
+        await manager.ReviewAsync(accepted.Id, new ReviewAttendanceRequest { Approved = true, Note = "Camera xác nhận có mặt" });
+        await manager.ReviewAsync(rejected.Id, new ReviewAttendanceRequest { Approved = false, Note = "Không thấy trên camera" });
+
+        var sent = notes.To(a.Id).ToList();
+        Assert.Equal(2, sent.Count);
+        Assert.All(sent, n => Assert.Equal(NotificationType.Attendance, n.Type));
+        Assert.Contains("chấp nhận", sent[0].Title);
+        Assert.Contains("Camera xác nhận có mặt", sent[0].Content);
+        Assert.Equal(accepted.Id.ToString(), sent[0].Reference);
+        Assert.Contains("từ chối", sent[1].Title);
+        Assert.Contains("Không thấy trên camera", sent[1].Content);
+        Assert.Equal(rejected.Id.ToString(), sent[1].Reference);
     }
 
     [SkippableFact]

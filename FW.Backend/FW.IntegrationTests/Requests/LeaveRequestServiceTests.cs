@@ -5,6 +5,7 @@ using FW.Domain.Entities;
 using FW.Domain.Enums;
 using FW.Infrastructure.Database;
 using FW.Infrastructure.Repositories;
+using FW.IntegrationTests.Notifications;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace FW.IntegrationTests.Requests;
@@ -71,16 +72,16 @@ public partial class LeaveRequestServiceTests
         public Task<bool> DeleteAsync(string publicId, CancellationToken cancellationToken = default) => Task.FromResult(true);
     }
 
-    private static LeaveRequestService Service(DbSession s, ICurrentUserService user, MemoryStorage? storage = null) => new(
-        new LeaveRequestRepository(s), new LeaveTypeRepository(s), new LeaveBalanceRepository(s), Checker(s),
+    private static LeaveRequestService Service(DbSession s, ICurrentUserService user, MemoryStorage? storage = null, RecordingNotifier? notes = null) => new(
+        new LeaveRequestRepository(s), notes ?? new RecordingNotifier(), new LeaveTypeRepository(s), new LeaveBalanceRepository(s), Checker(s),
         new AttendanceLogRepository(s), new UserRepository(s), new SystemSettingRepository(s),
         storage ?? new MemoryStorage(), user, new FixedClock(), NullLogger<LeaveRequestService>.Instance);
 
     private static RequestScheduleChecker Checker(DbSession s) =>
         new(new ScheduleRepository(s), new ShiftRepository(s), new UserRepository(s), new LeaveRequestRepository(s), new FixedClock());
 
-    private static LeaveRequestService As(DbSession s, User user, MemoryStorage? storage = null) =>
-        Service(s, new TestUser(user.Id, user.BranchId), storage);
+    private static LeaveRequestService As(DbSession s, User user, MemoryStorage? storage = null, RecordingNotifier? notes = null) =>
+        Service(s, new TestUser(user.Id, user.BranchId), storage, notes);
 
     // ------------------------------------------------------------------ dữ liệu
 

@@ -33,6 +33,7 @@ public class EntitySchemaMappingTests
         { typeof(LeaveBalanceAdjustment), "leave_balance_adjustments" },
         { typeof(ShiftTask), "shift_tasks" },
         { typeof(ShiftTaskAssignment), "shift_task_assignments" },
+        { typeof(Notification), "notifications" },
     };
 
     [Theory]

@@ -266,8 +266,8 @@ flowchart TD
 
 > **Tổng quan Tiến độ Hiện tại:**
 > * **Giai đoạn đang thực hiện:** CẤP BẬC 5 (Cấp 3, 4 đã xong)
-> * **Tiến độ tổng thể:** `28 / 53` Nhiệm vụ hoàn thành (`53%`)
-> * **Hành động tiếp theo:** **Task 5.1** — Cấp 5 (Báo cáo, chat realtime, bảng công). Trước khi push Cấp 4: chạy migration `007` và `008` trên TiDB. Việc nhỏ còn lại: kéo ghim trực tiếp trên bản đồ (Leaflet) — làm khi chốt nâng cấp Vite/React Router đang dở trong `package.json` của web.
+> * **Tiến độ tổng thể:** `29 / 53` Nhiệm vụ hoàn thành (`55%`)
+> * **Hành động tiếp theo:** **Task 5.2** — `ChatHub` + API hội thoại (chat 1-1 văn bản / hình ảnh, nhóm tự động theo chi nhánh, lịch sử tin nhắn). Trước khi push Cấp 4 – 5: chạy migration `007`, `008` trên TiDB (Task 5.1 không có migration). Việc nhỏ còn lại: kéo ghim trực tiếp trên bản đồ (Leaflet) — làm khi chốt nâng cấp Vite/React Router đang dở trong `package.json` của web.
 
 ### Các quyết định cần chốt
 
@@ -462,10 +462,15 @@ flowchart TD
 
 ---
 
-### 📌 CẤP BẬC 5: Realtime, Bảng công, Bảng lương & Báo cáo `[0/10]`
+### 📌 CẤP BẬC 5: Realtime, Bảng công, Bảng lương & Báo cáo `[1/10]`
 > 🎯 **Demo:** Thông báo & chat tức thì giữa Web và Mobile; dashboard quân số realtime; chốt bảng công tháng → tính lương tạm tính → gửi phiếu lương; xuất Excel.
 
-- [ ] **Task 5.1:** `NotificationHub` + bảng `notifications`: lưu và đẩy thông báo (kết quả duyệt đơn, lịch mới, check-in, task được giao); API danh sách, đánh dấu đã đọc.
+- [x] **Task 5.1:** `NotificationHub` + bảng `notifications`: lưu và đẩy thông báo (kết quả duyệt đơn, lịch mới, check-in, task được giao); API danh sách, đánh dấu đã đọc.
+  - *Đã làm (17/11/2026):* **Hub** `/hubs/notifications` (cần JWT — token gửi qua `access_token`, không token bị 401): khi kết nối, thiết bị vào nhóm `User_{id}` nên Web và điện thoại của cùng một người đều nhận; máy chủ gọi sự kiện `ReceiveNotification` `{title, content, type, referenceId, createdAt}` — **chỉ là tín hiệu**, danh sách và số chưa đọc luôn lấy qua REST (lấy lại khi kết nối lại). Gửi thông báo qua `INotifier` (Application) — lưu CSDL bằng INSERT nhiều dòng rồi đẩy qua `INotificationPublisher` (SignalR ở FW.API); **không bao giờ ném lỗi** (hub lỗi / người nhận không tồn tại chỉ ghi log, thông báo đã lưu vẫn xem được), gọi **sau khi** nghiệp vụ commit.
+  - **API** `/api/notifications` (mọi vai trò, chỉ thấy của mình): `GET` (mới nhất trước, phân trang, `unreadOnly`), `GET unread-count`, `POST {id}/read` (gọi lại không lỗi; thông báo của người khác → 404), `POST read-all`.
+  - **Sự kiện đã gắn:** tạo đơn → người duyệt (đơn đổi ca → báo đồng nghiệp trước, Quản lý chỉ nhận sau khi đồng nghiệp đồng ý); đồng nghiệp đồng ý / từ chối → người tạo đơn; duyệt / từ chối đơn → người tạo đơn (kèm người duyệt và ghi chú), đổi ca được duyệt → cả đồng nghiệp; công bố lịch → từng nhân viên có ca mới (một thông báo, không báo lại khi không còn ca nháp); hủy ca đã công bố → nhân viên; check-in / check-out khiến lượt chấm công chờ duyệt → người duyệt; duyệt lượt chấm công → nhân viên; được giao checklist khi check-in → chính nhân viên.
+  - **Quy tắc người duyệt:** các Quản lý đang hoạt động của chi nhánh (trừ người tạo); nếu người tạo là Quản lý hoặc chi nhánh chưa có Quản lý → HR; Quản trị viên không nhận mặc định để tránh ồn. Loại thông báo & cách hiểu `reference_id` ghi ở `NotificationType` (`attendance`, `leave_approval`, `leave_request`, `schedule_new`, `task_assigned`) để Web / Mobile chọn biểu tượng và màn hình khi bấm — giao diện (chuông, trung tâm thông báo) làm ở Task 5.8, 5.9. Không cần migration (bảng `notifications` có sẵn từ schema gốc).
+  - Test: +2 unit (ánh xạ entity, 251 unit); +7 integration test (gửi nhiều người + cắt tiêu đề + hub lỗi không ném lỗi; chọn người duyệt theo chi nhánh / HR; danh sách – chưa đọc – đã đọc – phạm vi người dùng; sự kiện của đơn từ; công bố / hủy lịch; duyệt chấm công; check-in / check-out chờ duyệt + giao checklist) — tổng 81 integration, 251 unit. Kiểm tra bằng **máy khách SignalR thật** (Node): không token bị từ chối; 4 kết nối (NV 2 thiết bị, Quản lý, HR) — NV gửi đơn → chỉ Quản lý chi nhánh nhận tức thì (HR không), Quản lý duyệt → cả 2 thiết bị của NV nhận, công bố lịch và hủy ca → NV nhận; số chưa đọc qua REST khớp số thông báo nhận realtime, đánh dấu đã đọc / đọc tất cả.
 - [ ] **Task 5.2:** `ChatHub` + API hội thoại: chat 1-1 (văn bản, hình ảnh), nhóm tự động theo chi nhánh, lịch sử tin nhắn. Nhóm chat tùy chỉnh `[Tùy chọn]`.
 - [ ] **Task 5.3:** Thuật toán Tổng hợp Bảng công tháng (`monthly_timesheets`) từ `attendance_logs`, `schedules`, `leave_requests` (ngày công, giờ OT, phút vi phạm, nghỉ có/không lương, số ca gãy/đêm); quy trình Quản lý xác nhận → HR khóa bảng công (kèm unit test).
 - [ ] **Task 5.4:** Cấu hình lương (UC 8.1): bổ sung schema — lương tháng / đơn giá giờ riêng theo nhân viên (`users`), danh mục phụ cấp & phụ cấp theo nhân viên, hệ số OT, kỳ lương (`payroll_periods`) và phiếu lương chi tiết từng khoản (`payslips`, `payslip_items`); API CRUD cấu hình.

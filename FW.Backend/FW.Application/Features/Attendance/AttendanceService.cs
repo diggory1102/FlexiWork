@@ -2,6 +2,7 @@ using FW.Application.Common.Exceptions;
 using FW.Application.Common.Interfaces;
 using FW.Application.Common.Interfaces.Persistence;
 using FW.Application.Common.Settings;
+using FW.Application.Features.Notifications;
 using FW.Domain.Entities;
 using FW.Domain.Enums;
 using FW.Domain.Services;
@@ -48,6 +49,7 @@ public class AttendanceService : IAttendanceService
     private readonly IBranchWifiRepository _wifis;
     private readonly IFaceProfileRepository _faces;
     private readonly IUserRepository _users;
+    private readonly INotifier _notifier;
     private readonly IShiftTaskAssignmentRepository _taskAssignments;
     private readonly IFaceRecognitionService _recognition;
     private readonly IFileStorageService _storage;
@@ -65,6 +67,7 @@ public class AttendanceService : IAttendanceService
         IBranchWifiRepository wifis,
         IFaceProfileRepository faces,
         IUserRepository users,
+        INotifier notifier,
         IShiftTaskAssignmentRepository taskAssignments,
         IFaceRecognitionService recognition,
         IFileStorageService storage,
@@ -81,6 +84,7 @@ public class AttendanceService : IAttendanceService
         _wifis = wifis;
         _faces = faces;
         _users = users;
+        _notifier = notifier;
         _taskAssignments = taskAssignments;
         _recognition = recognition;
         _storage = storage;
@@ -223,7 +227,8 @@ public class AttendanceService : IAttendanceService
             Note = JoinNote(null, warnings)
         };
 
-        var positionId = (await _users.GetByIdAsync(userId, cancellationToken))?.PositionId;
+        var employee = await _users.GetByIdAsync(userId, cancellationToken);
+        var positionId = employee?.PositionId;
         var uploaded = await UploadAsync(photo, fileName, cancellationToken);
         log.CheckinImageUrl = uploaded.Url;
         try
@@ -253,6 +258,17 @@ public class AttendanceService : IAttendanceService
         if (log.LateMinutes > target.Shift.LateGraceMinutes) message += $" Bạn đi muộn {log.LateMinutes} phút.";
         var (taskCount, _) = await _taskAssignments.CountAsync(target.Schedule.Id, mandatoryOnly: false, cancellationToken);
         if (taskCount > 0) message += $" Ca này có {taskCount} việc trong checklist.";
+
+        if (taskCount > 0)
+        {
+            await _notifier.NotifyAsync(new[] { userId }, NotificationType.TaskAssigned, $"Checklist {target.Shift.Name}",
+                $"Bạn có {taskCount} việc cần làm trong ca này. Mở mục Công việc để xem và tích hoàn thành.", target.Schedule.Id.ToString(), cancellationToken);
+        }
+        if (log.Status == AttendanceStatus.PendingApproval)
+        {
+            await _notifier.NotifyReviewersAsync(branch.Id, userId, NotificationType.Attendance, "Lượt chấm công cần duyệt",
+                $"{employee?.FullName ?? "Nhân viên"} check-in lúc {now:HH:mm} — {string.Join(" ", warnings)}", log.Id.ToString(), cancellationToken);
+        }
 
         return new AttendanceResultDto(log.Id, log.ScheduleId, AttendanceActions.CheckIn, now, target.Shift.Name, log.Status,
             log.LateMinutes, 0, 0, gps, WifiLayerDto.From(wifi), face, warnings, message);
@@ -303,7 +319,8 @@ public class AttendanceService : IAttendanceService
         log.CheckoutDeviceId = NormalizeDeviceId(request.DeviceId);
         log.EarlyMinutes = ViolationPolicy.EarlyLeaveMinutes(item.Shift, item.Schedule.WorkDate, now);
         log.ActualWorkHours = AttendanceRules.WorkedHours(item.Shift, item.Schedule.WorkDate, log.CheckinTime, now);
-        if (warnings.Count > 0 && log.Status == AttendanceStatus.Valid)
+        var becamePending = warnings.Count > 0 && log.Status == AttendanceStatus.Valid;
+        if (becamePending)
         {
             // Lượt vào đã hợp lệ (hoặc đã được duyệt) nhưng lượt ra có vấn đề → duyệt lại cả bản ghi
             log.Status = AttendanceStatus.PendingApproval;
@@ -335,6 +352,13 @@ public class AttendanceService : IAttendanceService
             : $"Đã ghi nhận check-out lúc {now:HH:mm}, chờ Quản lý duyệt.";
         if (log.EarlyMinutes > item.Shift.EarlyLeaveGraceMinutes) message += $" Bạn về sớm {log.EarlyMinutes} phút.";
         if (mandatoryPending > 0) message += $" Còn {mandatoryPending} việc bắt buộc trong checklist chưa hoàn thành.";
+
+        if (becamePending)
+        {
+            var employee = await _users.GetByIdAsync(userId, cancellationToken);
+            await _notifier.NotifyReviewersAsync(branch.Id, userId, NotificationType.Attendance, "Lượt chấm công cần duyệt",
+                $"{employee?.FullName ?? "Nhân viên"} check-out lúc {now:HH:mm} — {string.Join(" ", warnings)}", log.Id.ToString(), cancellationToken);
+        }
 
         return new AttendanceResultDto(log.Id, log.ScheduleId, AttendanceActions.CheckOut, now, item.Shift.Name, log.Status,
             log.LateMinutes, log.EarlyMinutes, log.ActualWorkHours, gps, WifiLayerDto.From(wifi), face, warnings, message);

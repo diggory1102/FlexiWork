@@ -1,4 +1,5 @@
 using FW.API.Extensions;
+using FW.API.Hubs;
 using FW.API.Middlewares;
 using FW.API.Services;
 using FW.Application;
@@ -46,8 +47,9 @@ builder.Services.AddJwtAuthentication(builder.Configuration);
 builder.Services.AddCorsPolicy(builder.Configuration);
 builder.Services.AddSwaggerDocumentation();
 
-// 6. SignalR (các Hub sẽ được map ở Task 5.1)
+// 6. SignalR: NotificationHub (thông báo tức thì); ChatHub thêm ở Task 5.2
 builder.Services.AddSignalR();
+builder.Services.AddSingleton<INotificationPublisher, SignalRNotificationPublisher>();
 
 var app = builder.Build();
 
@@ -103,7 +105,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
-// app.MapHub<NotificationHub>("/hubs/notifications");  // Task 5.1
-// app.MapHub<ChatHub>("/hubs/chat");                    // Task 5.1
+app.MapHub<NotificationHub>("/hubs/notifications");
+// app.MapHub<ChatHub>("/hubs/chat");                    // Task 5.2
 
 app.Run();

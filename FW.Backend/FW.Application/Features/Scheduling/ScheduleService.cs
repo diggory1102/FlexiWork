@@ -2,6 +2,7 @@ using FW.Application.Common.Exceptions;
 using FW.Application.Common.Interfaces;
 using FW.Application.Common.Interfaces.Persistence;
 using FW.Application.Common.Security;
+using FW.Application.Features.Notifications;
 using FW.Domain.Entities;
 using FW.Domain.Enums;
 using FW.Domain.Services;
@@ -53,6 +54,7 @@ public class ScheduleService : IScheduleService
     private readonly IBranchRepository _branches;
     private readonly IUserRepository _users;
     private readonly ILeaveRequestRepository _leaveRequests;
+    private readonly INotifier _notifier;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUserService _currentUser;
     private readonly IDateTimeProvider _clock;
@@ -63,6 +65,7 @@ public class ScheduleService : IScheduleService
         IBranchRepository branches,
         IUserRepository users,
         ILeaveRequestRepository leaveRequests,
+        INotifier notifier,
         IUnitOfWork unitOfWork,
         ICurrentUserService currentUser,
         IDateTimeProvider clock)
@@ -72,6 +75,7 @@ public class ScheduleService : IScheduleService
         _branches = branches;
         _users = users;
         _leaveRequests = leaveRequests;
+        _notifier = notifier;
         _unitOfWork = unitOfWork;
         _currentUser = currentUser;
         _clock = clock;
@@ -204,7 +208,19 @@ public class ScheduleService : IScheduleService
     {
         var branchId = ResolveBranchId(request.BranchId);
         EnsureRange(request.FromDate, request.ToDate);
-        return await _schedules.PublishAsync(branchId, ToDateTime(request.FromDate), ToDateTime(request.ToDate), _clock.Now, cancellationToken);
+        var from = ToDateTime(request.FromDate);
+        var to = ToDateTime(request.ToDate);
+        var affected = await _schedules.GetDraftCountsByUserAsync(branchId, from, to, cancellationToken);
+        var published = await _schedules.PublishAsync(branchId, from, to, _clock.Now, cancellationToken);
+
+        // Báo từng nhân viên có ca mới (chỉ khi công bố được ít nhất một ca)
+        if (published > 0 && affected.Count > 0)
+        {
+            await _notifier.NotifyAsync(affected.Keys, NotificationType.ScheduleNew, "Lịch làm việc mới",
+                $"Lịch làm việc từ {request.FromDate:dd/MM} đến {request.ToDate:dd/MM} đã được công bố. Mở mục Lịch ca để xem.",
+                request.FromDate.ToString("yyyy-MM-dd"), cancellationToken);
+        }
+        return published;
     }
 
     public async Task<int> DeleteDraftsAsync(ScheduleRangeRequest request, CancellationToken cancellationToken = default)
@@ -233,6 +249,9 @@ public class ScheduleService : IScheduleService
 
         schedule.Status = ScheduleStatus.Cancelled;
         await _schedules.UpdateAsync(schedule, cancellationToken);
+        await _notifier.NotifyAsync(new[] { schedule.UserId }, NotificationType.ScheduleNew, "Ca làm việc bị hủy",
+            $"{shift.Name} ngày {schedule.WorkDate:dd/MM} ({shift.StartTime:hh\\:mm}–{shift.EndTime:hh\\:mm}) đã bị Quản lý hủy.",
+            schedule.WorkDate.ToString("yyyy-MM-dd"), cancellationToken);
         return false;
     }
 

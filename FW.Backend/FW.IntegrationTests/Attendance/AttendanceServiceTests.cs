@@ -6,6 +6,7 @@ using FW.Domain.Entities;
 using FW.Domain.Enums;
 using FW.Infrastructure.Database;
 using FW.Infrastructure.Repositories;
+using FW.IntegrationTests.Notifications;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
@@ -95,6 +96,7 @@ public class AttendanceServiceTests
         public required Shift Shift { get; init; }
         public TestClock Clock { get; } = new();
         public StubFace Face { get; } = new();
+        public RecordingNotifier Notes { get; } = new();
         public MemoryStorage Storage { get; } = new();
 
         public AttendanceService Service(int? userId = null)
@@ -102,7 +104,7 @@ public class AttendanceServiceTests
             var s = Session;
             return new AttendanceService(
                 new AttendanceLogRepository(s), new ScheduleRepository(s), new ShiftRepository(s), new BranchRepository(s),
-                new BranchWifiRepository(s), new FaceProfileRepository(s), new UserRepository(s), new ShiftTaskAssignmentRepository(s),
+                new BranchWifiRepository(s), new FaceProfileRepository(s), new UserRepository(s), Notes, new ShiftTaskAssignmentRepository(s),
                 Face, Storage, s, new TestUser(userId ?? UserId), Clock,
                 Options.Create(new AttendanceSettings()), NullLogger<AttendanceService>.Instance);
         }
@@ -203,6 +205,9 @@ public class AttendanceServiceTests
         Assert.Equal(7, checkIn.LateMinutes);
         Assert.Contains("đi muộn 7 phút", checkIn.Message);
         Assert.Contains("1 việc trong checklist", checkIn.Message);
+        var assigned = Assert.Single(ctx.Notes.To(ctx.UserId)); // được giao checklist → báo chính mình
+        Assert.Equal((NotificationType.TaskAssigned, ctx.Schedule.Id.ToString()), (assigned.Type, assigned.Reference));
+        Assert.Empty(ctx.Notes.ToReviewers); // đạt đủ 3 lớp: không cần ai duyệt
         Assert.Single(await new ShiftTaskAssignmentRepository(ctx.Session).GetDetailsByScheduleIdsAsync(new[] { ctx.Schedule.Id }));
         Assert.InRange(checkIn.Gps.DistanceMeters, 19.5, 20.5);
         Assert.Equal("matched", checkIn.Wifi.Status);
@@ -230,6 +235,7 @@ public class AttendanceServiceTests
         Assert.Equal(7.74m, checkOut.ActualWorkHours);
         Assert.Contains("về sớm 10 phút", checkOut.Message);
         Assert.Contains("Còn 1 việc bắt buộc", checkOut.Message);
+        Assert.Empty(ctx.Notes.ToReviewers);
         Assert.Equal(AttendanceStatus.Valid, checkOut.Status); // việc chưa xong không làm lượt chấm công phải chờ duyệt
 
         log = await logs.GetByIdAsync(checkIn.LogId);
@@ -315,6 +321,9 @@ public class AttendanceServiceTests
         // Không đọc được Wi-Fi (VD iPhone trong Expo Go) → vẫn ghi nhận, chờ duyệt
         var noWifi = await CheckIn(first.Service(), AtBranch(bssid: null, deviceId: "dev-shared"));
         Assert.Equal(AttendanceStatus.PendingApproval, noWifi.Status);
+        var review = Assert.Single(first.Notes.ToReviewers); // lượt chờ duyệt → báo người duyệt của chi nhánh
+        Assert.Equal((Branch1, first.UserId, NotificationType.Attendance, noWifi.LogId.ToString()), (review.BranchId, review.Requester, review.Type, review.Reference));
+        Assert.Contains("check-in", review.Content);
         Assert.Equal("no_wifi_info", noWifi.Wifi.Status);
         Assert.Contains("chờ Quản lý duyệt", noWifi.Message);
         Assert.Equal(0, noWifi.LateMinutes);
@@ -337,6 +346,26 @@ public class AttendanceServiceTests
         Assert.Contains("AA:BB:CC:DD:EE:FF", log.Note);
         Assert.Equal("AA:BB:CC:DD:EE:FF", log.CheckoutBssid);
         Assert.False(log.CheckoutWifiMatched);
+    }
+
+    [SkippableFact]
+    public async Task Check_out_with_unknown_wifi_sends_a_valid_check_in_back_for_review()
+    {
+        Skip.IfNot(_db.IsAvailable, _db.SkipReason);
+        var ctx = await SetupAsync(new DateTime(2036, 6, 3));
+        await using var _ = ctx.Session;
+        var service = ctx.Service();
+
+        ctx.Clock.Now = ctx.At(8);
+        Assert.Equal(AttendanceStatus.Valid, (await CheckIn(service, AtBranch())).Status);
+        Assert.Empty(ctx.Notes.ToReviewers);
+
+        ctx.Clock.Now = ctx.At(17);
+        var checkOut = await CheckOut(service, AtBranch(bssid: "AA:BB:CC:DD:EE:FF"));
+        Assert.Equal(AttendanceStatus.PendingApproval, checkOut.Status);
+        var review = Assert.Single(ctx.Notes.ToReviewers); // chỉ báo khi lượt ra khiến bản ghi chuyển sang chờ duyệt
+        Assert.Contains("check-out", review.Content);
+        Assert.Equal(checkOut.LogId.ToString(), review.Reference);
     }
 
     [SkippableFact]

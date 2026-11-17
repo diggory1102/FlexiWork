@@ -4,6 +4,7 @@ using FW.Application.Common.Interfaces;
 using FW.Application.Common.Interfaces.Persistence;
 using FW.Application.Common.Models;
 using FW.Application.Common.Security;
+using FW.Application.Features.Notifications;
 using FW.Domain.Entities;
 using FW.Domain.Enums;
 using FW.Domain.Services;
@@ -56,6 +57,7 @@ public class LeaveRequestService : ILeaveRequestService
     private static readonly IReadOnlyList<string> AllowedTypes = new[] { "image/jpeg", "image/png", "image/webp", "image/heic", "image/heif" };
 
     private readonly ILeaveRequestRepository _requests;
+    private readonly INotifier _notifier;
     private readonly ILeaveTypeRepository _types;
     private readonly ILeaveBalanceRepository _balances;
     private readonly IRequestScheduleChecker _checker;
@@ -69,6 +71,7 @@ public class LeaveRequestService : ILeaveRequestService
 
     public LeaveRequestService(
         ILeaveRequestRepository requests,
+        INotifier notifier,
         ILeaveTypeRepository types,
         ILeaveBalanceRepository balances,
         IRequestScheduleChecker checker,
@@ -81,6 +84,7 @@ public class LeaveRequestService : ILeaveRequestService
         ILogger<LeaveRequestService> logger)
     {
         _requests = requests;
+        _notifier = notifier;
         _types = types;
         _balances = balances;
         _checker = checker;
@@ -150,7 +154,20 @@ public class LeaveRequestService : ILeaveRequestService
         }
 
         _logger.LogInformation("Người dùng {UserId} tạo đơn {RequestId} ({Category})", me.Id, request.Id, type.Category);
-        return await GetDtoAsync(request.Id, cancellationToken);
+        var created = await GetDtoAsync(request.Id, cancellationToken);
+        var reference = created.Id.ToString();
+        if (created.Status == RequestStatus.PendingPeer && created.TargetUser is { } colleague)
+        {
+            // Đổi ca: báo đồng nghiệp trước, Quản lý chỉ được báo khi đồng nghiệp đã đồng ý
+            await _notifier.NotifyAsync(new[] { colleague.Id }, NotificationType.LeaveRequest, $"{me.FullName} đề nghị đổi ca",
+                $"{me.FullName} muốn {RequestNotices.Describe(created)}. Mở mục Đơn từ để đồng ý hoặc từ chối.", reference, cancellationToken);
+        }
+        else
+        {
+            await _notifier.NotifyReviewersAsync(created.BranchId, me.Id, NotificationType.LeaveRequest, "Có đơn mới chờ duyệt",
+                $"{me.FullName} · {created.LeaveTypeName}: {RequestNotices.Describe(created)}.", reference, cancellationToken);
+        }
+        return created;
     }
 
     private async Task BuildLeaveAsync(LeaveRequest request, CreateLeaveRequestForm form, LeaveType type, User me, CancellationToken cancellationToken)
@@ -317,7 +334,23 @@ public class LeaveRequestService : ILeaveRequestService
         request.PeerRespondedAt = _clock.Now;
         request.PeerNote = string.IsNullOrWhiteSpace(response.Note) ? null : response.Note.Trim();
         await _requests.UpdateAsync(request, cancellationToken);
-        return await GetDtoAsync(id, cancellationToken);
+        var answered = await GetDtoAsync(id, cancellationToken);
+
+        var colleagueName = answered.TargetUser?.FullName ?? "Đồng nghiệp";
+        var reference = answered.Id.ToString();
+        var peerNote = request.PeerNote is null ? string.Empty : $" Ghi chú: {request.PeerNote}";
+        await _notifier.NotifyAsync(new[] { answered.Employee.Id }, NotificationType.LeaveRequest,
+            accepted ? $"{colleagueName} đã đồng ý đổi ca" : $"{colleagueName} từ chối đổi ca",
+            accepted
+                ? $"Đơn {RequestNotices.Describe(answered)} đã được chuyển tới Quản lý duyệt.{peerNote}"
+                : $"Đơn {RequestNotices.Describe(answered)} không được đồng nghiệp chấp nhận.{peerNote}",
+            reference, cancellationToken);
+        if (accepted)
+        {
+            await _notifier.NotifyReviewersAsync(answered.BranchId, answered.Employee.Id, NotificationType.LeaveRequest, "Có đơn mới chờ duyệt",
+                $"{answered.Employee.FullName} · {answered.LeaveTypeName}: {RequestNotices.Describe(answered)} (đồng nghiệp đã đồng ý).", reference, cancellationToken);
+        }
+        return answered;
     }
 
     // ------------------------------------------------------------------ Quỹ phép

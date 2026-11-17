@@ -5,6 +5,7 @@ using FW.Domain.Entities;
 using FW.Domain.Enums;
 using FW.Infrastructure.Database;
 using FW.Infrastructure.Repositories;
+using FW.IntegrationTests.Notifications;
 using FW.Infrastructure.Services;
 
 namespace FW.IntegrationTests.Scheduling;
@@ -47,9 +48,9 @@ public class ScheduleServiceTests
     private static readonly TestUser Employee = new(EmployeeId, Branch1, RoleNames.Employee);
     private static readonly TestUser Hr = new(4, null, RoleNames.Hr);
 
-    private static ScheduleService Service(DbSession s, ICurrentUserService user) => new(
+    private static ScheduleService Service(DbSession s, ICurrentUserService user, RecordingNotifier? notes = null) => new(
         new ScheduleRepository(s), new ShiftRepository(s), new BranchRepository(s), new UserRepository(s), new LeaveRequestRepository(s),
-        s, user, new DateTimeProvider());
+        notes ?? new RecordingNotifier(), s, user, new DateTimeProvider());
 
     private static DateOnly Day(int offset) => DateOnly.FromDateTime(DateTime.Today).AddDays(offset);
 
@@ -72,6 +73,35 @@ public class ScheduleServiceTests
     {
         Items = items.Select(i => new ScheduleItemRequest { UserId = i.UserId, ShiftId = i.Shift.Id, WorkDate = i.Date }).ToList()
     };
+
+    [SkippableFact]
+    public async Task Publishing_notifies_only_employees_with_new_shifts_and_cancelling_notifies_the_employee()
+    {
+        Skip.IfNot(_db.IsAvailable, _db.SkipReason);
+        await using var session = _db.CreateSession();
+        var notes = new RecordingNotifier();
+        var manager = Service(session, Manager1, notes);
+        var morning = await NewShiftAsync(session, 8, 12);
+        var range = new ScheduleRangeRequest { FromDate = Day(330), ToDate = Day(336) };
+
+        await manager.CreateAsync(Items((EmployeeId, morning, Day(330)), (EmployeeId, morning, Day(331))));
+        Assert.Empty(notes.Items); // lịch nháp: nhân viên chưa thấy nên chưa báo
+
+        await manager.PublishAsync(range);
+        var published = Assert.Single(notes.Items);
+        Assert.Equal(new[] { EmployeeId }, published.Users);
+        Assert.Equal((NotificationType.ScheduleNew, Day(330).ToString("yyyy-MM-dd")), (published.Type, published.Reference));
+        Assert.Contains($"{Day(330):dd/MM}", published.Content);
+
+        await manager.PublishAsync(range); // không còn ca nháp → không báo lại
+        Assert.Single(notes.Items);
+
+        var mine = await Service(session, Employee).GetMySchedulesAsync(Day(330), Day(331));
+        Assert.False(await manager.RemoveAsync(mine[0].Id)); // đã công bố → hủy ca
+        Assert.Equal(2, notes.Items.Count);
+        Assert.Equal(new[] { EmployeeId }, notes.Items[1].Users);
+        Assert.Contains("bị hủy", notes.Items[1].Title);
+    }
 
     [SkippableFact]
     public async Task Drafts_are_hidden_from_employee_until_published()

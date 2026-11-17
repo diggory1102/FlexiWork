@@ -155,6 +155,7 @@ public static class DependencyInjection
         services.AddScoped<ILeaveBalanceRepository, LeaveBalanceRepository>();
         services.AddScoped<ILeaveBalanceAdjustmentRepository, LeaveBalanceAdjustmentRepository>();
         services.AddScoped<IShiftTaskRepository, ShiftTaskRepository>();
+        services.AddScoped<INotificationRepository, NotificationRepository>();
         services.AddScoped<IShiftTaskAssignmentRepository, ShiftTaskAssignmentRepository>();
 
         return services;
