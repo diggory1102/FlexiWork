@@ -1,5 +1,5 @@
 > **Cập nhật 14/11/2026:** bổ sung **Phân hệ 0 – Xác thực & Tài khoản** và các UC còn thiếu so với chức năng đã/sẽ cài đặt (đánh dấu ★); UC 1.6 sửa thành 4 vai trò (thêm HR). Tổng cộng **50 UC / 10 phân hệ**.
-> **Cập nhật 15/11/2026:** thêm **Phân hệ 10 – Trợ lý AI & Phân tích** (4 UC) và UC 3.5 `[Tùy chọn]` → **55 UC / 11 phân hệ**. Biểu đồ UC, đặc tả, activity, sequence sẽ vẽ một lần sau khi hoàn thiện sản phẩm (Task K.2).
+> **Cập nhật 15/11/2026:** thêm **Phân hệ 10 – Trợ lý AI & Phân tích** (4 UC) → **55 UC / 11 phân hệ**. *(17/11/2026: bỏ UC 3.5 “Đăng ký nguyện vọng ca” — tùy chọn, chấm điểm nguy cơ nghỉ việc vẫn đủ tín hiệu mà không cần → còn **54 UC / 11 phân hệ**.)* Biểu đồ UC, đặc tả, activity, sequence sẽ vẽ một lần sau khi hoàn thiện sản phẩm (Task K.2).
 
 #### **Phân hệ 0: Xác thực &amp; Tài khoản (04 UCs)** ★
 
@@ -37,7 +37,6 @@
 * **UC 3.2** **\- Phân ca &amp; Xếp lịch làm việc:** Thao tác xếp lịch phân ca cho nhân viên full-time/part-time theo chu kỳ tuần hoặc tháng[12]. *(Actor: Manager)*
 * **UC 3.3** **\- Phê duyệt &amp; Xuất bản lịch làm việc:** Chốt danh sách phân ca và công bố lịch làm việc chính thức lên hệ thống[19][20]. *(Actor: Manager / HR)*
 * **UC 3.4** **\- Tra cứu Lịch làm việc:** Xem chi tiết lịch ca cá nhân trên ứng dụng di động hoặc xem lịch làm việc của toàn chi nhánh[8]. *(Actor: Nhân viên, Manager)*
-* **UC 3.5** **\- Đăng ký nguyện vọng ca làm việc:** Nhân viên đăng ký ca / ngày có thể làm trong tuần tới để Quản lý tham khảo khi xếp lịch; dữ liệu này cũng là một tín hiệu cho UC 10.3. ★ `[Tùy chọn]` *(Actor: Nhân viên)*
 
 ---
 
@@ -106,5 +105,5 @@
 
 * **UC 10.1** **\- Hỏi đáp với Trợ lý nhân sự:** Nhân viên hỏi bằng ngôn ngữ tự nhiên ("Tháng này em được bao nhiêu công?", "Em còn mấy ngày phép?", "Tuần sau em làm ca nào?"); trợ lý (LLM + Function Calling) gọi các chức năng tra cứu của hệ thống với đúng quyền của người hỏi và trả lời. *(Actor: Nhân viên, Manager)*
 * **UC 10.2** **\- Tạo đơn từ qua hội thoại:** Từ câu nói tự nhiên ("Cho em xin nghỉ ca sáng thứ 5 tuần này vì bận thi"), trợ lý trích xuất ngày, ca, loại đơn, lý do và tạo **bản nháp** đơn; nhân viên xem lại và bấm xác nhận thì đơn mới được gửi tới Quản lý duyệt (UC 5.1). *(Actor: Nhân viên)*
-* **UC 10.3** **\- Tự động chấm điểm nguy cơ nghỉ việc:** Hằng tuần hệ thống so sánh hành vi 2 tuần gần nhất với nền 8 tuần trước của chính nhân viên (đi muộn tăng, xin nghỉ nhiều hơn, vắng mặt, xin đổi ca, giảm đăng ký nguyện vọng ca) và tính điểm rủi ro 0–100 kèm lý do. *(Actor: Hệ thống)*
+* **UC 10.3** **\- Tự động chấm điểm nguy cơ nghỉ việc:** Hằng tuần hệ thống so sánh hành vi 2 tuần gần nhất với nền 8 tuần trước của chính nhân viên (đi muộn tăng, xin nghỉ nhiều hơn, vắng mặt, xin đổi ca) và tính điểm rủi ro 0–100 kèm lý do. *(Actor: Hệ thống)*
 * **UC 10.4** **\- Xem cảnh báo nhân sự cần quan tâm:** Quản lý / HR xem danh sách nhân viên có điểm rủi ro cao, lý do và xu hướng theo tuần để chủ động trao đổi; đây là tín hiệu tham khảo, không dùng để kỷ luật. *(Actor: Manager / HR)*

@@ -22,7 +22,7 @@
 
 ## 2. Danh mục 8 Phân hệ Chức năng
 
-> Đối chiếu `docs/UML.md` (11 phân hệ, 55 UC): UML tách "Xác thực", "Hệ thống & Danh mục", "Hồ sơ Nhân sự" thành 3 phân hệ — ở đây gộp vào 2.1; Phân hệ 8 (Bảng lương rút gọn) tương ứng mục 2.7; Phân hệ 10 (Trợ lý AI & Phân tích) tương ứng mục 2.8.
+> Đối chiếu `docs/UML.md` (11 phân hệ, 54 UC): UML tách "Xác thực", "Hệ thống & Danh mục", "Hồ sơ Nhân sự" thành 3 phân hệ — ở đây gộp vào 2.1; Phân hệ 8 (Bảng lương rút gọn) tương ứng mục 2.7; Phân hệ 10 (Trợ lý AI & Phân tích) tương ứng mục 2.8.
 
 ### 2.1. Phân hệ Quản lý Hồ sơ & Tổ chức (Web Admin)
 * **Quản lý danh sách chi nhánh / cửa hàng:** Khai báo thông tin hành chính, thiết lập tâm tọa độ vĩ độ/kinh độ, bán kính chấm công hợp lệ (GPS Geofencing) và danh sách địa chỉ phần cứng Wi-Fi BSSID nội bộ.
@@ -59,7 +59,7 @@
 ### 2.6. Phân hệ Báo cáo & Tổng hợp Bảng công (Web Admin)
 * **Dashboard giám sát quân số:** Trực quan hóa tình hình quân số thời gian thực: số nhân sự đang làm việc, tỷ lệ đi làm đúng giờ, số ca vắng mặt hoặc đi muộn theo từng chi nhánh.
 * **Tự động tổng hợp bảng công:** Tự động gom dữ liệu chấm công thô, so khớp với khung ca và đơn từ hợp lệ để tính toán chính xác số giờ làm việc, thời gian đi muộn, về sớm, giờ OT và ngày công quy đổi.
-* **Trích xuất dữ liệu (Export):** Hỗ trợ xuất dữ liệu bảng công chi tiết ra định dạng file **Excel (.xlsx)** hoặc **PDF** phục vụ cho bộ phận kế toán/nhân sự tính lương.
+* **Trích xuất dữ liệu (Export):** Hỗ trợ xuất dữ liệu bảng công chi tiết ra định dạng file **Excel (.xlsx)** phục vụ cho bộ phận kế toán/nhân sự tính lương.
 
 ### 2.7. Phân hệ Bảng lương Rút gọn (Web Admin & Mobile App) — UML Phân hệ 8
 * **Cấu hình mức lương & phụ cấp (UC 8.1):** Lương tháng (nhân viên toàn thời gian) hoặc đơn giá giờ theo chức vụ (bán thời gian, có thể ghi đè theo từng nhân viên); phụ cấp ca gãy/ca đêm, phụ cấp cố định; hệ số OT; định mức phạt.
@@ -126,7 +126,7 @@ flowchart TD
     M6 --> M6_1["6.1 Dashboard giám sát quân số thời gian thực"]
     M6 --> M6_2["6.2 Báo cáo vi phạm (Đi muộn / Về sớm / Vắng mặt)"]
     M6 --> M6_3["6.3 Tự động tổng hợp dữ liệu Bảng công"]
-    M6 --> M6_4["6.4 Trích xuất Bảng công ra Excel (.xlsx) / PDF"]
+    M6 --> M6_4["6.4 Trích xuất Bảng công ra Excel (.xlsx)"]
 
     %% Module 7
     M7 --> M7_1["7.1 Cấu hình Mức lương, Phụ cấp & Hệ số OT"]
@@ -206,7 +206,7 @@ flowchart TD
 | - Dashboard giám sát quân số Realtime | Web | `R` | `R` | `R` *(theo CN)* | `-` |
 | - Báo cáo vi phạm (Đi muộn, về sớm, vắng) | Web | `R` | `R` | `R` *(theo CN)* | `-` |
 | - Tổng hợp số giờ công, công quy đổi, giờ OT | Web | `R` | `CRUD` | `R` *(theo CN)* | `R` *(Cá nhân)* |
-| - Trích xuất file Bảng công (Excel / PDF) | Web | `E` | `E` | `E` *(theo CN)* | `-` |
+| - Trích xuất file Bảng công (Excel) | Web | `E` | `E` | `E` *(theo CN)* | `-` |
 | **7. Bảng lương Rút gọn** | | | | | |
 | - Cấu hình Mức lương, Phụ cấp, Hệ số OT, Mức phạt | Web | `CRUD` | `CRUD` | `-` | `-` |
 | - Tính & Xem Bảng lương tạm tính | Web | `CRUD` | `CRUD` | `R` *(theo CN)* | `-` |
@@ -266,7 +266,7 @@ flowchart TD
 
 > **Tổng quan Tiến độ Hiện tại:**
 > * **Giai đoạn đang thực hiện:** CẤP BẬC 5 (Cấp 3, 4 đã xong)
-> * **Tiến độ tổng thể:** `36 / 53` Nhiệm vụ hoàn thành (`68%`)
+> * **Tiến độ tổng thể:** `36 / 51` Nhiệm vụ hoàn thành (`71%`)
 > * **Hành động tiếp theo:** **Task 5.9** — Mobile App: thông báo, chat, bảng công cá nhân trong tháng, phiếu lương cá nhân (API backend đã đủ; lưu ý tin báo SignalR của thông báo **không kèm `id` / `isRead`** — nạp lại danh sách từ API khi có tin mới, như Web Admin). Việc nhỏ còn lại: kéo ghim trực tiếp trên bản đồ (Leaflet).
 
 ### Các quyết định cần chốt
@@ -284,15 +284,15 @@ flowchart TD
 | ~~Quy tắc bảng công tháng~~ | Task 5.3, 5.5 | ✅ **Đã chốt (17/11/2026):** ngày công = Σ hệ số công của các ca đã làm − công bị trừ theo bậc vi phạm; ca vắng không tính; ca thiếu check-out không tính (cần xử lý); lượt chấm công **chờ duyệt chặn xác nhận** bảng công; đơn giải trình đã duyệt miễn vi phạm; nghỉ đã duyệt chia có / không lương theo loại đơn. Quy trình `draft → confirmed (Quản lý) → locked (HR, chỉ khi tháng đã kết thúc) → finalized (chốt lương)`; đã khóa thì chặn duyệt thêm chấm công / đơn của tháng đó, muốn sửa phải mở lại (HR) kèm lý do |
 | ~~Quy tắc tính & chốt bảng lương~~ | Task 5.5 | ✅ **Đã chốt (17/11/2026):** chỉ tính từ bảng công **đã khóa**; ngày nghỉ **có lương tính như ngày công** (bán thời gian quy đổi 8 giờ / công); thực nhận = lương + phụ cấp + OT − phạt, không chặn số âm; phiếu là ảnh chụp lúc tính. Kỳ lương theo tháng, toàn doanh nghiệp (một kỳ mỗi tháng). Chốt khi tháng đã kết thúc, **không còn bảng công chưa khóa và không ai thiếu cấu hình lương**, tính lại lần cuối trong transaction; chốt xong **không mở lại** (cần sửa thì tạo điều chỉnh ở kỳ sau). Nhân viên xem phiếu trong ứng dụng ngay khi kỳ chốt; email phiếu lương gửi riêng (có thể lỗi / gửi lại), trạng thái `sent` chỉ nghĩa là đã gửi email |
 | ~~Định nghĩa dashboard & báo cáo vi phạm~~ | Task 5.6, 5.8 | ✅ **Đã chốt (17/11/2026):** dashboard tính tại lúc gọi (giao diện làm mới định kỳ) — không dùng hub riêng; chỉ xét lịch **đã công bố**. Vi phạm: đi muộn / về sớm theo quy tắc vi phạm hiện hành (vượt số phút cho phép của ca), **vắng mặt = ca đã kết thúc mà không chấm công và không nghỉ phép**; lượt bị từ chối không tính có mặt cũng không tính vắng; đơn giải trình đã duyệt được miễn. Tỷ lệ vi phạm = ca vi phạm ÷ ca đã có kết quả (có mặt + vắng). Báo cáo quỹ phép chỉ tính nhân viên đang hoạt động; cảnh báo "còn ít phép" khi còn ≤ 2 ngày |
-| Chống giả mạo khuôn mặt (liveness) | Task 6.2 | `[Tùy chọn]` |
+| ~~Chống giả mạo khuôn mặt (liveness)~~ | Task 6.2 | ❌ **Loại khỏi phạm vi (17/11/2026)** — xem mục *Đã loại khỏi phạm vi* |
 | ~~Phát hiện "trùng thiết bị" (1 điện thoại chấm công cho nhiều người)~~ | Task 3.2 | ✅ **Đã chốt (15/11/2026):** lưu mã thiết bị mỗi lượt; người thứ hai check-in trên cùng điện thoại trong cùng ngày công → `pending_approval`, ghi chú mã nhân viên đã dùng máy đó (Quản lý duyệt ở UC 4.6, cảnh báo trên Dashboard ở Cấp 5) |
 | ~~Giao diện Web Admin~~ | Task 1.6 trở đi | ✅ **Đã chốt:** tham khảo bố cục HRM iPOS, thương hiệu & hình ảnh riêng FlexiWork, bỏ Tuyển dụng/Bảng giá, Hợp đồng gộp vào hồ sơ NV, Lương → Bảng công (lương tạm tính) |
 | ~~Thư viện giao diện Web Admin~~ | Toàn bộ Web | ✅ **Đã chốt (12/11/2026):** nâng **React 18 → 19**, **Tailwind 3 → 4**, dùng hệ thống thiết kế **Astryx** của Meta (`@astryxdesign/core` 0.7.14, đang beta — ghim cố định phiên bản). Theme `flexiwork` kế thừa `neutral`: màu nhấn xanh `#2563EB`, font **Be Vietnam Pro** (Figtree gốc thiếu dấu tiếng Việt), gói ngôn ngữ `vi-VN`, chế độ sáng/tối. Mobile giữ React Native (Astryx chỉ cho web) |
 | ~~Phân hệ Bảng lương rút gọn (UML Phân hệ 8)~~ | Task 5.4, 5.5 | ✅ **Đã chốt (12/11/2026):** đưa vào phạm vi, không gồm thuế TNCN/BHXH |
 | ~~Cách tính lương~~ | Task 5.4, 5.5 | ✅ **Đã chốt (17/11/2026):** **Toàn thời gian** = `lương tháng ÷ số công chuẩn × ngày công thực tế`; **bán thời gian** = `giờ công × đơn giá giờ`. Đơn giá giờ = mức riêng của nhân viên nếu có, ngược lại theo chức vụ (`positions.base_salary_per_hour`). **OT** = giờ OT × đơn giá giờ × hệ số OT (mặc định 1,5; chỉnh 1 – 5); đơn giá giờ để tính OT của nhân viên toàn thời gian = lương tháng ÷ công chuẩn ÷ 8 giờ (chưa có lương tháng thì dùng đơn giá giờ). **Phụ cấp** = số lượng × mức tiền, số lượng theo cách tính: cố định tháng (1) / mỗi ca đêm / mỗi ngày ca gãy (lấy từ bảng công); phụ cấp "áp dụng cho tất cả" hoặc gán riêng cho nhân viên (có thể đặt mức riêng). Phạt = tổng tiền phạt của bảng công (quy tắc vi phạm, Task 2.2). Tiền là số đồng nguyên. Lương là dữ liệu nhạy cảm: chỉ Admin / HR xem và sửa, không ai tự sửa lương của mình |
 | Vai trò HR (UML UC 1.6 mới ghi 3 vai trò) | Task K.2 | Giữ 4 vai trò; sửa UC 1.6 trong UML/Chương 3 thêm HR |
-| Nhóm chat tùy chỉnh (UML UC 7.2) | Task 5.2 | Vẫn `[Tùy chọn]`; nhóm tự động theo chi nhánh là bắt buộc |
-| ~~Công cụ bổ sung ngoài Chương 2~~ | Cấp 2–6 | ✅ **Đã chốt:** Excel → **ClosedXML** (MIT); PDF → **QuestPDF**; biểu đồ → **Recharts**; bản đồ → **Leaflet + OpenStreetMap** (tìm địa chỉ: Nominatim) thay Google Maps; ngày giờ Web → **dayjs**; push → **expo-notifications + Expo Push**; Fake GPS → cờ `mocked` của `expo-location`; mã thiết bị → **expo-application**; ảnh minh chứng → `expo-image-picker` + `expo-image-manipulator`; tác vụ nền → `BackgroundService` (.NET) |
+| ~~Nhóm chat tùy chỉnh (UML UC 7.2)~~ | Task 5.8 | ✅ **Đã làm (17/11/2026)** — xem Task 5.8 |
+| ~~Công cụ bổ sung ngoài Chương 2~~ | Cấp 2–6 | ✅ **Đã chốt:** Excel → **ClosedXML** (MIT); biểu đồ → **Recharts**; bản đồ → **Leaflet + OpenStreetMap** (tìm địa chỉ: Nominatim) thay Google Maps; ngày giờ Web → **dayjs**; push → **expo-notifications + Expo Push**; Fake GPS → cờ `mocked` của `expo-location`; mã thiết bị → **expo-application**; ảnh minh chứng → `expo-image-picker` + `expo-image-manipulator`; tác vụ nền → `BackgroundService` (.NET) |
 | ~~Gửi email~~ | Task 1.3, 5.5, 6.3 | ✅ **Đã chốt:** local dùng Gmail + App Password (SMTP/MailKit); cloud dùng **Brevo HTTP API** (`BrevoEmailService`, ưu tiên khi có `Brevo:ApiKey`) vì Render gói free chặn cổng SMTP |
 | ~~Redis khi triển khai~~ | Task 6.3 | ✅ **Đã chốt:** **Render Key Value** (khai báo trong `render.yaml`); backend đọc được cả URL `redis://` / `rediss://` |
 | ~~Thu hồi phiên khi đổi mật khẩu~~ | Task 1.x (bổ sung) | ✅ **Đã chốt (14/11/2026):** đổi mật khẩu vẫn chỉ cần mật khẩu hiện tại (OTP chỉ cho "Quên mật khẩu"), bổ sung: (1) email thông báo "Mật khẩu vừa được thay đổi" sau đổi/đặt lại mật khẩu; (2) cột `users.password_changed_at` + claim JWT `pwd_stamp` — token cấp trước lần đổi/đặt lại/cấp lại mật khẩu bị từ chối 401 (kiểm tra ở `OnTokenValidated`, cache Redis 30 phút), thiết bị đang đổi nhận token mới. Migration `001_users_password_changed_at.sql`. Chương 2 (bảo mật) nêu cơ chế này |
@@ -465,7 +465,7 @@ flowchart TD
 
 ---
 
-### 📌 CẤP BẬC 5: Realtime, Bảng công, Bảng lương & Báo cáo `[8/10]`
+### 📌 CẤP BẬC 5: Realtime, Bảng công, Bảng lương & Báo cáo `[8/9]`
 > 🎯 **Demo:** Thông báo & chat tức thì giữa Web và Mobile; dashboard quân số realtime; chốt bảng công tháng → tính lương tạm tính → gửi phiếu lương; xuất Excel.
 
 - [x] **Task 5.1:** `NotificationHub` + bảng `notifications`: lưu và đẩy thông báo (kết quả duyệt đơn, lịch mới, check-in, task được giao); API danh sách, đánh dấu đã đọc.
@@ -503,11 +503,11 @@ flowchart TD
   - *Đã làm (17/11/2026):* không cần migration (chỉ đọc dữ liệu có sẵn). **Phân loại ca** (`AttendanceReportRules` — hàm thuần ở Domain): có lượt chấm công → *đang làm* (chưa check-out) / *đã xong* (đã check-out) / *bị từ chối* (không tính có mặt, cũng không tính vắng); không có lượt → *nghỉ phép* (lịch `on_leave`) / *vắng mặt* (ca đã kết thúc) / *chờ chấm công* (ca đang diễn ra) / *chưa tới ca*. Đi muộn / về sớm theo `ViolationPolicy` (vượt số phút cho phép của ca; về sớm chỉ xét sau check-out; **đơn giải trình đã duyệt thì miễn**); lượt chờ duyệt vẫn tính là có mặt.
   - **API** `/api/reports` (Admin / HR mọi chi nhánh; Quản lý chỉ chi nhánh mình — chọn chi nhánh khác → 403; nhân viên → 403): `GET dashboard?branchId&date` (UC 9.1: theo từng chi nhánh và tổng — số nhân viên được xếp, **đã chấm công, đang trong ca**, ca chờ chấm công / chưa tới / hoàn thành / vắng mặt, nhân viên nghỉ phép, ca đi muộn, **tỷ lệ đúng giờ**, lượt chấm công và đơn đang chờ duyệt; kèm **xu hướng 7 ngày** tới ngày xem cho biểu đồ; `asOf` là thời điểm tính). "Thời gian thực" = tính tại lúc gọi từ dữ liệu hiện hành, giao diện Task 5.8 gọi lại định kỳ (không cần hub riêng). `GET violations?fromDate&toDate&branchId&search` (UC 9.2: tổng hợp, theo chi nhánh, theo nhân viên — chỉ người có vi phạm, nhiều nhất trước, phân trang; gồm số lần / số phút muộn và sớm, số ca vắng, **tỷ lệ ca vi phạm** trên số ca đã có kết quả, tiền phạt và công bị trừ theo quy tắc hiện hành; tối đa 93 ngày mỗi lần), `GET violations/employees/{userId}` (từng lượt vi phạm: ngày, ca, loại, số phút, tiền phạt, công bị trừ), `GET leave-usage?year&branchId` (UC 9.3: tổng quỹ / đã dùng / còn lại / tỷ lệ sử dụng / ngày phép đang chờ duyệt, nhân viên chưa có quỹ riêng (mặc định) và **còn ít phép (≤ 2 ngày)**, theo chi nhánh, **theo loại nghỉ** (đã duyệt / đang chờ), **theo tháng** (12 tháng), top 10 dùng nhiều nhất và còn ít phép nhất).
   - Test: +24 unit (`AttendanceReportRulesTests`: trạng thái theo đồng hồ, nghỉ phép thắng vắng mặt nhưng không thắng lượt chấm công, lượt bị từ chối, ca qua nửa đêm, ngưỡng cho phép, bậc vi phạm, về sớm sau check-out, giải trình miễn, tỷ lệ) — 359 unit; +6 integration (`ReportServiceTests`: dashboard đếm quân số theo chi nhánh và trạng thái + xu hướng + ngày cũ, phạm vi theo vai trò, báo cáo vi phạm tổng hợp có giải trình miễn / nghỉ phép / vắng, theo chi nhánh – nhân viên – chi tiết – tìm kiếm – phân trang – phạm vi – giới hạn ngày, báo cáo quỹ phép theo quỹ / loại / tháng / danh sách nổi bật, phạm vi và kiểm tra đầu vào) — 115 integration. Gọi thử qua HTTP với dữ liệu mẫu hôm nay: 401 / 403 / 400 đúng chỗ, Quản lý chỉ thấy chi nhánh mình, số liệu khớp dữ liệu chấm công. Giao diện dashboard (Recharts) và báo cáo làm ở Task 5.8; xuất Excel ở Task 5.7.
-- [x] **Task 5.7:** Xuất bảng công & bảng lương ra Excel (`.xlsx`, ClosedXML). Xuất PDF (QuestPDF) `[Tùy chọn]`.
+- [x] **Task 5.7:** Xuất bảng công & bảng lương ra Excel (`.xlsx`, ClosedXML).
   - *Đã làm (17/11/2026):* không cần migration. Thêm gói **ClosedXML 0.105.1** (MIT, đã kiểm tra không có lỗ hổng) vào `FW.Infrastructure`; `IExcelExporter` ở Application, cài đặt `ExcelExporter` ở Infrastructure để nghiệp vụ không phụ thuộc thư viện. **Không dùng `AdjustToContents`** (cần phông chữ hệ thống, container Linux trên Render không có) — đặt sẵn độ rộng cột. Chữ do người dùng nhập (tên, ghi chú, chức vụ…) **luôn ghi dạng văn bản**, giá trị như `=1+1` hay `@SUM(...)` không bao giờ thành công thức (có test).
   - **Bảng công** `GET /api/timesheets/export?year&month&branchId` (Quản lý chi nhánh mình — chọn chi nhánh khác → 403; Admin / HR tất cả hoặc một chi nhánh): 1 sheet, mỗi nhân viên một dòng với đủ số liệu (ca xếp / làm / vắng / chờ duyệt / thiếu check-out, ngày công, giờ làm, phút muộn / sớm, vi phạm, công bị trừ, tiền phạt, giờ OT, nghỉ có / không lương, ca đêm, ca gãy, trạng thái, người xác nhận / khóa). Tên tệp `bang-cong-{năm}-{tháng}[-cn{id}].xlsx`.
   - **Bảng lương** `GET /api/payroll/periods/{id}/export` (Admin / HR): 3 sheet — *Bảng lương* (mỗi nhân viên một dòng: lương cơ bản, đơn giá giờ, công, giờ, lương theo công, phụ cấp, OT, phạt, thực nhận, đã gửi email chưa), *Chi tiết khoản* (từng dòng của phiếu lương, khoản trừ là số âm), *Theo chi nhánh* (tổng hợp). Kỳ chưa chốt vẫn xuất được nhưng ghi rõ **"BẢN NHÁP"**. Tên tệp `bang-luong-{năm}-{tháng}.xlsx`.
-  - Trình bày: tiêu đề + phạm vi + giờ xuất, hàng tiêu đề tô màu và cố định (cùng 3 cột đầu), bộ lọc tự động, định dạng số (ngăn cách hàng nghìn, 2 số lẻ), **dòng "Tổng cộng" dùng công thức SUM** nên vẫn đúng khi kế toán sửa số. Phản hồi có `Cache-Control: no-store` (dữ liệu lương nhạy cảm). Bảng công đọc theo trang 100 dòng rồi gộp nên xuất được cả khi quá một trang (đã test 105 dòng). Xuất PDF (QuestPDF) `[Tùy chọn]` chưa làm — để dành cho phần "Hướng phát triển".
+  - Trình bày: tiêu đề + phạm vi + giờ xuất, hàng tiêu đề tô màu và cố định (cùng 3 cột đầu), bộ lọc tự động, định dạng số (ngăn cách hàng nghìn, 2 số lẻ), **dòng "Tổng cộng" dùng công thức SUM** nên vẫn đúng khi kế toán sửa số. Phản hồi có `Cache-Control: no-store` (dữ liệu lương nhạy cảm). Bảng công đọc theo trang 100 dòng rồi gộp nên xuất được cả khi quá một trang (đã test 105 dòng). Xuất PDF đã **loại khỏi phạm vi** (17/11/2026, xem mục *Đã loại khỏi phạm vi*).
   - Test: +17 unit (`ExcelExporterTests` — đọc lại tệp bằng ClosedXML: tiêu đề, hàng tiêu đề, giá trị từng ô, công thức tổng và kết quả, cố định hàng / cột, bộ lọc, tháng không có dữ liệu, chữ độc hại không thành công thức, nhãn trạng thái tiếng Việt, 3 sheet bảng lương, nhãn bản nháp, tệp zip hợp lệ) — 376 unit; +4 integration (`ExportServiceTests`: phạm vi theo vai trò / chi nhánh + tên tệp + đầu vào, **105 dòng qua nhiều trang**, tháng rỗng, bảng lương từ phiếu thật + nhãn nháp → đã chốt, kỳ không tồn tại) — 120 integration. Gọi thử qua HTTP: 401 / 403 / 400 / 404 đúng chỗ, tải được tệp (đúng content-type, `Content-Disposition`, `no-store`), kiểm tra độc lập cấu trúc tệp (sheet, công thức SUM, cố định hàng, bộ lọc). Nút tải xuống trên giao diện làm ở Task 5.8.
 - [x] **Task 5.8:** Web Admin: dashboard (Recharts), bảng công & khóa công, cấu hình lương & phụ cấp, bảng lương & chốt kỳ, báo cáo, chat, trung tâm thông báo.
   - *Đã làm (17/11/2026), chia 4 đợt:* chỉ làm phía web, không đổi backend (ngoài một dòng CORS cho header `Content-Disposition` để web đọc được tên tệp Excel khi gọi chéo origin). Thêm **Recharts** (+ `react-is`, cài bằng `--legacy-peer-deps` vì plugin React cũ chưa khai báo hỗ trợ Vite 8).
@@ -519,15 +519,14 @@ flowchart TD
   - **Bổ sung — UC 7.2 Nhóm chat tùy chỉnh (17/11/2026):** *backend:* **migration `012_chat_groups.sql`** (cột `conversations.created_by` = quản trị nhóm; chạy lại an toàn, đã thử trên CSDL tạm), `ChatService` thêm `CreateGroup` / `RenameGroup` / `AddMembers` / `RemoveMember`, API `POST /api/chat/conversations/group`, `PUT /conversations/{id}`, `POST /conversations/{id}/members`, `DELETE /conversations/{id}/members/{userId}`, sự kiện SignalR `ConversationUpdated` (kể cả người vừa bị xóa khỏi nhóm để thiết bị của họ bỏ phòng). Quy tắc: ai cũng tạo được nhóm (tối thiểu 1 thành viên khác, tối đa 100, chỉ nhân sự đang hoạt động, tên 2–100 ký tự, được trùng tên); **người tạo là quản trị nhóm** — đổi tên, thêm, xóa thành viên; thành viên thường chỉ rời nhóm; quản trị rời đi thì người vào nhóm sớm nhất kế nhiệm, hết người thì đóng nhóm; người mới vào không bị tính "chưa đọc" cả lịch sử; nhóm chi nhánh và chat 1-1 vẫn do hệ thống quản lý (từ chối đổi tên / thêm / xóa). *Web:* nút **Tạo nhóm**, hộp chọn thành viên (tìm kiếm, phân trang, giữ lựa chọn khi chuyển trang), ngăn **Thông tin nhóm** (danh sách thành viên, nhãn quản trị, đổi tên, thêm / xóa, rời nhóm), danh sách phòng của mọi thiết bị cập nhật tức thì. Test: +3 integration (`ChatServiceTests`: tạo nhóm + kiểm tra đầu vào, quyền quản trị / nhóm chi nhánh, xóa – rời – kế nhiệm – đóng nhóm) — **376 unit, 123 integration**; thử bằng 3 trình duyệt thật (Quản lý, HR, Admin). Phát hiện kèm: hộp thoại đang đóng vẫn dựng sẵn nội dung nên bộ chọn người gọi API danh bạ thừa — nay chỉ dựng khi mở.
   - Kiểm tra: typecheck + `npm run build` sạch sau mỗi đợt; chưa viết test tự động cho web (kiểm tra bằng Playwright thủ công, ảnh lưu ở scratchpad). Nhóm chat tùy chỉnh (UML 7.2) làm ngay sau đó (bullet bên dưới).
 - [ ] **Task 5.9:** Mobile App: thông báo, chat, bảng công cá nhân trong tháng, phiếu lương cá nhân.
-- [ ] **Task 5.10:** `[Tùy chọn]` Push Notification khi ứng dụng đang đóng (Expo Push).
 
 ---
 
 ### 📌 CẤP BẬC 6: Hoàn thiện, Triển khai & Thực nghiệm `[0/5]`
 > 🎯 **Demo:** Hệ thống chạy trên môi trường cloud; có số liệu thực nghiệm cho Chương 4.
 
-- [ ] **Task 6.1:** Tác vụ nền (`BackgroundService`): tự đánh dấu vắng mặt khi hết ca, xử lý quên check-out, khởi tạo quỹ phép đầu năm.
-- [ ] **Task 6.2:** Gia cố nhận diện khuôn mặt: hiệu chỉnh ngưỡng khớp (`FaceRecognition:MatchThreshold`, mặc định 0,40) bằng ảnh thật ở Task 6.5; `FW.AiService` (phương án tách dịch vụ): tắt chế độ dự phòng (fallback) ngoài dev, xác thực bằng API key. Chống giả mạo khuôn mặt (liveness) `[Tùy chọn]`.
+- [ ] **Task 6.1:** Xử lý **quên check-out** (hiện ca có check-in mà không check-out chưa được tính công và chưa có cách sửa): chọn một trong hai — Quản lý điều chỉnh giờ check-out thủ công (có ghi lý do, chịu chốt chặn bảng công đã khóa) **hoặc** `BackgroundService` tự đóng ca theo quy tắc. *Đã bỏ (17/11/2026) vì không cần:* “tự đánh dấu vắng mặt khi hết ca” (vắng mặt được **suy ra** từ lịch đã công bố + không có lượt chấm công ở bảng công, dashboard và báo cáo) và “khởi tạo quỹ phép đầu năm” (quỹ chưa có dòng thì dùng mức mặc định theo năm). `BackgroundService` vẫn cần cho Task 7.4.
+- [ ] **Task 6.2:** Gia cố nhận diện khuôn mặt: hiệu chỉnh ngưỡng khớp (`FaceRecognition:MatchThreshold`, mặc định 0,40) bằng ảnh thật ở Task 6.5; `FW.AiService` (phương án tách dịch vụ): tắt chế độ dự phòng (fallback) ngoài dev, xác thực bằng API key.
 - [ ] **Task 6.3:** Triển khai: MySQL trên TiDB Cloud, Backend trên Render (giữ thức bằng UptimeRobot), nhận diện khuôn mặt chạy trong backend, Web trên Vercel, bản build Android (EAS) để demo.
   - *Đã chuẩn bị (12/11/2026):* `render.yaml` (API Docker + Key Value), `FW.Frontend/mobile/eas.json`, `docs/DEPLOY.md` (TiDB Cloud → Brevo → Cloudinary → Render → Vercel → EAS); backend: `BrevoEmailService`, `RedisConnectionParser` (URL `redis://`), `BootstrapAdminService` (Admin đầu tiên từ biến môi trường), `flexiwork_seed_production.sql` (chỉ vai trò + loại đơn), ForwardedHeaders sau proxy, cờ `Swagger:Enabled`; Dockerfile không phụ thuộc `global.json`. Kiểm thử chế độ Production cục bộ: tạo Admin tự động, đăng nhập qua Redis, tài khoản mẫu không tồn tại, CORS chỉ nhận domain khai báo, gọi được API Brevo. *Đã triển khai (13/11/2026):* Web <https://flexiwork-tlu.vercel.app> (Vercel, root `FW.Frontend/web`) — API <https://flexiwork-api.onrender.com> (Render Blueprint + Key Value) — CSDL TiDB Cloud Starter (Singapore) — email Brevo, ảnh Cloudinary; Admin đầu tiên tạo qua Bootstrap. Còn lại: AI Service (Task 2.4), EAS Build (Task 3.4).
 - [ ] **Task 6.4:** Dữ liệu demo quy mô 30–80 nhân sự (seed mở rộng: nhiều chi nhánh, lịch 1 tháng, lịch sử chấm công, đơn từ). Gồm vài nhân viên có hành vi "xấu dần" (đi muộn, xin nghỉ tăng) để minh họa cảnh báo nghỉ việc (Task 7.4).
@@ -535,16 +534,15 @@ flowchart TD
 
 ---
 
-### 📌 CẤP BẬC 7: Trợ lý AI & Phân tích `[0/6]`
+### 📌 CẤP BẬC 7: Trợ lý AI & Phân tích `[0/5]`
 > 🎯 **Demo:** Nhân viên nhắn "Cho em xin nghỉ ca sáng thứ 5 tuần này vì bận thi" → trợ lý tạo bản nháp đơn đúng ngày/ca → nhân viên xác nhận → Quản lý nhận đơn chờ duyệt. Dashboard của Quản lý hiện "Nhân sự cần quan tâm" kèm lý do.
 > ⚠️ **Phụ thuộc:** làm sau Cấp 4–5 (cần đơn từ, quỹ phép, bảng công để trợ lý tra cứu và dữ liệu chấm công tích lũy để chấm điểm). Cấu hình: `docs/DEPLOY.md` Bước 8.
 
 - [ ] **Task 7.1:** Module `Assistant` (backend): gọi Claude API bằng SDK chính thức cho C# với Function Calling; công cụ tra cứu tái sử dụng service sẵn có (lịch ca, bảng công, quỹ phép, trạng thái đơn, loại đơn) và **chạy với quyền của người hỏi**; lưu hội thoại (`assistant_conversations`, `assistant_messages`); giới hạn số lượt/người/ngày để kiểm soát chi phí; xử lý lỗi/từ chối của mô hình.
 - [ ] **Task 7.2:** Tạo đơn qua hội thoại (UC 10.2): công cụ tạo **bản nháp** đơn nghỉ / đổi ca / OT (ngày tương đối như "thứ 5 tuần này" quy đổi theo giờ Việt Nam) → thẻ xác nhận → gửi qua API đơn từ (Task 4.1). Bộ kiểm thử ~50 câu mẫu.
 - [ ] **Task 7.3:** Mobile App + Web Admin: màn hình chat với trợ lý (hiển thị câu trả lời dần dần), thẻ xác nhận đơn, lịch sử hội thoại.
-- [ ] **Task 7.4:** Chấm điểm nguy cơ nghỉ việc (UC 10.3): tác vụ nền hằng tuần so 2 tuần gần nhất với nền 8 tuần trước của chính nhân viên (phút đi muộn, số đơn nghỉ, vắng mặt, xin đổi ca, nguyện vọng ca nếu có) → điểm 0–100 + lý do, lưu `attrition_risk_snapshots`; trọng số / ngưỡng cấu hình được (kèm unit test).
-- [ ] **Task 7.5:** Web Admin (UC 10.4): widget "Nhân sự cần quan tâm" trên Dashboard, trang chi tiết xu hướng theo tuần; `[Tùy chọn]` LLM viết tóm tắt dễ hiểu cho Quản lý.
-- [ ] **Task 7.6:** `[Tùy chọn]` Đăng ký nguyện vọng ca (UC 3.5): nhân viên đăng ký ca / ngày có thể làm; Quản lý xem khi xếp lịch; cung cấp tín hiệu "giảm đăng ký ca" cho Task 7.4.
+- [ ] **Task 7.4:** Chấm điểm nguy cơ nghỉ việc (UC 10.3): tác vụ nền hằng tuần so 2 tuần gần nhất với nền 8 tuần trước của chính nhân viên (phút đi muộn, số đơn nghỉ, vắng mặt, xin đổi ca) → điểm 0–100 + lý do, lưu `attrition_risk_snapshots`; trọng số / ngưỡng cấu hình được (kèm unit test).
+- [ ] **Task 7.5:** Web Admin (UC 10.4): widget "Nhân sự cần quan tâm" trên Dashboard, trang chi tiết xu hướng theo tuần.
 
 ---
 
@@ -552,14 +550,28 @@ flowchart TD
 - [ ] **Task K.1:** Sửa Chương 1–2:
   - Loại bỏ nội dung còn sót từ dự án SOSMap: `Post`, `RescueTask`, `Comment`, "mạng xã hội cứu trợ", "SosReport", feed bài đăng, Flat Threading bình luận, FilterJson, Optimistic UI; Google Maps "tính thời gian đến điểm cứu hộ" → Leaflet/OpenStreetMap chọn tâm geofence.
   - Điền chỗ trống "mô hình (…)"; thống nhất Clean Architecture; chỉ dùng **SignalR** (bỏ Socket.io).
-  - Bổ sung công nghệ đang dùng: Mobile (Expo, expo-camera/location, NetInfo, SecureStore), `FW.AiService` (FastAPI + InsightFace), xUnit, ClosedXML/QuestPDF, Recharts, Expo Push.
+  - Bổ sung công nghệ đang dùng: Mobile (Expo, expo-camera/location, NetInfo, SecureStore), `FW.AiService` (FastAPI + InsightFace), xUnit, ClosedXML, Recharts.
   - Mục Frontend: **React 18 → React 19**; **Tailwind CSS v4** (cascade layers, cấu hình bằng CSS); thêm **hệ thống thiết kế Astryx** (Meta): component có trợ năng (accessibility), design token qua CSS variables (Dynamic Theming), chế độ sáng/tối, đa ngôn ngữ; giải thích vì sao chọn design system thay vì tự viết component.
   - Mục 1.4.2: thêm phân hệ Bảng lương rút gọn và **Trợ lý AI & Phân tích** cho khớp `docs/UML.md`.
   - Chương 2: lý thuyết LLM & Function Calling (Claude API), phương pháp chấm điểm rủi ro có giải thích; triển khai: Render (API), Vercel (Web), TiDB Cloud (CSDL), nhận diện khuôn mặt bằng **ONNX Runtime trong backend** (FW.AiService là phương án tách dịch vụ), Brevo, Cloudinary.
 - [ ] **Task K.2:** Chương 3 — **làm một lần sau khi hoàn thiện sản phẩm** (đã chốt 14/11/2026) để biểu đồ khớp code thật:
-  - Quy trình TO-BE; danh sách tác nhân; biểu đồ UC tổng quát + UC phân rã 11 phân hệ theo `docs/UML.md` (đã bổ sung Phân hệ 0, Phân hệ 10 và các UC ★ — 55 UC); BFD.
+  - Quy trình TO-BE; danh sách tác nhân; biểu đồ UC tổng quát + UC phân rã 11 phân hệ theo `docs/UML.md` (đã bổ sung Phân hệ 0, Phân hệ 10 và các UC ★ — 54 UC); BFD.
   - Đặc tả UC dạng bảng ngắn cho mọi UC; đặc tả đầy đủ + **biểu đồ hoạt động** + **biểu đồ tuần tự** cho ~12–15 UC cốt lõi (đăng nhập, quên mật khẩu OTP, đổi mật khẩu, mời nhân viên, cấu hình geofence, xếp & công bố lịch, đăng ký Face ID, **chấm công 3 lớp**, duyệt chấm công chờ xác nhận, lập & duyệt đơn, tổng hợp bảng công, tính & chốt lương).
   - Biểu đồ lớp (theo entity/service thật), ERD & mô tả bảng (theo `flexiwork_schema.sql`), kiến trúc Clean Architecture & triển khai cloud.
   - Công cụ: **PlantUML** (`docs/diagrams/*.puml`, render PNG bằng Java có sẵn trên máy) — sửa được bằng code, tuần tự đi đúng lớp `Controller → Service → Repository`. Đầu ra: ảnh PNG + nội dung chương (đặc tả, lời dẫn hình) để chép vào Word; không sửa trực tiếp file `.docx`.
 - [ ] **Task K.3:** Chương 4: môi trường cài đặt, giao diện Web Admin & Mobile App, kết quả thực nghiệm (từ Task 6.5).
 - [ ] **Task K.4:** Chương 5 & phần đầu: kết luận, hạn chế, hướng phát triển; cập nhật tóm tắt, mục lục, danh mục viết tắt/hình/bảng; sửa lời cam đoan ("nhóm tác giả" → cá nhân).
+
+### ✂️ Đã loại khỏi phạm vi (17/11/2026)
+> Rà soát lại các việc chưa làm: chỉ giữ cái thật sự phục vụ mục tiêu đề tài. Các mục dưới đây đưa vào **Hướng phát triển** (Task K.4), không làm trong khóa luận.
+
+| Mục | Lý do bỏ |
+|---|---|
+| Task 5.10 — Push khi ứng dụng đóng (Expo Push) | Tùy chọn. Thông báo tức thì đã có bằng SignalR (UC 7.4) khi ứng dụng đang mở; push khi đóng cần tài khoản FCM / APNs và bản build riêng, tốn công mà không thêm UC nào |
+| Task 7.6 + UML UC 3.5 — Đăng ký nguyện vọng ca | Tùy chọn. Chấm điểm nguy cơ nghỉ việc (UC 10.3) đã đủ tín hiệu: đi muộn, xin nghỉ, vắng mặt, xin đổi ca. UML còn **54 UC** |
+| Xuất PDF (QuestPDF) | Tùy chọn. Excel (.xlsx) đã đáp ứng nhu cầu kế toán / nhân sự và sửa được; PDF không thêm chức năng |
+| Chống giả mạo khuôn mặt (liveness), Task 6.2 | Tùy chọn. Đã có chấm công 3 lớp (GPS + Wi-Fi + khuôn mặt) và phát hiện trùng thiết bị; liveness cần mô hình / dữ liệu riêng |
+| LLM viết tóm tắt cho Quản lý, Task 7.5 | Tùy chọn. Widget “Nhân sự cần quan tâm” kèm lý do dạng quy tắc đã dễ hiểu; tránh thêm chi phí Claude API |
+| Task 6.1 — tự đánh dấu vắng mặt, khởi tạo quỹ phép đầu năm | Không cần: vắng mặt được suy ra lúc đọc từ lịch + chấm công; quỹ phép dùng mức mặc định khi chưa có dòng. Giữ lại phần xử lý quên check-out |
+| Tệp `ComingSoonPage.tsx` (web) | Không còn trang nào dùng sau khi mọi màn hình đã làm xong |
+
