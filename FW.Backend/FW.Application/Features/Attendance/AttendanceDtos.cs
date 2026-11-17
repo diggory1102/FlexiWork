@@ -183,9 +183,14 @@ public record AttendanceLogDetailDto(
     string? ReviewerName,
     DateTime? ReviewedAt,
     string? ReviewNote,
-    bool CanReview)
+    bool CanReview,
+    int? CheckoutAdjustedBy,
+    string? CheckoutAdjusterName,
+    DateTime? CheckoutAdjustedAt,
+    string? CheckoutAdjustNote,
+    bool CanAdjustCheckout)
 {
-    public static AttendanceLogDetailDto From(FW.Application.Common.Interfaces.Persistence.AttendanceLogDetail d, bool canReview) => new(
+    public static AttendanceLogDetailDto From(FW.Application.Common.Interfaces.Persistence.AttendanceLogDetail d, bool canReview, bool canAdjustCheckout = false) => new(
         AttendanceLogItemDto.From(d),
         new AttendanceEvidenceDto(d.CheckinTime, d.CheckinImageUrl, d.CheckinLat, d.CheckinLng, d.CheckinAccuracy, d.CheckinDistance,
             d.CheckinBssid, d.CheckinWifiMatched, d.CheckinFaceMatched, d.CheckinFaceScore, d.CheckinDeviceId),
@@ -194,5 +199,6 @@ public record AttendanceLogDetailDto(
                 d.CheckoutBssid, d.CheckoutWifiMatched, d.CheckoutFaceMatched, d.CheckoutFaceScore, d.CheckoutDeviceId)
             : null,
         new AttendanceGeofenceDto(d.BranchId, d.BranchName, d.BranchLatitude, d.BranchLongitude, d.BranchRadius),
-        d.ReviewedBy, d.ReviewerName, d.ReviewedAt, d.ReviewNote, canReview);
+        d.ReviewedBy, d.ReviewerName, d.ReviewedAt, d.ReviewNote, canReview,
+        d.CheckoutAdjustedBy, d.CheckoutAdjusterName, d.CheckoutAdjustedAt, d.CheckoutAdjustNote, canAdjustCheckout);
 }

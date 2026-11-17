@@ -63,6 +63,13 @@ export interface AttendanceLogDetail {
   reviewedAt: string | null;
   reviewNote: string | null;
   canReview: boolean;
+  /** Giờ ra do Quản lý / HR nhập thủ công (nhân viên quên check-out). */
+  checkoutAdjustedBy: number | null;
+  checkoutAdjusterName: string | null;
+  checkoutAdjustedAt: string | null;
+  checkoutAdjustNote: string | null;
+  /** Người xem điều chỉnh được giờ ra: lượt chưa có giờ ra, còn hiệu lực, có ca, và không phải chính chủ. */
+  canAdjustCheckout: boolean;
 }
 
 export interface AttendanceLogFilter extends PagedQuery {

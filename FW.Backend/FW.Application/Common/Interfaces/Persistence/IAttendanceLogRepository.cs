@@ -36,6 +36,7 @@ public class AttendanceLogDetail : AttendanceLog
     public TimeSpan? ShiftEndTime { get; set; }
 
     public string? ReviewerName { get; set; }
+    public string? CheckoutAdjusterName { get; set; }
 }
 
 public interface IAttendanceLogRepository : IGenericRepository<AttendanceLog, long>

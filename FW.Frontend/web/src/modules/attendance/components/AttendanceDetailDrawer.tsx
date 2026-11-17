@@ -15,6 +15,7 @@ import { DetailDrawer } from '@/components/ui/DetailDrawer';
 import { Avatar } from '@/components/ui/Layout';
 import { Badge, FormError, Notice, Spinner } from '@/components/ui/Feedback';
 import { attendanceApi } from '@/services/attendanceApi';
+import { AdjustCheckoutModal } from './AdjustCheckoutModal';
 import { getErrorMessage } from '@/services/apiClient';
 import { toast } from '@/stores/toastStore';
 import { formatDate, formatDateTime } from '@/lib/format';
@@ -172,6 +173,7 @@ export function AttendanceDetailDrawer({ row, open, onClose, onReviewed }: Props
   const [noteError, setNoteError] = useState<string | null>(null);
   const [saving, setSaving] = useState<'approve' | 'reject' | null>(null);
   const [photoIndex, setPhotoIndex] = useState<number | null>(null);
+  const [adjusting, setAdjusting] = useState(false);
 
   const rowId = row?.id;
   useEffect(() => {
@@ -332,6 +334,21 @@ export function AttendanceDetailDrawer({ row, open, onClose, onReviewed }: Props
                         </MetadataListItem>
                       </MetadataList>
 
+                      {detail.canAdjustCheckout && (
+                        <Notice
+                          status="warning"
+                          title="Chưa có giờ ra"
+                          description={
+                            <VStack gap={2}>
+                              <Text size="sm">Nhân viên chưa check-out nên ca này chưa được tính công. Bạn có thể nhập giờ ra thay họ (ghi lý do, hệ thống tính lại giờ làm).</Text>
+                              <HStack>
+                                <Button label="Điều chỉnh giờ ra" size="sm" variant="secondary" onClick={() => setAdjusting(true)} />
+                              </HStack>
+                            </VStack>
+                          }
+                        />
+                      )}
+
                       <Grid columns={{ minWidth: 260, max: 2 }} gap={3}>
                         <EvidenceCard
                           title="Lượt vào"
@@ -341,14 +358,27 @@ export function AttendanceDetailDrawer({ row, open, onClose, onReviewed }: Props
                           workDate={detail.log.workDate}
                           onOpenPhoto={() => openPhoto('in')}
                         />
-                        <EvidenceCard
-                          title="Lượt ra"
-                          evidence={detail.checkOut}
-                          radius={detail.branch.radius}
-                          requiresWifi={detail.log.branchRequiresWifi}
-                          workDate={detail.log.workDate}
-                          onOpenPhoto={() => openPhoto('out')}
-                        />
+                        {detail.checkoutAdjustedBy != null && detail.checkOut ? (
+                          <Card padding={4}>
+                            <VStack gap={2}>
+                              <Heading level={4}>Lượt ra</Heading>
+                              <Text weight="semibold">{timeOf(detail.checkOut.time, detail.log.workDate)} · nhập thủ công</Text>
+                              <Text type="supporting" size="sm">
+                                {detail.checkoutAdjusterName ?? '—'} ghi giờ ra lúc {formatDateTime(detail.checkoutAdjustedAt)}, không có ảnh hay vị trí minh chứng.
+                              </Text>
+                              {detail.checkoutAdjustNote && <Text size="sm">Lý do: {detail.checkoutAdjustNote}</Text>}
+                            </VStack>
+                          </Card>
+                        ) : (
+                          <EvidenceCard
+                            title="Lượt ra"
+                            evidence={detail.checkOut}
+                            radius={detail.branch.radius}
+                            requiresWifi={detail.log.branchRequiresWifi}
+                            workDate={detail.log.workDate}
+                            onOpenPhoto={() => openPhoto('out')}
+                          />
+                        )}
                       </Grid>
 
                       {detail.reviewedAt && (
@@ -363,6 +393,22 @@ export function AttendanceDetailDrawer({ row, open, onClose, onReviewed }: Props
                 </VStack>
               )}
       </DetailDrawer>
+      {detail && (
+        <AdjustCheckoutModal
+          open={adjusting}
+          logId={detail.log.id}
+          employeeName={detail.log.fullName}
+          workDate={detail.log.workDate}
+          shiftLabel={`${detail.log.shiftName ?? 'Ca'} ${detail.log.shiftStartTime ?? ''}–${detail.log.shiftEndTime ?? ''}`}
+          checkInTime={detail.checkIn.time}
+          shiftEnd={detail.log.shiftEndTime}
+          onClose={() => setAdjusting(false)}
+          onAdjusted={(updated) => {
+            setDetail(updated);
+            onReviewed();
+          }}
+        />
+      )}
       {photos.length > 0 && (
         <Lightbox
           isOpen={photoIndex != null}

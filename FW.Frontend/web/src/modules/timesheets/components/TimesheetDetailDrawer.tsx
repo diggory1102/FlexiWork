@@ -11,11 +11,14 @@ import { DataTable, type Column } from '@/components/ui/DataTable';
 import { DetailDrawer } from '@/components/ui/DetailDrawer';
 import { Modal } from '@/components/ui/Modal';
 import { StatCard } from '@/components/ui/StatCard';
+import { AdjustCheckoutModal } from '@/modules/attendance/components/AdjustCheckoutModal';
 import { useApiData } from '@/hooks/useApiData';
 import { useFormSubmit } from '@/hooks/useFormSubmit';
 import { timesheetApi } from '@/services/timesheetApi';
 import { getErrorMessage } from '@/services/apiClient';
 import { toast } from '@/stores/toastStore';
+import { useAuthStore } from '@/stores/authStore';
+import { RoleGroups } from '@/types/auth';
 import { formatCurrency, formatDate, formatDateTime, formatTime } from '@/lib/format';
 import { formatMinutes } from '@/lib/dates';
 import type { OvertimeLine, Timesheet, TimesheetLine } from '@/types/timesheets';
@@ -33,9 +36,11 @@ export function TimesheetDetailDrawer({
   onChanged: () => void;
 }) {
   const id = row?.id ?? null;
+  const myId = useAuthStore((s) => s.user?.id);
   const { data: detail, loading, error, reload } = useApiData(() => timesheetApi.detail(id!), [id], { enabled: id != null, toastError: false });
   const [busy, setBusy] = useState<'confirm' | 'lock' | null>(null);
   const [reopening, setReopening] = useState(false);
+  const [adjusting, setAdjusting] = useState<TimesheetLine | null>(null);
   const [note, setNote] = useState('');
   const reopenForm = useFormSubmit();
   const employeeId = row?.employee.id;
@@ -79,6 +84,8 @@ export function TimesheetDetailDrawer({
 
   const ts = detail?.timesheet ?? row;
   const f = ts?.figures;
+  // Quản lý / HR sửa được giờ ra của ca thiếu check-out (không phải của chính mình; máy chủ kiểm tra lại phạm vi và bảng công đã khóa)
+  const canAdjust = useAuthStore((s) => s.hasAnyRole(RoleGroups.Managers)) && !!ts && ts.employee.id !== myId && !!ts.status && ts.status !== 'locked' && ts.status !== 'finalized';
 
   const lineColumns: Column<TimesheetLine>[] = [
     { key: 'date', header: 'Ngày', width: 90, render: (l) => formatDate(l.workDate).slice(0, 5) },
@@ -105,7 +112,22 @@ export function TimesheetDetailDrawer({
         </VStack>
       ),
     },
-    { key: 'time', header: 'Vào – ra', className: 'whitespace-nowrap', render: (l) => (l.checkIn ? `${formatTime(l.checkIn)} – ${formatTime(l.checkOut)}` : '—') },
+    {
+      key: 'time',
+      header: 'Vào – ra',
+      className: 'whitespace-nowrap',
+      render: (l) =>
+        !l.checkIn ? (
+          '—'
+        ) : l.outcome === 'missing_checkout' && l.logId != null && canAdjust ? (
+          <VStack gap={0.5} hAlign="start">
+            <Text>{formatTime(l.checkIn)} – ?</Text>
+            <Button label="Nhập giờ ra" size="sm" variant="secondary" onClick={() => setAdjusting(l)} />
+          </VStack>
+        ) : (
+          `${formatTime(l.checkIn)} – ${formatTime(l.checkOut)}`
+        ),
+    },
     {
       key: 'violation',
       header: 'Muộn / sớm',
@@ -233,6 +255,23 @@ export function TimesheetDetailDrawer({
           )}
         </VStack>
       </DetailDrawer>
+
+      {adjusting && ts && (
+        <AdjustCheckoutModal
+          open
+          logId={adjusting.logId!}
+          employeeName={ts.employee.fullName}
+          workDate={adjusting.workDate}
+          shiftLabel={`${adjusting.shiftName} ${adjusting.startTime}–${adjusting.endTime}`}
+          checkInTime={adjusting.checkIn!}
+          shiftEnd={adjusting.endTime}
+          onClose={() => setAdjusting(null)}
+          onAdjusted={() => {
+            onChanged();
+            void reload();
+          }}
+        />
+      )}
 
       <Modal
         open={reopening}

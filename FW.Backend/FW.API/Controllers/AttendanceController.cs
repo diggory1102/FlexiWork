@@ -18,11 +18,13 @@ public class AttendanceController : ApiControllerBase
 
     private readonly IAttendanceService _attendanceService;
     private readonly IAttendanceLogService _logService;
+    private readonly IAttendanceAdjustmentService _adjustmentService;
 
-    public AttendanceController(IAttendanceService attendanceService, IAttendanceLogService logService)
+    public AttendanceController(IAttendanceService attendanceService, IAttendanceLogService logService, IAttendanceAdjustmentService adjustmentService)
     {
         _attendanceService = attendanceService;
         _logService = logService;
+        _adjustmentService = adjustmentService;
     }
 
     /// <summary>Việc cần làm tiếp theo (check-in / check-out / không có), chi nhánh của ca và các ca trong ngày.</summary>
@@ -74,6 +76,12 @@ public class AttendanceController : ApiControllerBase
     [HttpGet("logs/{id:long}")]
     public async Task<IActionResult> GetLog(long id, CancellationToken cancellationToken) =>
         Success(await _logService.GetByIdAsync(id, cancellationToken));
+
+    /// <summary>Quản lý / HR nhập giờ ra thay nhân viên quên check-out: {checkoutTime, note}. Tính lại giờ làm, báo cho nhân viên; bị chặn khi bảng công đã khóa.</summary>
+    [HttpPut("logs/{id:long}/checkout")]
+    [Authorize(Roles = RoleNames.Managers)]
+    public async Task<IActionResult> AdjustCheckout(long id, [FromBody] AdjustCheckoutRequest request, CancellationToken cancellationToken) =>
+        Success(await _adjustmentService.AdjustCheckoutAsync(id, request, cancellationToken), "Đã ghi giờ ra cho nhân viên.");
 
     /// <summary>Chấp nhận / từ chối lượt chấm công đang chờ duyệt (từ chối phải ghi lý do).</summary>
     [HttpPut("logs/{id:long}/review")]

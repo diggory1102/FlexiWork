@@ -37,6 +37,7 @@ public static class DependencyInjection
         services.AddScoped<IScheduleService, ScheduleService>();
         services.AddScoped<IAttendanceService, AttendanceService>();
         services.AddScoped<IAttendanceLogService, AttendanceLogService>();
+        services.AddScoped<IAttendanceAdjustmentService, AttendanceAdjustmentService>();
         services.AddScoped<ILeaveTypeService, LeaveTypeService>();
         services.AddScoped<ILeaveRequestService, LeaveRequestService>();
         services.AddScoped<IRequestScheduleChecker, RequestScheduleChecker>();

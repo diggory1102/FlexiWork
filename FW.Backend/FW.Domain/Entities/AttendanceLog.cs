@@ -74,10 +74,19 @@ public class AttendanceLog : BaseEntity<long>, IAuditableEntity
     public DateTime? ReviewedAt { get; set; }
     public string? ReviewNote { get; set; }
 
+    // ----- Điều chỉnh giờ ra thủ công -----
+    /// <summary>Quản lý / HR đã nhập giờ ra thay nhân viên quên check-out; null nếu giờ ra do chính nhân viên chấm công.</summary>
+    public int? CheckoutAdjustedBy { get; set; }
+    public DateTime? CheckoutAdjustedAt { get; set; }
+    public string? CheckoutAdjustNote { get; set; }
+
     /// <summary>Do CSDL tự gán — không ghi từ ứng dụng.</summary>
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
 
     /// <summary>Đã check-out chưa (thuộc tính tính toán, không ánh xạ xuống CSDL).</summary>
     public bool IsCheckedOut => CheckoutTime.HasValue;
+
+    /// <summary>Giờ ra do Quản lý nhập thủ công (không có ảnh / vị trí minh chứng).</summary>
+    public bool IsCheckoutAdjusted => CheckoutAdjustedBy.HasValue;
 }

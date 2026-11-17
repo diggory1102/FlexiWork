@@ -7,5 +7,7 @@ export const attendanceApi = {
   logs: (filter: AttendanceLogFilter) => api.get<PaginatedResult<AttendanceLogItem>>('/attendance/logs', filter),
   get: (id: number) => api.get<AttendanceLogDetail>(`/attendance/logs/${id}`),
   /** Chấp nhận / từ chối lượt đang chờ duyệt (từ chối phải ghi lý do). */
+  /** Quản lý / HR nhập giờ ra thay nhân viên quên check-out (giờ Việt Nam, dạng yyyy-MM-ddTHH:mm:ss). */
+  adjustCheckout: (id: number, checkoutTime: string, note: string) => api.put<AttendanceLogDetail>(`/attendance/logs/${id}/checkout`, { checkoutTime, note }),
   review: (id: number, approved: boolean, note: string | null) => api.put<AttendanceLogDetail>(`/attendance/logs/${id}/review`, { approved, note }),
 };

@@ -21,7 +21,7 @@ export const outcomeLabels: Record<ShiftOutcome, string> = {
   leave: 'Nghỉ phép',
   pending: 'Chờ duyệt',
   rejected: 'Bị từ chối',
-  missingCheckout: 'Thiếu check-out',
+  missing_checkout: 'Thiếu check-out',
   upcoming: 'Chưa tới',
 };
 
@@ -31,7 +31,7 @@ export const outcomeTone: Record<ShiftOutcome, BadgeTone> = {
   leave: 'blue',
   pending: 'amber',
   rejected: 'red',
-  missingCheckout: 'amber',
+  missing_checkout: 'amber',
   upcoming: 'gray',
 };
 

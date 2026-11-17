@@ -5,7 +5,7 @@ import type { PagedQuery } from './api';
 export type TimesheetStatus = 'draft' | 'confirmed' | 'locked' | 'finalized';
 
 /** Kết quả của một ca khi tính bảng công. */
-export type ShiftOutcome = 'worked' | 'absent' | 'leave' | 'pending' | 'rejected' | 'missingCheckout' | 'upcoming';
+export type ShiftOutcome = 'worked' | 'absent' | 'leave' | 'pending' | 'rejected' | 'missing_checkout' | 'upcoming';
 
 export interface TimesheetFilter extends PagedQuery {
   year?: number;

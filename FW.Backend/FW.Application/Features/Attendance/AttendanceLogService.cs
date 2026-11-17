@@ -77,7 +77,7 @@ public class AttendanceLogService : IAttendanceLogService
         {
             throw new ForbiddenException("Bạn không có quyền xem bản ghi chấm công này.");
         }
-        return AttendanceLogDetailDto.From(log, CanReview(log));
+        return AttendanceLogDetailDto.From(log, CanReview(log), CanAdjustCheckout(log));
     }
 
     public async Task<AttendanceLogDetailDto> ReviewAsync(long id, ReviewAttendanceRequest request, CancellationToken cancellationToken = default)
@@ -125,6 +125,15 @@ public class AttendanceLogService : IAttendanceLogService
 
     private async Task<AttendanceLogDetail> LoadAsync(long id, CancellationToken cancellationToken) =>
         await _logs.GetDetailByIdAsync(id, cancellationToken) ?? throw new NotFoundException("Bản ghi chấm công", id);
+
+    /// <summary>Lượt đã check-in mà chưa có giờ ra, còn hiệu lực, có ca để tính giờ, và người xem là Quản lý / HR của chi nhánh (không phải chính chủ).</summary>
+    private bool CanAdjustCheckout(AttendanceLogDetail log) =>
+        log.CheckoutTime is null &&
+        log.ScheduleId.HasValue &&
+        log.Status != AttendanceStatus.Invalid &&
+        log.UserId != CurrentUserId &&
+        (_currentUser.HasCompanyWideAccess() || _currentUser.IsBranchManager()) &&
+        _currentUser.CanAccessBranch(log.BranchId);
 
     private bool CanReview(AttendanceLogDetail log) =>
         log.Status == AttendanceStatus.PendingApproval &&

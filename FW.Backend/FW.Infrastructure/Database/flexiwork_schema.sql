@@ -284,6 +284,9 @@ CREATE TABLE attendance_logs (
     reviewed_by INT NULL COMMENT 'Quản lý / HR duyệt bản ghi chờ duyệt',
     reviewed_at DATETIME NULL,
     review_note VARCHAR(255) NULL,
+    checkout_adjusted_by INT NULL COMMENT 'Quản lý / HR điều chỉnh giờ ra thủ công (nhân viên quên check-out)',
+    checkout_adjusted_at DATETIME NULL,
+    checkout_adjust_note VARCHAR(255) NULL COMMENT 'Lý do điều chỉnh giờ ra',
 
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NULL ON UPDATE CURRENT_TIMESTAMP,
@@ -291,6 +294,7 @@ CREATE TABLE attendance_logs (
     CONSTRAINT fk_attendance_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     CONSTRAINT fk_attendance_branch FOREIGN KEY (branch_id) REFERENCES branches(id) ON DELETE RESTRICT,
     CONSTRAINT fk_attendance_reviewer FOREIGN KEY (reviewed_by) REFERENCES users(id) ON DELETE SET NULL,
+    CONSTRAINT fk_attendance_adjuster FOREIGN KEY (checkout_adjusted_by) REFERENCES users(id) ON DELETE SET NULL,
     UNIQUE KEY uq_attendance_schedule (schedule_id),
     INDEX idx_attendance_user_date (user_id, work_date),
     INDEX idx_attendance_branch_date (branch_id, work_date),
