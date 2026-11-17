@@ -177,7 +177,7 @@ cd FW.Backend\FW.Infrastructure\Database\migrations
 | `003_violation_rules_system_settings.sql` | Quy tắc trừ công / phạt theo bậc + số công chuẩn tháng (kèm giá trị mặc định) | ✅ |
 | `004_face_profiles_model_buffalo_sc.sql` | Tên mô hình mặc định của `face_profiles` là `buffalo_sc` | ☐ |
 | `005_attendance_logs_three_layer.sql` | Thiết kế lại `attendance_logs` cho chấm công 3 lớp (bảng cũ đổi tên thành `attendance_logs_backup_005`; **chạy lại an toàn** — đã migrate thì tự bỏ qua). Sau đó kiểm tra bảng sao lưu 0 dòng rồi xóa bằng lệnh ở cuối file | ✅ |
-| `006_leave_requests_categories.sql` | Đơn từ (Task 4.1): `leave_types` thêm nhóm đơn (nghỉ / đổi ca / OT / giải trình), trừ phép năm, bật/tắt + loại "Giải trình đi muộn / về sớm"; `leave_requests` thêm chi nhánh xử lý, giờ OT, phản hồi đổi ca của đồng nghiệp, lượt chấm công được giải trình; `system_settings.annual_leave_days` = 12. **Chạy lại an toàn.** Cuối file in danh sách loại đơn và `9`, `2` (số cột / khóa ngoại mới) | ☐ |
+| `006_leave_requests_categories.sql` | Đơn từ (Task 4.1): `leave_types` thêm nhóm đơn (nghỉ / đổi ca / OT / giải trình), trừ phép năm, bật/tắt + loại "Giải trình đi muộn / về sớm"; `leave_requests` thêm chi nhánh xử lý, giờ OT, phản hồi đổi ca của đồng nghiệp, lượt chấm công được giải trình; `system_settings.annual_leave_days` = 12. **Chạy lại an toàn.** Mỗi câu ALTER chỉ làm một việc (TiDB không cho một câu vừa thêm cột vừa tham chiếu cột đó). Cuối file in danh sách 6 loại đơn và `6`, `9`, `2` (số cột / khóa ngoại mới) | ☐ |
 
 ## Xử lý sự cố
 
