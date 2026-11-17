@@ -19,6 +19,7 @@ import { RequestsPage } from '@/modules/requests/pages/RequestsPage';
 import { LeaveBalancesPage } from '@/modules/requests/pages/LeaveBalancesPage';
 import { LeaveTypesPage } from '@/modules/requests/pages/LeaveTypesPage';
 import { TasksPage } from '@/modules/tasks/pages/TasksPage';
+import { TimesheetsPage } from '@/modules/timesheets/pages/TimesheetsPage';
 import { ReportsPage } from '@/modules/reports/pages/ReportsPage';
 import { ComingSoonPage } from '@/components/common/ComingSoonPage';
 import { NotFoundPage } from '@/components/common/NotFoundPage';
@@ -66,7 +67,7 @@ const router = createBrowserRouter([
                   { path: '/shifts', element: <ShiftsPage /> },
                   { path: '/schedules', element: <SchedulesPage /> },
                   { path: '/attendance', element: <AttendanceLogsPage /> },
-                  comingSoon('/timesheets', 'Bảng công', 'Cấp bậc 5 — Tổng hợp bảng công'),
+                  { path: '/timesheets', element: <TimesheetsPage /> },
                   { path: '/tasks', element: <TasksPage /> },
                   comingSoon('/chat', 'Truyền thông nội bộ', 'Cấp bậc 5 — Realtime'),
                   { path: '/reports', element: <ReportsPage /> },
