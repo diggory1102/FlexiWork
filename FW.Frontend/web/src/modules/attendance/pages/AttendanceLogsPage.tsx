@@ -7,7 +7,8 @@ import { Tab, TabList } from '@astryxdesign/core/TabList';
 import { Text } from '@astryxdesign/core/Text';
 import { Tooltip } from '@astryxdesign/core/Tooltip';
 import { MapPin, RefreshCw, ScanFace, Wifi } from 'lucide-react';
-import { Avatar, PageHeader, Toolbar } from '@/components/ui/Layout';
+import { PageHeader, Toolbar } from '@/components/ui/Layout';
+import { EmployeeCell } from '@/components/ui/EmployeeCell';
 import { ListCard, SearchInput } from '@/components/ui/ListCard';
 import { BranchSelect } from '@/components/ui/BranchSelect';
 import { Badge } from '@/components/ui/Feedback';
@@ -162,18 +163,7 @@ export function AttendanceLogsPage() {
       header: 'Nhân viên',
       width: 240,
       render: (l) => (
-        <HStack gap={3} vAlign="center">
-          <Avatar name={l.fullName} url={l.avatarUrl} size={36} />
-          <VStack gap={0.5} className="min-w-0">
-            <Text weight="medium" maxLines={1}>
-              {l.fullName}
-            </Text>
-            <Text type="supporting" maxLines={1}>
-              <span className="font-mono">{l.employeeCode}</span>
-              {isCompanyWide && <> · {l.branchName}</>}
-            </Text>
-          </VStack>
-        </HStack>
+        <EmployeeCell name={l.fullName} code={l.employeeCode} avatarUrl={l.avatarUrl} sub={isCompanyWide ? l.branchName : null} />
       ),
     },
     {

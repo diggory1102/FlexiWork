@@ -1,13 +1,12 @@
 import { useEffect, useState } from 'react';
-import { Drawer, DrawerHeader } from '@astryxdesign/core/Drawer';
 import { Icon } from '@astryxdesign/core/Icon';
-import { Layout, LayoutContent } from '@astryxdesign/core/Layout';
 import { Lightbox } from '@astryxdesign/core/Lightbox';
 import { ProgressBar } from '@astryxdesign/core/ProgressBar';
 import { HStack, VStack } from '@astryxdesign/core/Stack';
 import { Heading, Text } from '@astryxdesign/core/Text';
 import { Thumbnail } from '@astryxdesign/core/Thumbnail';
 import { CheckCircle2, Circle } from 'lucide-react';
+import { DetailDrawer } from '@/components/ui/DetailDrawer';
 import { Avatar } from '@/components/ui/Layout';
 import { Badge, FormError, Spinner } from '@/components/ui/Feedback';
 import { taskApi } from '@/services/taskApi';
@@ -53,17 +52,15 @@ export function ScheduleTasksDrawer({ row, date, open, onClose }: Props) {
 
   return (
     <>
-      <Drawer isOpen={open} onOpenChange={(isOpen) => !isOpen && onClose()} label="Checklist của ca" width={560}>
-        <Layout
-          header={
-            <DrawerHeader
-              title="Checklist của ca"
-              subtitle={row ? `${row.shiftName} · ${row.startTime}–${row.endTime} · ${formatDate(date)}` : undefined}
-              onOpenChange={(isOpen) => !isOpen && onClose()}
-            />
-          }
-          content={
-            <LayoutContent>
+      <DetailDrawer
+        open={open}
+        onClose={onClose}
+        label="Checklist của ca"
+        title="Checklist của ca"
+        subtitle={row ? `${row.shiftName} · ${row.startTime}–${row.endTime} · ${formatDate(date)}` : undefined}
+        width={560}
+        purpose="info"
+      >
               {row && (
                 <VStack gap={4}>
                   <HStack gap={3} vAlign="center" hAlign="between" wrap="wrap">
@@ -166,10 +163,7 @@ export function ScheduleTasksDrawer({ row, date, open, onClose }: Props) {
                   )}
                 </VStack>
               )}
-            </LayoutContent>
-          }
-        />
-      </Drawer>
+      </DetailDrawer>
       {photo && <Lightbox isOpen onOpenChange={(isOpen) => !isOpen && setPhoto(null)} media={photo} hasZoom />}
     </>
   );

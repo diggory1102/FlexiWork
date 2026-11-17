@@ -1,9 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { Button } from '@astryxdesign/core/Button';
 import { Card } from '@astryxdesign/core/Card';
-import { Drawer, DrawerHeader } from '@astryxdesign/core/Drawer';
 import { Icon } from '@astryxdesign/core/Icon';
-import { Layout, LayoutContent, LayoutFooter } from '@astryxdesign/core/Layout';
 import { Lightbox } from '@astryxdesign/core/Lightbox';
 import { MetadataList, MetadataListItem } from '@astryxdesign/core/MetadataList';
 import { HStack, VStack } from '@astryxdesign/core/Stack';
@@ -11,6 +9,7 @@ import { Heading, Text } from '@astryxdesign/core/Text';
 import { TextArea } from '@astryxdesign/core/TextArea';
 import { Thumbnail } from '@astryxdesign/core/Thumbnail';
 import { CheckCircle2, Circle, XCircle } from 'lucide-react';
+import { DetailDrawer } from '@/components/ui/DetailDrawer';
 import { Avatar } from '@/components/ui/Layout';
 import { Badge, Notice } from '@/components/ui/Feedback';
 import { requestApi } from '@/services/requestApi';
@@ -96,17 +95,53 @@ export function RequestDetailDrawer({ request, open, onClose, onReviewed }: Prop
   const r = current;
   return (
     <>
-      <Drawer isOpen={open} onOpenChange={(isOpen) => !isOpen && onClose()} label="Chi tiết đơn" width={600} purpose="form">
-        <Layout
-          header={
-            <DrawerHeader
-              title="Chi tiết đơn"
-              subtitle={r ? `${r.leaveTypeName} · gửi ${formatDateTime(r.createdAt)}` : undefined}
-              onOpenChange={(isOpen) => !isOpen && onClose()}
-            />
-          }
-          content={
-            <LayoutContent>
+      <DetailDrawer
+        open={open}
+        onClose={onClose}
+        label="Chi tiết đơn"
+        title="Chi tiết đơn"
+        subtitle={r ? `${r.leaveTypeName} · gửi ${formatDateTime(r.createdAt)}` : undefined}
+        width={600}
+        purpose="form"
+        footer={
+            r?.canReview && (
+              <>
+                {/* Ghi chú + nút duyệt nằm ở chân cố định: luôn thấy lỗi "thiếu lý do từ chối" dù đang cuộn tới đâu */}
+                <VStack gap={3}>
+                  <TextArea
+                    label="Ghi chú duyệt"
+                    labelTooltip="Bắt buộc khi từ chối. Nhân viên thấy ghi chú này trên ứng dụng."
+                    placeholder="Bắt buộc khi từ chối. VD: Tháng này đã đủ người nghỉ, mời bạn chọn ngày khác."
+                    rows={2}
+                    maxLength={255}
+                    value={note}
+                    onChange={(v) => {
+                      setNote(v);
+                      if (noteError && v.trim()) setNoteError(null);
+                    }}
+                    status={noteError ? { type: 'error', message: noteError } : undefined}
+                  />
+                  <HStack gap={2} hAlign="end">
+                    <Button
+                      label="Từ chối"
+                      variant="destructive"
+                      onClick={() => review(false)}
+                      isLoading={saving === 'reject'}
+                      isDisabled={saving === 'approve'}
+                    />
+                    <Button
+                      label="Duyệt đơn"
+                      variant="primary"
+                      onClick={() => review(true)}
+                      isLoading={saving === 'approve'}
+                      isDisabled={saving === 'reject'}
+                    />
+                  </HStack>
+                </VStack>
+              </>
+            )
+        }
+      >
               {r && (
                 <VStack gap={4}>
                   <HStack gap={3} vAlign="center" hAlign="between" wrap="wrap">
@@ -232,48 +267,7 @@ export function RequestDetailDrawer({ request, open, onClose, onReviewed }: Prop
                   </VStack>
                 </VStack>
               )}
-            </LayoutContent>
-          }
-          footer={
-            r?.canReview && (
-              <LayoutFooter hasDivider>
-                {/* Ghi chú + nút duyệt nằm ở chân cố định: luôn thấy lỗi "thiếu lý do từ chối" dù đang cuộn tới đâu */}
-                <VStack gap={3}>
-                  <TextArea
-                    label="Ghi chú duyệt"
-                    labelTooltip="Bắt buộc khi từ chối. Nhân viên thấy ghi chú này trên ứng dụng."
-                    placeholder="Bắt buộc khi từ chối. VD: Tháng này đã đủ người nghỉ, mời bạn chọn ngày khác."
-                    rows={2}
-                    maxLength={255}
-                    value={note}
-                    onChange={(v) => {
-                      setNote(v);
-                      if (noteError && v.trim()) setNoteError(null);
-                    }}
-                    status={noteError ? { type: 'error', message: noteError } : undefined}
-                  />
-                  <HStack gap={2} hAlign="end">
-                    <Button
-                      label="Từ chối"
-                      variant="destructive"
-                      onClick={() => review(false)}
-                      isLoading={saving === 'reject'}
-                      isDisabled={saving === 'approve'}
-                    />
-                    <Button
-                      label="Duyệt đơn"
-                      variant="primary"
-                      onClick={() => review(true)}
-                      isLoading={saving === 'approve'}
-                      isDisabled={saving === 'reject'}
-                    />
-                  </HStack>
-                </VStack>
-              </LayoutFooter>
-            )
-          }
-        />
-      </Drawer>
+      </DetailDrawer>
       {r?.attachmentUrl && (
         <Lightbox isOpen={photoOpen} onOpenChange={setPhotoOpen} media={{ src: r.attachmentUrl, alt: 'Ảnh minh chứng' }} hasZoom />
       )}

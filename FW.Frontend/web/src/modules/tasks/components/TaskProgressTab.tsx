@@ -8,7 +8,8 @@ import { ProgressBar } from '@astryxdesign/core/ProgressBar';
 import { HStack, VStack } from '@astryxdesign/core/Stack';
 import { Text } from '@astryxdesign/core/Text';
 import { RefreshCw } from 'lucide-react';
-import { Avatar, Toolbar } from '@/components/ui/Layout';
+import { Toolbar } from '@/components/ui/Layout';
+import { EmployeeCell } from '@/components/ui/EmployeeCell';
 import { ListCard } from '@/components/ui/ListCard';
 import { BranchSelect } from '@/components/ui/BranchSelect';
 import { Badge } from '@/components/ui/Feedback';
@@ -81,18 +82,7 @@ export function TaskProgressTab() {
       header: 'Nhân viên',
       width: 250,
       render: (r) => (
-        <HStack gap={3} vAlign="center">
-          <Avatar name={r.fullName} url={r.avatarUrl} size={36} />
-          <VStack gap={0.5} className="min-w-0">
-            <Text weight="medium" maxLines={1}>
-              {r.fullName}
-            </Text>
-            <Text type="supporting" maxLines={1}>
-              <span className="font-mono">{r.employeeCode}</span>
-              {isCompanyWide && <> · {r.branchName}</>}
-            </Text>
-          </VStack>
-        </HStack>
+        <EmployeeCell name={r.fullName} code={r.employeeCode} avatarUrl={r.avatarUrl} sub={isCompanyWide ? r.branchName : null} />
       ),
     },
     {

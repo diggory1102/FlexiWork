@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Button } from '@astryxdesign/core/Button';
 import { Selector } from '@astryxdesign/core/Selector';
-import { HStack, VStack } from '@astryxdesign/core/Stack';
 import { Text } from '@astryxdesign/core/Text';
-import { Avatar, PageHeader, Toolbar } from '@/components/ui/Layout';
+import { PageHeader, Toolbar } from '@/components/ui/Layout';
+import { EmployeeCell } from '@/components/ui/EmployeeCell';
 import { ListCard, SearchInput } from '@/components/ui/ListCard';
 import { BranchSelect } from '@/components/ui/BranchSelect';
 import { Badge } from '@/components/ui/Feedback';
@@ -53,18 +53,7 @@ export function LeaveBalancesPage() {
       header: 'Nhân viên',
       width: 260,
       render: (r) => (
-        <HStack gap={3} vAlign="center">
-          <Avatar name={r.fullName} url={r.avatarUrl} size={36} />
-          <VStack gap={0.5} className="min-w-0">
-            <Text weight="medium" maxLines={1}>
-              {r.fullName}
-            </Text>
-            <Text type="supporting" maxLines={1}>
-              <span className="font-mono">{r.employeeCode}</span>
-              {isCompanyWide && r.branchName && <> · {r.branchName}</>}
-            </Text>
-          </VStack>
-        </HStack>
+        <EmployeeCell name={r.fullName} code={r.employeeCode} avatarUrl={r.avatarUrl} sub={isCompanyWide ? r.branchName : null} />
       ),
     },
     { key: 'total', header: 'Tổng quỹ', align: 'end', render: (r) => <Text hasTabularNumbers>{days(r.totalDays)}</Text> },

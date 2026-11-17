@@ -6,7 +6,8 @@ import { Selector } from '@astryxdesign/core/Selector';
 import { HStack, VStack } from '@astryxdesign/core/Stack';
 import { Text } from '@astryxdesign/core/Text';
 import { KeyRound, Lock, Pencil, Plus, ShieldCheck, Trash2, Unlock } from 'lucide-react';
-import { Avatar, PageHeader, Toolbar } from '@/components/ui/Layout';
+import { PageHeader, Toolbar } from '@/components/ui/Layout';
+import { EmployeeCell } from '@/components/ui/EmployeeCell';
 import { ListCard, SearchInput } from '@/components/ui/ListCard';
 import { BranchSelect } from '@/components/ui/BranchSelect';
 import { Badge } from '@/components/ui/Feedback';
@@ -98,17 +99,7 @@ export function EmployeesPage() {
       header: 'Nhân viên',
       width: 260,
       render: (u) => (
-        <HStack gap={3} vAlign="center">
-          <Avatar name={u.fullName} url={u.avatarUrl} size={36} />
-          <VStack gap={0.5} className="min-w-0">
-            <Text weight="medium" maxLines={1}>
-              {u.fullName}
-            </Text>
-            <Text type="supporting" maxLines={1}>
-              <span className="font-mono">{u.employeeCode}</span> · {u.email}
-            </Text>
-          </VStack>
-        </HStack>
+        <EmployeeCell name={u.fullName} code={u.employeeCode} avatarUrl={u.avatarUrl} sub={u.email} />
       ),
     },
     { key: 'branch', header: 'Chi nhánh', render: (u) => <Text type="supporting">{u.branchName ?? '—'}</Text> },

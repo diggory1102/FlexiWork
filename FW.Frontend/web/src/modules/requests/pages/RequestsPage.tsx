@@ -7,7 +7,8 @@ import { HStack, VStack } from '@astryxdesign/core/Stack';
 import { Tab, TabList } from '@astryxdesign/core/TabList';
 import { Text } from '@astryxdesign/core/Text';
 import { RefreshCw } from 'lucide-react';
-import { Avatar, PageHeader, Toolbar } from '@/components/ui/Layout';
+import { PageHeader, Toolbar } from '@/components/ui/Layout';
+import { EmployeeCell } from '@/components/ui/EmployeeCell';
 import { ListCard, SearchInput } from '@/components/ui/ListCard';
 import { BranchSelect } from '@/components/ui/BranchSelect';
 import { Badge } from '@/components/ui/Feedback';
@@ -92,18 +93,7 @@ export function RequestsPage() {
       header: 'Nhân viên',
       width: 240,
       render: (r) => (
-        <HStack gap={3} vAlign="center">
-          <Avatar name={r.employee.fullName} url={r.employee.avatarUrl} size={36} />
-          <VStack gap={0.5} className="min-w-0">
-            <Text weight="medium" maxLines={1}>
-              {r.employee.fullName}
-            </Text>
-            <Text type="supporting" maxLines={1}>
-              <span className="font-mono">{r.employee.employeeCode}</span>
-              {isCompanyWide && r.branchName && <> · {r.branchName}</>}
-            </Text>
-          </VStack>
-        </HStack>
+        <EmployeeCell name={r.employee.fullName} code={r.employee.employeeCode} avatarUrl={r.employee.avatarUrl} sub={isCompanyWide ? r.branchName : null} />
       ),
     },
     {

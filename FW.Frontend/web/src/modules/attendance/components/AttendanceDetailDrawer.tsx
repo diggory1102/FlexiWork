@@ -1,11 +1,9 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { Button } from '@astryxdesign/core/Button';
 import { Card } from '@astryxdesign/core/Card';
-import { Drawer, DrawerHeader } from '@astryxdesign/core/Drawer';
 import { Grid } from '@astryxdesign/core/Grid';
 import { Icon } from '@astryxdesign/core/Icon';
 import { IconButton } from '@astryxdesign/core/IconButton';
-import { Layout, LayoutContent, LayoutFooter } from '@astryxdesign/core/Layout';
 import { Lightbox } from '@astryxdesign/core/Lightbox';
 import { MetadataList, MetadataListItem } from '@astryxdesign/core/MetadataList';
 import { HStack, VStack } from '@astryxdesign/core/Stack';
@@ -13,6 +11,7 @@ import { Heading, Text } from '@astryxdesign/core/Text';
 import { TextArea } from '@astryxdesign/core/TextArea';
 import { Thumbnail } from '@astryxdesign/core/Thumbnail';
 import { CheckCircle2, MapPinned, MinusCircle, XCircle } from 'lucide-react';
+import { DetailDrawer } from '@/components/ui/DetailDrawer';
 import { Avatar } from '@/components/ui/Layout';
 import { Badge, FormError, Notice, Spinner } from '@/components/ui/Feedback';
 import { attendanceApi } from '@/services/attendanceApi';
@@ -230,17 +229,53 @@ export function AttendanceDetailDrawer({ row, open, onClose, onReviewed }: Props
 
   return (
     <>
-      <Drawer isOpen={open} onOpenChange={(isOpen) => !isOpen && onClose()} label="Chi tiết chấm công" width={640} purpose="form">
-        <Layout
-          header={
-            <DrawerHeader
-              title="Chi tiết chấm công"
-              subtitle={log ? `${log.branchName} · ngày công ${formatDate(log.workDate)}` : undefined}
-              onOpenChange={(isOpen) => !isOpen && onClose()}
-            />
-          }
-          content={
-            <LayoutContent>
+      <DetailDrawer
+        open={open}
+        onClose={onClose}
+        label="Chi tiết chấm công"
+        title="Chi tiết chấm công"
+        subtitle={log ? `${log.branchName} · ngày công ${formatDate(log.workDate)}` : undefined}
+        width={640}
+        purpose="form"
+        footer={
+            detail?.canReview && (
+              <>
+                {/* Ghi chú + nút duyệt nằm ở chân cố định: luôn thấy lỗi "thiếu lý do từ chối" dù đang cuộn tới đâu */}
+                <VStack gap={3}>
+                  <TextArea
+                    label="Ghi chú duyệt"
+                    labelTooltip="Bắt buộc khi từ chối. Lượt bị từ chối không được tính công."
+                    placeholder="Bắt buộc khi từ chối. VD: Đã xác nhận với ca trưởng, nhân viên có mặt đúng giờ."
+                    rows={2}
+                    maxLength={255}
+                    value={note}
+                    onChange={(v) => {
+                      setNote(v);
+                      if (noteError && v.trim()) setNoteError(null);
+                    }}
+                    status={noteError ? { type: 'error', message: noteError } : undefined}
+                  />
+                  <HStack gap={2} hAlign="end">
+                    <Button
+                      label="Từ chối"
+                      variant="destructive"
+                      onClick={() => review(false)}
+                      isLoading={saving === 'reject'}
+                      isDisabled={saving === 'approve'}
+                    />
+                    <Button
+                      label="Chấp nhận"
+                      variant="primary"
+                      onClick={() => review(true)}
+                      isLoading={saving === 'approve'}
+                      isDisabled={saving === 'reject'}
+                    />
+                  </HStack>
+                </VStack>
+              </>
+            )
+        }
+      >
               {log && (
                 <VStack gap={4}>
                   <HStack gap={3} vAlign="center" hAlign="between" wrap="wrap">
@@ -327,48 +362,7 @@ export function AttendanceDetailDrawer({ row, open, onClose, onReviewed }: Props
                   )}
                 </VStack>
               )}
-            </LayoutContent>
-          }
-          footer={
-            detail?.canReview && (
-              <LayoutFooter hasDivider>
-                {/* Ghi chú + nút duyệt nằm ở chân cố định: luôn thấy lỗi "thiếu lý do từ chối" dù đang cuộn tới đâu */}
-                <VStack gap={3}>
-                  <TextArea
-                    label="Ghi chú duyệt"
-                    labelTooltip="Bắt buộc khi từ chối. Lượt bị từ chối không được tính công."
-                    placeholder="Bắt buộc khi từ chối. VD: Đã xác nhận với ca trưởng, nhân viên có mặt đúng giờ."
-                    rows={2}
-                    maxLength={255}
-                    value={note}
-                    onChange={(v) => {
-                      setNote(v);
-                      if (noteError && v.trim()) setNoteError(null);
-                    }}
-                    status={noteError ? { type: 'error', message: noteError } : undefined}
-                  />
-                  <HStack gap={2} hAlign="end">
-                    <Button
-                      label="Từ chối"
-                      variant="destructive"
-                      onClick={() => review(false)}
-                      isLoading={saving === 'reject'}
-                      isDisabled={saving === 'approve'}
-                    />
-                    <Button
-                      label="Chấp nhận"
-                      variant="primary"
-                      onClick={() => review(true)}
-                      isLoading={saving === 'approve'}
-                      isDisabled={saving === 'reject'}
-                    />
-                  </HStack>
-                </VStack>
-              </LayoutFooter>
-            )
-          }
-        />
-      </Drawer>
+      </DetailDrawer>
       {photos.length > 0 && (
         <Lightbox
           isOpen={photoIndex != null}
