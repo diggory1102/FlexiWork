@@ -27,7 +27,16 @@ export interface MenuItem {
  */
 export const menu: MenuItem[] = [
   { label: 'Tổng quan', to: '/', icon: LayoutDashboard, roles: RoleGroups.Managers },
-  { label: 'Yêu cầu chờ duyệt', to: '/requests', icon: Inbox, roles: RoleGroups.Managers },
+  {
+    label: 'Đơn từ',
+    icon: Inbox,
+    roles: RoleGroups.Managers,
+    children: [
+      { label: 'Duyệt đơn', to: '/requests' },
+      { label: 'Quỹ phép năm', to: '/leave-balances' },
+      { label: 'Loại đơn', to: '/leave-types', roles: RoleGroups.AdminOrHr },
+    ],
+  },
   {
     label: 'Nhân sự',
     icon: Users,
@@ -57,7 +66,7 @@ export const menu: MenuItem[] = [
       { label: 'Bảng công', to: '/timesheets' },
     ],
   },
-  { label: 'Công việc', to: '/tasks', icon: ClipboardCheck, roles: RoleGroups.Managers },
+  { label: 'Công việc theo ca', to: '/tasks', icon: ClipboardCheck, roles: RoleGroups.Managers },
   { label: 'Truyền thông nội bộ', to: '/chat', icon: MessagesSquare, roles: RoleGroups.Managers },
   { label: 'Báo cáo', to: '/reports', icon: BarChart3, roles: RoleGroups.Managers },
   { label: 'Cài đặt', to: '/settings', icon: Settings, roles: RoleGroups.AdminOrHr },

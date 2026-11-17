@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Button } from '@astryxdesign/core/Button';
-import { DateRangeInput, type DateRange, type DateRangePreset } from '@astryxdesign/core/DateRangeInput';
+import { DateRangeInput, type DateRange } from '@astryxdesign/core/DateRangeInput';
 import { Icon } from '@astryxdesign/core/Icon';
 import { Selector } from '@astryxdesign/core/Selector';
 import { HStack, VStack } from '@astryxdesign/core/Stack';
@@ -19,8 +19,9 @@ import { getErrorMessage } from '@/services/apiClient';
 import { useAuthStore } from '@/stores/authStore';
 import { useLookupStore } from '@/stores/lookupStore';
 import { toast } from '@/stores/toastStore';
-import { todayIso, type ISODateString } from '@/lib/format';
+import { todayIso } from '@/lib/format';
 import { addDays, formatDayMonth, formatMinutes, weekdayIndex, weekdayShortLabels } from '@/lib/dates';
+import { iso, rangePresets } from '@/lib/dateRanges';
 import { RoleGroups } from '@/types/auth';
 import type { AttendanceLogFilter, AttendanceLogItem, AttendanceStatus } from '@/types/attendance';
 import { AttendanceDetailDrawer } from '../components/AttendanceDetailDrawer';
@@ -35,37 +36,6 @@ import {
   wifiText,
   type LayerState,
 } from '../attendanceUi';
-
-const iso = (value: string) => value as ISODateString;
-const monthStart = (day: string) => iso(`${day.slice(0, 8)}01`);
-
-function presets(today: ISODateString): DateRangePreset[] {
-  const thisMonth = monthStart(today);
-  const lastMonth = monthStart(addDays(thisMonth, -1));
-  return [
-    { label: 'Hôm nay', getRange: () => ({ start: today, end: today }) },
-    {
-      label: 'Hôm qua',
-      getRange: () => ({
-        start: iso(addDays(today, -1)),
-        end: iso(addDays(today, -1)),
-      }),
-    },
-    {
-      label: '7 ngày qua',
-      getRange: () => ({ start: iso(addDays(today, -6)), end: today }),
-    },
-    {
-      label: '30 ngày qua',
-      getRange: () => ({ start: iso(addDays(today, -29)), end: today }),
-    },
-    { label: 'Tháng này', getRange: () => ({ start: thisMonth, end: today }) },
-    {
-      label: 'Tháng trước',
-      getRange: () => ({ start: lastMonth, end: iso(addDays(thisMonth, -1)) }),
-    },
-  ];
-}
 
 const layerColor: Record<LayerState, 'success' | 'error' | 'secondary'> = {
   pass: 'success',
@@ -310,7 +280,7 @@ export function AttendanceLogsPage() {
             width={260}
             value={range}
             onChange={changeRange}
-            presets={presets(today)}
+            presets={rangePresets(today)}
             max={today}
             maxRangeSpan={366}
             weekStartsOn="mon"

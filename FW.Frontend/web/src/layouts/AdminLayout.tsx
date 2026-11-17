@@ -128,13 +128,15 @@ function Sidebar() {
 const isActive = (to: string, pathname: string) => (to === '/' ? pathname === '/' : pathname.startsWith(to));
 
 function MenuEntry({ item, pathname }: { item: MenuItem; pathname: string }) {
+  const hasAnyRole = useAuthStore((s) => s.hasAnyRole);
   if (!item.children) {
     return <SideNavItem label={item.label} icon={item.icon} href={item.to} isSelected={isActive(item.to!, pathname)} />;
   }
-  const childActive = item.children.some((c) => isActive(c.to, pathname));
+  const children = item.children.filter((c) => !c.roles || hasAnyRole(c.roles));
+  const childActive = children.some((c) => isActive(c.to, pathname));
   return (
     <SideNavItem label={item.label} icon={item.icon} collapsible={{ defaultIsCollapsed: !childActive }}>
-      {item.children.map((child) => (
+      {children.map((child) => (
         <SideNavItem key={child.to} label={child.label} href={child.to} isSelected={isActive(child.to, pathname)} />
       ))}
     </SideNavItem>

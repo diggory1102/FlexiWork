@@ -265,9 +265,9 @@ flowchart TD
 > * `[Tùy chọn]`: chỉ thực hiện khi còn thời gian; có thể đưa vào "Hướng phát triển" (Chương 5).
 
 > **Tổng quan Tiến độ Hiện tại:**
-> * **Giai đoạn đang thực hiện:** CẤP BẬC 4 - Đơn từ, Phê duyệt & Công việc theo ca (Cấp 3 đã xong)
-> * **Tiến độ tổng thể:** `27 / 53` Nhiệm vụ hoàn thành (`51%`)
-> * **Hành động tiếp theo:** **Task 4.5** — Web Admin: duyệt / từ chối đơn, quản lý loại đơn & quỹ phép, quản lý checklist mẫu, giám sát tiến độ task theo ca (hoàn thành là xong Cấp 4). Chạy migration `007`, `008` trước khi push Task 4.2 – 4.4. Việc nhỏ còn lại: kéo ghim trực tiếp trên bản đồ (Leaflet) — làm khi chốt nâng cấp Vite/React Router đang dở trong `package.json` của web.
+> * **Giai đoạn đang thực hiện:** CẤP BẬC 5 (Cấp 3, 4 đã xong)
+> * **Tiến độ tổng thể:** `28 / 53` Nhiệm vụ hoàn thành (`53%`)
+> * **Hành động tiếp theo:** **Task 5.1** — Cấp 5 (Báo cáo, chat realtime, bảng công). Trước khi push Cấp 4: chạy migration `007` và `008` trên TiDB. Việc nhỏ còn lại: kéo ghim trực tiếp trên bản đồ (Leaflet) — làm khi chốt nâng cấp Vite/React Router đang dở trong `package.json` của web.
 
 ### Các quyết định cần chốt
 
@@ -425,7 +425,7 @@ flowchart TD
 
 ---
 
-### 📌 CẤP BẬC 4: Đơn từ, Phê duyệt & Công việc theo ca `[4/5]`
+### 📌 CẤP BẬC 4: Đơn từ, Phê duyệt & Công việc theo ca `[5/5]`
 > 🎯 **Demo:** Nhân viên gửi đơn trên Mobile → Quản lý duyệt trên Web → quỹ phép và lịch tự cập nhật; checklist ca trực có ảnh minh chứng.
 
 - [x] **Task 4.1:** API Đơn từ: CRUD loại đơn (`leave_types`); tạo đơn nghỉ phép, đổi ca, OT (có giờ bắt đầu/kết thúc), giải trình đi muộn/về sớm kèm ảnh minh chứng. Bổ sung schema cho đơn OT.
@@ -451,7 +451,14 @@ flowchart TD
   - **Công việc trong ca** (UC 6.2, 6.3): checklist các ca hôm nay chia Đầu ca / Trong ca / Cuối ca, thanh tiến độ, nhãn Bắt buộc / Cần ảnh; ca chưa check-in hiện việc dự kiến kèm lối tắt tới Chấm công; chạm một việc → ghi chú + ảnh hiện trường → **Hoàn thành** (việc cần ảnh thiếu ảnh bị chặn), **Bỏ tích** có xác nhận; ca đã check-out khóa checklist. Lối vào: Trang chủ → Công việc, màn hình Chấm công ("Công việc trong ca" và nút sau khi check-in thành công).
   - Backend bổ sung `GET /api/leave-requests/swap-options?sourceScheduleId=` (ca đồng nghiệp & người làm thay cho màn hình đổi ca; +1 đoạn kiểm tra trong integration test đổi ca). Component dùng chung mới: ô chọn ngày / giờ / ảnh (`Pickers`), `pickImage`, `formDataWith`; `TextField` hỗ trợ nhiều dòng.
   - Kiểm tra: `tsc` sạch; chạy bản web khung iPhone 390×844 với backend thật (Chrome headless): xem quỹ phép, tạo đơn phép năm bằng lịch, đổi ca (2 chiều + nhờ làm thay), OT qua giờ, giải trình, nghỉ ốm thiếu ảnh → báo lỗi → chọn ảnh → gửi, rút đơn, đồng ý đổi ca, tích việc có / không ảnh (quỹ phép đổi 11 → 9 ngày theo đơn đang chờ). Chưa thử trên điện thoại thật: camera / thư viện ảnh dùng `expo-image-picker` (đã dùng ở ảnh đại diện).
-- [ ] **Task 4.5:** Web Admin: duyệt/từ chối đơn, quản lý loại đơn & quỹ phép; quản lý checklist mẫu; giám sát tiến độ task theo ca.
+- [x] **Task 4.5:** Web Admin: duyệt/từ chối đơn, quản lý loại đơn & quỹ phép; quản lý checklist mẫu; giám sát tiến độ task theo ca.
+  - *Đã làm (17/11/2026):* menu **Đơn từ** (thay "Yêu cầu chờ duyệt") gồm **Duyệt đơn**, **Quỹ phép năm**, **Loại đơn** (chỉ Admin/HR — menu con cũng lọc theo vai trò; Quản lý vào thẳng đường dẫn bị chuyển về trang chủ); menu **Công việc theo ca**.
+  - **Duyệt đơn** (`/requests`, UC 5.3): tab Chờ duyệt (kèm số lượng) / Chờ đồng nghiệp / Đã duyệt / Bị từ chối / Tất cả; lọc tên – mã NV, loại đơn, khoảng ngày (chọn nhanh), chi nhánh (Admin/HR; Quản lý chỉ chi nhánh mình). Mỗi dòng có nhãn nhóm đơn, tóm tắt nội dung (ngày nghỉ, giờ OT, ca đổi ⇄, lượt đi muộn…), lý do, trạng thái, người duyệt. **Ngăn chi tiết**: nội dung theo nhóm, ảnh minh chứng (xem lớn), tiến trình gửi → đồng nghiệp → người duyệt; lượt duyệt được thì ô ghi chú + nút **Từ chối / Duyệt đơn** ở chân cố định (từ chối thiếu lý do báo ngay tại ô); duyệt xong hiện thông báo tóm tắt thay đổi (VD "trừ 2 ngày phép năm 2026"), lỗi nghiệp vụ (quỹ phép không đủ, lịch vừa đổi…) hiện ngay trong ngăn.
+  - **Quỹ phép năm** (`/leave-balances`, UC 5.5): bảng tổng / đã dùng / chờ duyệt / còn xin được theo năm (năm trước – nay – sau), chi nhánh, tìm kiếm; nhân viên chưa có quỹ ghi "Số ngày mặc định". Hộp thoại từng người: các con số + lịch sử điều chỉnh (người, thời điểm, lý do); Admin/HR cộng / trừ (bước 0,5, ±30 ngày, bắt buộc lý do — lỗi báo ngay), Quản lý chỉ xem.
+  - **Loại đơn** (`/leave-types`, UC 1.4): bảng nhóm / có lương / trừ phép năm / bắt buộc ảnh / đang nhận đơn; form thêm – sửa (công tắc trừ phép chỉ hiện với nhóm nghỉ có lương), xóa có xác nhận (còn đơn chờ thì backend chặn — gợi ý "Tạm ngừng").
+  - **Công việc theo ca** (`/tasks`): tab **Tiến độ trong ngày** (UC 6.4) — ô tổng hợp (tiến độ chung %, số ca, việc bắt buộc còn dở, ca chưa check-in), lọc ngày + chi nhánh, bảng từng ca với thanh tiến độ (cam khi còn việc bắt buộc dở, xanh khi xong), ngăn chi tiết checklist (từng việc, giờ xong, ghi chú, ảnh hiện trường xem lớn); tab **Mẫu checklist** (UC 6.1) — lọc ca / chi nhánh, thêm – sửa – xóa theo quyền (Admin mọi việc, Quản lý việc riêng chi nhánh mình, HR chỉ xem; nút sửa / xóa chỉ hiện với việc sửa được), form: ca, áp dụng cho (mọi chi nhánh / một chi nhánh — Quản lý bị khóa ở chi nhánh mình), chức vụ, giai đoạn, thứ tự, bắt buộc, cần ảnh.
+  - Tách `lib/dateRanges` (chọn nhanh khoảng ngày) dùng chung với Nhật ký chấm công. Không thay đổi backend.
+  - Kiểm tra: `tsc` sạch, build production đạt; Chrome headless với backend thật — HR 1600×900: duyệt đơn nghỉ (số chờ duyệt 13 → 12, thông báo trừ phép), từ chối thiếu lý do, đơn nghỉ ốm có ảnh, giải trình, tab đơn, điều chỉnh quỹ phép (lỗi thiếu lý do → thành công → lịch sử), thêm / xóa loại đơn, tiến độ + ngăn checklist có ảnh, mẫu checklist; Quản lý 1366×768: chỉ thấy đơn chi nhánh mình, không có menu Loại đơn, chỉ sửa / xóa việc của chi nhánh mình, thêm rồi xóa việc (nút Lưu luôn trong màn hình).
 
 ---
 
