@@ -129,9 +129,11 @@ public record LeaveRequestDto(
     string? ApproverNote,
     DateTime CreatedAt,
     bool CanCancel,
-    bool CanRespond)
+    bool CanRespond,
+    bool CanReview)
 {
-    public static LeaveRequestDto From(LeaveRequestDetail d, int? currentUserId) => new(
+    /// <param name="canReview">Người đang xem duyệt được đơn này (tính ở service theo vai trò & phạm vi chi nhánh).</param>
+    public static LeaveRequestDto From(LeaveRequestDetail d, int? currentUserId, bool canReview = false) => new(
         d.Id,
         new RequestPersonDto(d.UserId, d.EmployeeCode, d.FullName, d.AvatarUrl),
         d.BranchId, d.BranchName,
@@ -152,7 +154,8 @@ public record LeaveRequestDto(
         d.Reason, d.AttachmentUrl, d.Status,
         d.ApprovedBy, d.ApproverName, d.ApprovedAt, d.ApproverNote, d.CreatedAt,
         CanCancel: d.UserId == currentUserId && Domain.Enums.RequestStatus.IsOpen(d.Status),
-        CanRespond: d.TargetUserId == currentUserId && d.Status == Domain.Enums.RequestStatus.PendingPeer);
+        CanRespond: d.TargetUserId == currentUserId && d.Status == Domain.Enums.RequestStatus.PendingPeer,
+        CanReview: canReview);
 
     private static string? Time(TimeSpan? time) => time?.ToString(@"hh\:mm");
 }

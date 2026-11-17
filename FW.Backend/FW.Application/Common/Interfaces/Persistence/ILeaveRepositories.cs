@@ -88,10 +88,79 @@ public interface ILeaveRequestRepository : IGenericRepository<LeaveRequest>
 
     /// <summary>Tổng số ngày của các đơn nghỉ trừ phép năm đang chờ duyệt, bắt đầu trong năm <paramref name="year"/>.</summary>
     Task<decimal> GetPendingDeductibleDaysAsync(int userId, int year, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Chốt kết quả duyệt — chỉ khi đơn vẫn đang chờ duyệt (hai người duyệt cùng lúc: người sau nhận false). Gọi trong transaction.
+    /// </summary>
+    Task<bool> TryCompleteReviewAsync(int id, string status, int reviewerId, DateTime reviewedAt, string? note,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>Các đơn nghỉ đã duyệt của những nhân viên này giao với khoảng ngày.</summary>
+    Task<IReadOnlyList<ApprovedLeave>> GetApprovedLeavesAsync(IEnumerable<int> userIds, DateTime fromDate, DateTime toDate,
+        CancellationToken cancellationToken = default);
 }
 
-/// <summary>Quỹ phép năm.</summary>
+/// <summary>Khoảng ngày nghỉ đã được duyệt của một nhân viên.</summary>
+public class ApprovedLeave
+{
+    public int UserId { get; set; }
+    public DateTime StartDate { get; set; }
+    public DateTime EndDate { get; set; }
+    public string LeaveTypeName { get; set; } = string.Empty;
+
+    public bool Covers(DateTime date) => StartDate.Date <= date.Date && date.Date <= EndDate.Date;
+}
+
+/// <summary>Điều kiện tra cứu quỹ phép theo nhân viên (nhân viên chưa nghỉ việc).</summary>
+public class LeaveBalanceQuery : PagedQuery
+{
+    public int Year { get; set; }
+    public int? BranchId { get; set; }
+    public int? UserId { get; set; }
+}
+
+/// <summary>Quỹ phép một năm của một nhân viên; các cột quỹ null = chưa khởi tạo (dùng số ngày mặc định).</summary>
+public class LeaveBalanceRow
+{
+    public int UserId { get; set; }
+    public string EmployeeCode { get; set; } = string.Empty;
+    public string FullName { get; set; } = string.Empty;
+    public string? AvatarUrl { get; set; }
+    public int? BranchId { get; set; }
+    public string? BranchName { get; set; }
+    public decimal? TotalDays { get; set; }
+    public decimal? UsedDays { get; set; }
+    public decimal? RemainingDays { get; set; }
+
+    /// <summary>Tổng ngày của các đơn trừ phép đang chờ duyệt trong năm.</summary>
+    public decimal PendingDays { get; set; }
+}
+
+/// <summary>Quỹ phép năm. Các thao tác ghi đều là câu UPDATE có điều kiện (an toàn khi nhiều người thao tác cùng lúc).</summary>
 public interface ILeaveBalanceRepository : IGenericRepository<LeaveBalance>
 {
     Task<LeaveBalance?> GetByUserAndYearAsync(int userId, int year, CancellationToken cancellationToken = default);
+
+    /// <summary>Tạo quỹ phép năm (tổng = <paramref name="defaultTotalDays"/>) nếu chưa có.</summary>
+    Task EnsureExistsAsync(int userId, int year, decimal defaultTotalDays, CancellationToken cancellationToken = default);
+
+    /// <summary>Trừ <paramref name="days"/> ngày vào quỹ — false nếu không đủ ngày còn lại.</summary>
+    Task<bool> TryDeductAsync(int userId, int year, decimal days, CancellationToken cancellationToken = default);
+
+    /// <summary>Cộng / trừ tổng quỹ — false nếu tổng mới nhỏ hơn số ngày đã dùng hoặc vượt <paramref name="maxTotalDays"/>.</summary>
+    Task<bool> TryAdjustTotalAsync(int userId, int year, decimal deltaDays, decimal maxTotalDays, CancellationToken cancellationToken = default);
+
+    Task<PaginatedResult<LeaveBalanceRow>> GetRowsPagedAsync(LeaveBalanceQuery query, CancellationToken cancellationToken = default);
+}
+
+/// <summary>Một lần điều chỉnh quỹ phép kèm tên người điều chỉnh.</summary>
+public class LeaveBalanceAdjustmentDetail : LeaveBalanceAdjustment
+{
+    public string? CreatedByName { get; set; }
+}
+
+public interface ILeaveBalanceAdjustmentRepository : IGenericRepository<LeaveBalanceAdjustment>
+{
+    /// <summary>Lịch sử điều chỉnh của nhân viên trong năm, mới nhất trước.</summary>
+    Task<IReadOnlyList<LeaveBalanceAdjustmentDetail>> GetByUserAndYearAsync(int userId, int year, CancellationToken cancellationToken = default);
 }

@@ -30,6 +30,7 @@ public class EntitySchemaMappingTests
         { typeof(LeaveType), "leave_types" },
         { typeof(LeaveRequest), "leave_requests" },
         { typeof(LeaveBalance), "leave_balances" },
+        { typeof(LeaveBalanceAdjustment), "leave_balance_adjustments" },
     };
 
     [Theory]

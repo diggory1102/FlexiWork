@@ -16,7 +16,7 @@ namespace FW.IntegrationTests.Requests;
 /// người dùng 2 = Quản lý chi nhánh 1, 4 = HR; system_settings.annual_leave_days = 12.
 /// </summary>
 [Collection(DatabaseCollection.Name)]
-public class LeaveRequestServiceTests
+public partial class LeaveRequestServiceTests
 {
     private const int Branch1 = 1, Branch2 = 2, ManagerId = 2, HrId = 4;
     private const int AnnualLeave = 1, SickLeave = 2, Swap = 4, Overtime = 5;
@@ -72,9 +72,12 @@ public class LeaveRequestServiceTests
     }
 
     private static LeaveRequestService Service(DbSession s, ICurrentUserService user, MemoryStorage? storage = null) => new(
-        new LeaveRequestRepository(s), new LeaveTypeRepository(s), new LeaveBalanceRepository(s), new ScheduleRepository(s),
-        new ShiftRepository(s), new AttendanceLogRepository(s), new UserRepository(s), new SystemSettingRepository(s),
+        new LeaveRequestRepository(s), new LeaveTypeRepository(s), new LeaveBalanceRepository(s), Checker(s),
+        new AttendanceLogRepository(s), new UserRepository(s), new SystemSettingRepository(s),
         storage ?? new MemoryStorage(), user, new FixedClock(), NullLogger<LeaveRequestService>.Instance);
+
+    private static RequestScheduleChecker Checker(DbSession s) =>
+        new(new ScheduleRepository(s), new ShiftRepository(s), new UserRepository(s), new LeaveRequestRepository(s), new FixedClock());
 
     private static LeaveRequestService As(DbSession s, User user, MemoryStorage? storage = null) =>
         Service(s, new TestUser(user.Id, user.BranchId), storage);

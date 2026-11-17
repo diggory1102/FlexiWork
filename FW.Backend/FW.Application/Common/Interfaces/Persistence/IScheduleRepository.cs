@@ -63,6 +63,16 @@ public interface IScheduleRepository : IGenericRepository<Schedule, long>
     /// <returns>Số dòng đã thêm.</returns>
     Task<int> AddRangeAsync(IReadOnlyCollection<Schedule> schedules, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Nghỉ theo đơn đã duyệt: các ca chưa chấm công (scheduled, absent) của nhân viên trong khoảng ngày chuyển sang on_leave.
+    /// Ca đã check-in giữ nguyên.
+    /// </summary>
+    /// <returns>Số ca đã chuyển.</returns>
+    Task<int> MarkOnLeaveAsync(int userId, DateTime fromDate, DateTime toDate, CancellationToken cancellationToken = default);
+
+    /// <summary>Chuyển ca sang người khác (đổi ca) — chỉ khi ca vẫn thuộc <paramref name="fromUserId"/> và chưa chấm công.</summary>
+    Task<bool> TryReassignAsync(long scheduleId, int fromUserId, int toUserId, CancellationToken cancellationToken = default);
+
     /// <summary>Công bố toàn bộ lịch nháp của chi nhánh trong khoảng ngày.</summary>
     /// <returns>Số ca vừa được công bố.</returns>
     Task<int> PublishAsync(int branchId, DateTime fromDate, DateTime toDate, DateTime publishedAt, CancellationToken cancellationToken = default);

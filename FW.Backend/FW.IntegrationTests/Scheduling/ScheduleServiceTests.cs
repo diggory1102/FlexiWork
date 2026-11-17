@@ -48,7 +48,8 @@ public class ScheduleServiceTests
     private static readonly TestUser Hr = new(4, null, RoleNames.Hr);
 
     private static ScheduleService Service(DbSession s, ICurrentUserService user) => new(
-        new ScheduleRepository(s), new ShiftRepository(s), new BranchRepository(s), new UserRepository(s), s, user, new DateTimeProvider());
+        new ScheduleRepository(s), new ShiftRepository(s), new BranchRepository(s), new UserRepository(s), new LeaveRequestRepository(s),
+        s, user, new DateTimeProvider());
 
     private static DateOnly Day(int offset) => DateOnly.FromDateTime(DateTime.Today).AddDays(offset);
 

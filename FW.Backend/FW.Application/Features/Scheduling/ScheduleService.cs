@@ -38,6 +38,7 @@ public interface IScheduleService
 ///   được xếp, ca phải là ca dùng chung hoặc ca riêng của chi nhánh đó, ngày làm từ hôm nay trở đi.
 /// - Lịch mới là bản nháp: nhân viên chưa thấy, chưa chấm công được; công bố để chốt.
 /// - Chặn trùng ca và chồng giờ (kể cả ca đêm hôm trước kéo sang sáng hôm sau) — xem <see cref="SchedulePlanner"/>.
+/// - Không xếp ca vào ngày nhân viên nghỉ theo đơn đã duyệt (Task 4.2).
 /// </summary>
 public class ScheduleService : IScheduleService
 {
@@ -51,6 +52,7 @@ public class ScheduleService : IScheduleService
     private readonly IShiftRepository _shifts;
     private readonly IBranchRepository _branches;
     private readonly IUserRepository _users;
+    private readonly ILeaveRequestRepository _leaveRequests;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUserService _currentUser;
     private readonly IDateTimeProvider _clock;
@@ -60,6 +62,7 @@ public class ScheduleService : IScheduleService
         IShiftRepository shifts,
         IBranchRepository branches,
         IUserRepository users,
+        ILeaveRequestRepository leaveRequests,
         IUnitOfWork unitOfWork,
         ICurrentUserService currentUser,
         IDateTimeProvider clock)
@@ -68,6 +71,7 @@ public class ScheduleService : IScheduleService
         _shifts = shifts;
         _branches = branches;
         _users = users;
+        _leaveRequests = leaveRequests;
         _unitOfWork = unitOfWork;
         _currentUser = currentUser;
         _clock = clock;
@@ -119,7 +123,8 @@ public class ScheduleService : IScheduleService
         if (request.Items.Count == 0) throw new BadRequestException("Chưa chọn ca nào để xếp.");
         if (request.Items.Count > MaxItemsPerRequest) throw new BadRequestException($"Mỗi lần xếp tối đa {MaxItemsPerRequest} ca.");
 
-        var context = await LoadContextAsync(branchId, request.Items.Select(i => i.UserId), cancellationToken);
+        var context = await LoadContextAsync(branchId, request.Items.Select(i => i.UserId),
+            request.Items.Min(i => i.WorkDate), request.Items.Max(i => i.WorkDate), cancellationToken);
 
         var errors = new List<string>();
         var items = new List<PlannedShift>();
@@ -171,7 +176,8 @@ public class ScheduleService : IScheduleService
             throw new BadRequestException("Khoảng ngày nguồn chưa có lịch nào để sao chép.");
         }
 
-        var context = await LoadContextAsync(branchId, source.Select(s => s.UserId), cancellationToken);
+        var context = await LoadContextAsync(branchId, source.Select(s => s.UserId),
+            request.TargetFrom, request.TargetFrom.AddDays(request.Days - 1), cancellationToken);
 
         var skipped = new List<string>();
         var items = new List<PlannedShift>();
@@ -264,11 +270,14 @@ public class ScheduleService : IScheduleService
         }
     }
 
-    private async Task<SchedulingContext> LoadContextAsync(int branchId, IEnumerable<int> userIds, CancellationToken cancellationToken)
+    private async Task<SchedulingContext> LoadContextAsync(int branchId, IEnumerable<int> userIds, DateOnly fromDate, DateOnly toDate,
+        CancellationToken cancellationToken)
     {
-        var users = await _users.GetByIdsAsync(userIds, cancellationToken);
+        var ids = userIds.Distinct().ToList();
+        var users = await _users.GetByIdsAsync(ids, cancellationToken);
         var shifts = await _shifts.GetAvailableForBranchAsync(branchId, cancellationToken);
-        return new SchedulingContext(branchId, users.ToDictionary(u => u.Id), shifts.ToDictionary(s => s.Id));
+        var leaves = await _leaveRequests.GetApprovedLeavesAsync(ids, ToDateTime(fromDate), ToDateTime(toDate), cancellationToken);
+        return new SchedulingContext(branchId, users.ToDictionary(u => u.Id), shifts.ToDictionary(s => s.Id), leaves);
     }
 
     /// <summary>Lịch hiệu lực của các nhân viên liên quan, rộng hơn khoảng xếp 1 ngày mỗi phía (ca đêm kéo sang).</summary>
@@ -322,7 +331,8 @@ public class ScheduleService : IScheduleService
     private static DateTime ToDateTime(DateOnly date) => date.ToDateTime(TimeOnly.MinValue);
 
     /// <summary>Nhân viên và khung ca hợp lệ của chi nhánh, dùng để kiểm tra từng ca dự định xếp.</summary>
-    private sealed record SchedulingContext(int BranchId, IReadOnlyDictionary<int, User> Users, IReadOnlyDictionary<int, Shift> Shifts)
+    private sealed record SchedulingContext(
+        int BranchId, IReadOnlyDictionary<int, User> Users, IReadOnlyDictionary<int, Shift> Shifts, IReadOnlyList<ApprovedLeave> Leaves)
     {
         public string Label(int userId) =>
             Users.TryGetValue(userId, out var u) ? $"{u.EmployeeCode} – {u.FullName}" : $"Nhân viên #{userId}";
@@ -337,6 +347,8 @@ public class ScheduleService : IScheduleService
             if (!Shifts.ContainsKey(shiftId)) return $"{who}: ca #{shiftId} không tồn tại hoặc không áp dụng cho chi nhánh này.";
             if (workDate < today) return $"{who}: không xếp được ca cho ngày đã qua ({workDate:dd/MM/yyyy}).";
             if (workDate.DayNumber - today.DayNumber > MaxAdvanceDays) return $"{who}: chỉ xếp lịch trước tối đa {MaxAdvanceDays} ngày.";
+            var leave = Leaves.FirstOrDefault(l => l.UserId == userId && l.Covers(ToDateTime(workDate)));
+            if (leave != null) return $"{who}: nghỉ theo đơn \"{leave.LeaveTypeName}\" đã duyệt ngày {workDate:dd/MM/yyyy}.";
             return null;
         }
     }

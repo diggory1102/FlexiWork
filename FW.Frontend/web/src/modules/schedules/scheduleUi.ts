@@ -8,6 +8,7 @@ export const scheduleStatusLabels: Record<ScheduleStatus, string> = {
   completed: 'Đã hoàn thành',
   absent: 'Vắng mặt',
   cancelled: 'Đã hủy',
+  on_leave: 'Nghỉ phép',
 };
 
 /** Màu thẻ ca trên lưới: nháp (cam) → đã công bố (xanh dương) → kết quả chấm công. */
@@ -21,6 +22,8 @@ export function scheduleColor(s: Schedule): TokenColor {
       return 'green';
     case 'absent':
       return 'red';
+    case 'on_leave':
+      return 'purple';
     default:
       return 'blue';
   }
@@ -36,6 +39,7 @@ export const legend: { color: TokenColor; label: string }[] = [
   { color: 'blue', label: 'Đã công bố' },
   { color: 'green', label: 'Đã hoàn thành' },
   { color: 'red', label: 'Vắng mặt' },
+  { color: 'purple', label: 'Nghỉ phép' },
   { color: 'gray', label: 'Đã hủy' },
 ];
 

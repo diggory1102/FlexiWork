@@ -21,7 +21,10 @@ public static class ScheduleStatus
     /// <summary>Ca đã công bố nhưng bị hủy (giữ lại để đối soát, không tính công).</summary>
     public const string Cancelled = "cancelled";
 
-    public static readonly IReadOnlyList<string> All = new[] { Scheduled, InProgress, Completed, Absent, Cancelled };
+    /// <summary>Nhân viên nghỉ theo đơn đã duyệt (Task 4.2) — không chấm công; bảng công tính theo loại nghỉ (có / không lương).</summary>
+    public const string OnLeave = "on_leave";
+
+    public static readonly IReadOnlyList<string> All = new[] { Scheduled, InProgress, Completed, Absent, Cancelled, OnLeave };
 
     public static bool IsValid(string? status) => status is not null && All.Contains(status);
 }

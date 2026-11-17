@@ -8,6 +8,7 @@ export const scheduleStatusBadges: Partial<Record<ScheduleStatus, { label: strin
   completed: { label: 'Đã hoàn thành', tone: 'success' },
   absent: { label: 'Vắng mặt', tone: 'danger' },
   cancelled: { label: 'Đã hủy', tone: 'warning' },
+  on_leave: { label: 'Nghỉ phép', tone: 'info' },
 };
 
 /** "08:00 – 12:00" hoặc "22:00 – 06:00 (hôm sau)" với ca qua đêm. */

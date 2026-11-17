@@ -8,7 +8,7 @@ namespace FW.API.Controllers;
 
 /// <summary>
 /// Đơn từ (UC 5.1, 5.2, 5.6): nghỉ, đổi ca, làm thêm giờ, giải trình đi muộn / về sớm. Mọi vai trò tạo và theo dõi đơn của mình;
-/// danh sách quản lý: Admin, HR (mọi chi nhánh), Quản lý (chi nhánh mình). Duyệt đơn: Task 4.2.
+/// danh sách quản lý và duyệt đơn: Admin, HR (mọi chi nhánh), Quản lý (chi nhánh mình).
 /// </summary>
 [Authorize]
 [Route("api/leave-requests")]
@@ -17,10 +17,12 @@ public class LeaveRequestsController : ApiControllerBase
     private const long MaxRequestBytes = LeaveRequestService.MaxImageBytes + 64 * 1024;
 
     private readonly ILeaveRequestService _requestService;
+    private readonly ILeaveApprovalService _approvalService;
 
-    public LeaveRequestsController(ILeaveRequestService requestService)
+    public LeaveRequestsController(ILeaveRequestService requestService, ILeaveApprovalService approvalService)
     {
         _requestService = requestService;
+        _approvalService = approvalService;
     }
 
     /// <summary>
@@ -84,6 +86,18 @@ public class LeaveRequestsController : ApiControllerBase
         return Success(result, result.Status == RequestStatus.Pending
             ? "Đã đồng ý đổi ca — đơn được chuyển tới Quản lý duyệt."
             : "Đã từ chối đổi ca.");
+    }
+
+    /// <summary>
+    /// Duyệt / từ chối đơn đang chờ duyệt (UC 5.3): {approved, note} — từ chối phải ghi lý do. Duyệt áp dụng luôn thay đổi kèm theo
+    /// (trừ phép, ca chuyển sang nghỉ, đổi người làm ca, lượt chấm công hợp lệ); thông báo trả về tóm tắt các thay đổi.
+    /// </summary>
+    [HttpPut("{id:int}/review")]
+    [Authorize(Roles = RoleNames.Managers)]
+    public async Task<IActionResult> Review(int id, [FromBody] ReviewLeaveRequest request, CancellationToken cancellationToken)
+    {
+        var result = await _approvalService.ReviewAsync(id, request, cancellationToken);
+        return Success(result.Request, result.Message);
     }
 
     /// <summary>Quỹ phép năm của tôi: tổng, đã dùng, còn lại, đang chờ duyệt, còn xin được.</summary>

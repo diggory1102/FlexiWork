@@ -85,7 +85,7 @@ export interface AttendancePolicyRequest {
 
 // ---------------------------------------------------------------- Lịch làm việc
 
-export type ScheduleStatus = 'scheduled' | 'in_progress' | 'completed' | 'absent' | 'cancelled';
+export type ScheduleStatus = 'scheduled' | 'in_progress' | 'completed' | 'absent' | 'cancelled' | 'on_leave';
 
 /** Khớp ScheduleDto ở backend. workDate dạng yyyy-MM-dd. */
 export interface Schedule {

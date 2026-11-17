@@ -266,8 +266,8 @@ flowchart TD
 
 > **Tổng quan Tiến độ Hiện tại:**
 > * **Giai đoạn đang thực hiện:** CẤP BẬC 4 - Đơn từ, Phê duyệt & Công việc theo ca (Cấp 3 đã xong)
-> * **Tiến độ tổng thể:** `24 / 53` Nhiệm vụ hoàn thành (`45%`)
-> * **Hành động tiếp theo:** **Task 4.2** — Duyệt đơn (transaction): trừ quỹ phép, gán nghỉ lên lịch, hoán đổi lịch khi đổi ca, cập nhật chấm công khi giải trình được chấp nhận; HR điều chỉnh quỹ phép (chạy migration `006` trước khi push Task 4.1). Việc nhỏ còn lại: kéo ghim trực tiếp trên bản đồ (Leaflet) — làm khi chốt nâng cấp Vite/React Router đang dở trong `package.json` của web.
+> * **Tiến độ tổng thể:** `25 / 53` Nhiệm vụ hoàn thành (`47%`)
+> * **Hành động tiếp theo:** **Task 4.3** — API checklist công việc theo ca (mẫu checklist, tự gán khi vào ca, tích hoàn thành kèm ảnh, tiến độ theo ca) (chạy migration `007` trước khi push Task 4.2). Việc nhỏ còn lại: kéo ghim trực tiếp trên bản đồ (Leaflet) — làm khi chốt nâng cấp Vite/React Router đang dở trong `package.json` của web.
 
 ### Các quyết định cần chốt
 
@@ -425,7 +425,7 @@ flowchart TD
 
 ---
 
-### 📌 CẤP BẬC 4: Đơn từ, Phê duyệt & Công việc theo ca `[1/5]`
+### 📌 CẤP BẬC 4: Đơn từ, Phê duyệt & Công việc theo ca `[2/5]`
 > 🎯 **Demo:** Nhân viên gửi đơn trên Mobile → Quản lý duyệt trên Web → quỹ phép và lịch tự cập nhật; checklist ca trực có ảnh minh chứng.
 
 - [x] **Task 4.1:** API Đơn từ: CRUD loại đơn (`leave_types`); tạo đơn nghỉ phép, đổi ca, OT (có giờ bắt đầu/kết thúc), giải trình đi muộn/về sớm kèm ảnh minh chứng. Bổ sung schema cho đơn OT.
@@ -433,7 +433,12 @@ flowchart TD
   - API **Loại đơn** `/api/leave-types`: mọi người xem loại đang nhận đơn; Admin/HR thêm / sửa / tạm ngừng / xóa (tên không trùng; chỉ nhóm nghỉ trừ phép năm; đã có đơn thì không đổi nhóm; còn đơn chờ thì không xóa).
   - API **Đơn** `/api/leave-requests`: tạo đơn (form-data + ảnh JPG/PNG/WEBP/HEIC ≤ 5 MB), `GET me` (đơn của tôi), `GET peer` (đơn đổi ca gửi tới tôi), `GET` (Quản lý: chi nhánh mình; Admin/HR: mọi chi nhánh — lọc trạng thái, nhóm, khoảng ngày, tên / mã NV), `GET {id}`, `POST {id}/cancel`, `POST {id}/peer-response`; `GET /api/leave-balances/me` (tổng, đã dùng, còn lại, đang chờ, còn xin được). Quy tắc nghiệp vụ thuần ở `RequestRules` (Domain).
   - Test: +22 unit test (`RequestRulesTests`) + 3 bảng trong `EntitySchemaMappingTests` (224 unit test); +6 integration test (loại đơn, đơn nghỉ & quỹ phép & ảnh bắt buộc, OT trùng ca, đổi ca đồng ý / từ chối / chồng giờ / ca nháp, giải trình, phạm vi xem); migration chạy 2 lần trên schema cũ → cột khớp schema mới; gọi thử qua HTTP: form-data ngày / giờ, OT qua nửa đêm 3,5 giờ, ảnh lưu được, 403 / 400 đúng chỗ.
-- [ ] **Task 4.2:** Quy trình Phê duyệt (transaction): Quản lý duyệt theo chi nhánh, HR duyệt toàn bộ; tự động trừ quỹ phép (`leave_balances`), cập nhật `schedules` / `attendance_logs`, hoán đổi lịch khi đổi ca; HR điều chỉnh quỹ phép.
+- [x] **Task 4.2:** Quy trình Phê duyệt (transaction): Quản lý duyệt theo chi nhánh, HR duyệt toàn bộ; tự động trừ quỹ phép (`leave_balances`), cập nhật `schedules` / `attendance_logs`, hoán đổi lịch khi đổi ca; HR điều chỉnh quỹ phép.
+  - *Đã làm (17/11/2026):* `PUT /api/leave-requests/{id}/review` `{approved, note}` — Quản lý duyệt đơn chi nhánh mình, Admin/HR mọi đơn; **không tự duyệt đơn của mình** (đơn của Quản lý do HR/Admin duyệt); từ chối phải ghi lý do; đơn đổi ca phải được đồng nghiệp đồng ý trước. Mỗi lần duyệt là **một transaction**, lỗi ở bước nào thì không thay đổi gì; trạng thái chốt bằng `UPDATE ... WHERE status = 'pending'` nên hai người duyệt cùng lúc chỉ một người thành công. DTO đơn có thêm `canReview`.
+  - Thay đổi khi duyệt: **nghỉ** → trừ quỹ phép năm (loại trừ phép; câu UPDATE có điều kiện `remaining_days >= số ngày`; chưa có quỹ thì tạo theo `annual_leave_days`), các ca chưa chấm công trong những ngày nghỉ chuyển trạng thái mới **`on_leave`** (ca đã check-in giữ nguyên); **đổi ca** → kiểm tra lại lịch rồi chuyển người làm của từng ca (2 chiều / làm thay); **OT** → kiểm tra lại không trùng ca mới xếp; **giải trình** → lượt chấm công chờ duyệt / bị từ chối chuyển hợp lệ (ghi người duyệt), đi muộn / về sớm được miễn xử lý vi phạm khi tổng hợp bảng công (Task 5.3 đọc đơn giải trình đã duyệt). Thông báo trả về tóm tắt thay đổi (VD "trừ 2 ngày phép năm 2027, 2 ca chuyển sang nghỉ phép").
+  - **Quỹ phép (UC 5.5)** `/api/leave-balances`: danh sách theo nhân viên (năm, chi nhánh, tìm kiếm — Quản lý chỉ xem chi nhánh mình), `POST adjust` (Admin/HR cộng / trừ tổng quỹ, bước 0,5 ngày, tối đa ±30 ngày / lần, tổng mới không nhỏ hơn số ngày đã dùng, không tự điều chỉnh quỹ của mình, chỉ năm trước / nay / sau), `GET {userId}/adjustments` (lịch sử kèm người điều chỉnh). Migration `007_leave_balance_adjustments.sql`.
+  - Xếp lịch: không xếp được ca vào ngày nhân viên nghỉ theo đơn đã duyệt; đổi ca: người đang được duyệt nghỉ không nhận ca được. Web / mobile thêm nhãn "Nghỉ phép" cho trạng thái ca mới.
+  - Test: +5 integration test (duyệt nghỉ trừ phép + ca nghỉ + chặn xếp ca; phạm vi, tự duyệt, từ chối thiếu lý do, hoàn tác khi thiếu quỹ; đổi ca chuyển người + chồng giờ phát hiện lúc duyệt; OT kiểm tra lại + giải trình làm hợp lệ lượt chấm công; HR điều chỉnh quỹ & quyền xem) — tổng 71 integration, 226 unit; gọi thử qua HTTP: duyệt / duyệt lại / tự duyệt / điều chỉnh / lịch sử / phạm vi.
 - [ ] **Task 4.3:** API Checklist công việc: mẫu checklist theo ca (`shift_tasks`); tự động gán khi nhân viên vào ca; tích hoàn thành kèm ảnh hiện trường; API tiến độ theo ca.
 - [ ] **Task 4.4:** Mobile App: tạo & theo dõi đơn từ; to-do list ca trực, tích hoàn thành và chụp ảnh minh chứng.
 - [ ] **Task 4.5:** Web Admin: duyệt/từ chối đơn, quản lý loại đơn & quỹ phép; quản lý checklist mẫu; giám sát tiến độ task theo ca.

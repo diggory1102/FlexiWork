@@ -4,7 +4,6 @@ using FW.Application.Common.Interfaces;
 using FW.Application.Common.Interfaces.Persistence;
 using FW.Application.Common.Models;
 using FW.Application.Common.Security;
-using FW.Application.Features.Scheduling;
 using FW.Domain.Entities;
 using FW.Domain.Enums;
 using FW.Domain.Services;
@@ -51,14 +50,12 @@ public class LeaveRequestService : ILeaveRequestService
 {
     public const string StorageFolder = "requests";
     public const long MaxImageBytes = 5 * 1024 * 1024;
-    public const decimal DefaultAnnualLeaveDays = 12;
     private static readonly IReadOnlyList<string> AllowedTypes = new[] { "image/jpeg", "image/png", "image/webp", "image/heic", "image/heif" };
 
     private readonly ILeaveRequestRepository _requests;
     private readonly ILeaveTypeRepository _types;
     private readonly ILeaveBalanceRepository _balances;
-    private readonly IScheduleRepository _schedules;
-    private readonly IShiftRepository _shifts;
+    private readonly IRequestScheduleChecker _checker;
     private readonly IAttendanceLogRepository _logs;
     private readonly IUserRepository _users;
     private readonly ISystemSettingRepository _settings;
@@ -71,8 +68,7 @@ public class LeaveRequestService : ILeaveRequestService
         ILeaveRequestRepository requests,
         ILeaveTypeRepository types,
         ILeaveBalanceRepository balances,
-        IScheduleRepository schedules,
-        IShiftRepository shifts,
+        IRequestScheduleChecker checker,
         IAttendanceLogRepository logs,
         IUserRepository users,
         ISystemSettingRepository settings,
@@ -84,8 +80,7 @@ public class LeaveRequestService : ILeaveRequestService
         _requests = requests;
         _types = types;
         _balances = balances;
-        _schedules = schedules;
-        _shifts = shifts;
+        _checker = checker;
         _logs = logs;
         _users = users;
         _settings = settings;
@@ -195,16 +190,7 @@ public class LeaveRequestService : ILeaveRequestService
         endAt = TrimSeconds(endAt);
         Ensure(RequestRules.ValidateOvertime(startAt, endAt, _clock.Now));
 
-        // OT là giờ làm NGOÀI ca: không được trùng ca đã xếp (nối tiếp ngay sau ca thì được)
-        var mine = await LoadWithShiftsAsync(
-            await _schedules.GetActiveByUserAsync(me.Id, startAt.Date.AddDays(-1), endAt.Date, cancellationToken), cancellationToken);
-        var clash = mine.FirstOrDefault(s => RequestRules.Overlaps(startAt, endAt,
-            s.Shift.StartAt(s.Schedule.WorkDate), s.Shift.EndAt(s.Schedule.WorkDate)));
-        if (clash is not null)
-        {
-            throw new BadRequestException(
-                $"Giờ OT trùng với {Label(clash)} — OT chỉ tính phần làm ngoài ca đã xếp.");
-        }
+        await _checker.EnsureOvertimeOutsideShiftsAsync(me.Id, startAt, endAt, cancellationToken);
         if (await _requests.HasOverlappingOvertimeAsync(me.Id, startAt, endAt, cancellationToken))
         {
             throw new BadRequestException("Bạn đã có đơn OT (chờ duyệt hoặc đã duyệt) trùng khoảng giờ này.");
@@ -226,8 +212,8 @@ public class LeaveRequestService : ILeaveRequestService
             throw new BadRequestException("Vui lòng chọn ca của đồng nghiệp muốn đổi, hoặc đồng nghiệp sẽ làm thay.");
         }
 
-        var plan = await LoadSwapAsync(me.Id, sourceId, form.TargetScheduleId, form.TargetUserId, cancellationToken);
-        await EnsureSwapFeasibleAsync(plan, excludeRequestId: null, cancellationToken);
+        var plan = await _checker.LoadSwapAsync(me.Id, sourceId, form.TargetScheduleId, form.TargetUserId, cancellationToken);
+        await _checker.EnsureSwapFeasibleAsync(plan, excludeRequestId: null, RequestViewpoint.Requester, cancellationToken);
 
         request.Status = RequestStatus.PendingPeer;
         request.BranchId = plan.Source.Schedule.BranchId;
@@ -255,110 +241,6 @@ public class LeaveRequestService : ILeaveRequestService
         request.StartDate = log.WorkDate.Date;
         request.EndDate = log.WorkDate.Date;
     }
-
-    // ------------------------------------------------------------------ Đổi ca
-
-    private sealed record ScheduledShift(Schedule Schedule, Shift Shift);
-
-    /// <param name="Target">Ca nhận lại; null = nhờ làm thay.</param>
-    private sealed record SwapPlan(ScheduledShift Source, ScheduledShift? Target, User Colleague);
-
-    private async Task<SwapPlan> LoadSwapAsync(int requesterId, long sourceId, long? targetScheduleId, int? targetUserId,
-        CancellationToken cancellationToken)
-    {
-        var source = await LoadScheduleAsync(sourceId, cancellationToken);
-        if (source is null || source.Schedule.UserId != requesterId) throw new BadRequestException("Không tìm thấy ca của bạn.");
-
-        ScheduledShift? target = null;
-        if (targetScheduleId is { } targetId)
-        {
-            target = await LoadScheduleAsync(targetId, cancellationToken) ?? throw new BadRequestException("Không tìm thấy ca của đồng nghiệp.");
-            if (targetUserId is { } given && given != target.Schedule.UserId)
-            {
-                throw new BadRequestException("Ca được chọn không thuộc đồng nghiệp này.");
-            }
-            targetUserId = target.Schedule.UserId;
-        }
-
-        if (targetUserId == requesterId) throw new BadRequestException("Không thể đổi ca với chính mình.");
-        var colleague = await _users.GetByIdAsync(targetUserId!.Value, cancellationToken);
-        if (colleague is null || colleague.Status != UserStatus.Active) throw new BadRequestException("Đồng nghiệp không tồn tại hoặc đã ngừng làm việc.");
-
-        return new SwapPlan(source, target, colleague);
-    }
-
-    /// <summary>Kiểm tra lúc tạo đơn và lúc đồng nghiệp đồng ý (lịch có thể đã thay đổi trong lúc chờ).</summary>
-    private async Task EnsureSwapFeasibleAsync(SwapPlan plan, int? excludeRequestId, CancellationToken cancellationToken)
-    {
-        var now = _clock.Now;
-        var (source, target, colleague) = plan;
-        Ensure(RequestRules.ValidateSwappable(source.Schedule, source.Shift, now, "Ca của bạn"));
-
-        if (target is not null)
-        {
-            Ensure(RequestRules.ValidateSwappable(target.Schedule, target.Shift, now, "Ca của đồng nghiệp"));
-            if (target.Schedule.BranchId != source.Schedule.BranchId)
-            {
-                throw new BadRequestException("Chỉ đổi được với ca cùng chi nhánh.");
-            }
-            if (target.Schedule.ShiftId == source.Schedule.ShiftId && target.Schedule.WorkDate.Date == source.Schedule.WorkDate.Date)
-            {
-                throw new BadRequestException("Hai ca giống nhau (cùng ca, cùng ngày) — không cần đổi.");
-            }
-        }
-        else if (colleague.BranchId != source.Schedule.BranchId)
-        {
-            throw new BadRequestException("Chỉ nhờ được đồng nghiệp cùng chi nhánh làm thay.");
-        }
-
-        // Đồng nghiệp nhận ca của tôi (đã bỏ ca đồng nghiệp nhường lại cho tôi)
-        await EnsureCanTakeOverAsync(colleague.Id, source, release: target?.Schedule.Id, "Đồng nghiệp", cancellationToken);
-        // Tôi nhận ca của đồng nghiệp (đã bỏ ca tôi nhường đi)
-        if (target is not null)
-        {
-            await EnsureCanTakeOverAsync(source.Schedule.UserId, target, release: source.Schedule.Id, "Bạn", cancellationToken);
-        }
-
-        var involved = target is null ? new[] { source.Schedule.Id } : new[] { source.Schedule.Id, target.Schedule.Id };
-        if (await _requests.HasOpenSwapForSchedulesAsync(involved, excludeRequestId, cancellationToken))
-        {
-            throw new BadRequestException("Ca này đang có một đơn đổi ca khác chờ xử lý.");
-        }
-    }
-
-    private async Task EnsureCanTakeOverAsync(int userId, ScheduledShift incoming, long? release, string who, CancellationToken cancellationToken)
-    {
-        var date = incoming.Schedule.WorkDate.Date;
-        var existing = (await LoadWithShiftsAsync(
-                await _schedules.GetActiveByUserAsync(userId, date.AddDays(-1), date.AddDays(1), cancellationToken), cancellationToken))
-            .Where(s => s.Schedule.Id != release)
-            .Select(s => (s.Schedule, s.Shift));
-        var conflict = RequestRules.FindTakeOverConflict(incoming.Shift, date, existing);
-        if (conflict is { } c)
-        {
-            throw new BadRequestException(
-                $"{who} đã có {Label(new ScheduledShift(c.Schedule, c.Shift))}, trùng hoặc chồng giờ với {Label(incoming)}.");
-        }
-    }
-
-    private async Task<ScheduledShift?> LoadScheduleAsync(long id, CancellationToken cancellationToken)
-    {
-        var schedule = await _schedules.GetByIdAsync(id, cancellationToken);
-        if (schedule is null) return null;
-        var shift = (await _shifts.GetByIdsAsync(new[] { schedule.ShiftId }, includeDeleted: true, cancellationToken)).Single();
-        return new ScheduledShift(schedule, shift);
-    }
-
-    private async Task<IReadOnlyList<ScheduledShift>> LoadWithShiftsAsync(IReadOnlyList<Schedule> schedules, CancellationToken cancellationToken)
-    {
-        if (schedules.Count == 0) return Array.Empty<ScheduledShift>();
-        var shifts = (await _shifts.GetByIdsAsync(schedules.Select(s => s.ShiftId).Distinct(), includeDeleted: true, cancellationToken))
-            .ToDictionary(s => s.Id);
-        return schedules.Select(s => new ScheduledShift(s, shifts[s.ShiftId])).ToList();
-    }
-
-    private static string Label(ScheduledShift s) =>
-        $"ca \"{s.Shift.Name}\" ngày {s.Schedule.WorkDate:dd/MM} ({s.Shift.StartTime:hh\\:mm}–{s.Shift.EndTime:hh\\:mm})";
 
     // ------------------------------------------------------------------ Xem, rút đơn, đồng nghiệp trả lời
 
@@ -391,10 +273,9 @@ public class LeaveRequestService : ILeaveRequestService
     {
         var detail = await LoadAsync(id, cancellationToken);
         var me = CurrentUserId;
-        var canView = detail.UserId == me || detail.TargetUserId == me ||
-                      _currentUser.HasCompanyWideAccess() || (_currentUser.IsBranchManager() && _currentUser.CanAccessBranch(detail.BranchId));
+        var canView = detail.UserId == me || detail.TargetUserId == me || RequestAccess.CanManage(_currentUser, detail.BranchId);
         if (!canView) throw new ForbiddenException("Bạn không có quyền xem đơn này.");
-        return LeaveRequestDto.From(detail, me);
+        return ToDto(detail);
     }
 
     public async Task<LeaveRequestDto> CancelAsync(int id, CancellationToken cancellationToken = default)
@@ -424,9 +305,9 @@ public class LeaveRequestService : ILeaveRequestService
         if (accepted)
         {
             // Lịch có thể đã đổi trong lúc chờ (ca bị hủy, đã qua giờ, đồng nghiệp được xếp thêm ca...)
-            var plan = await LoadSwapAsync(request.UserId, request.SourceScheduleId.Value, request.TargetScheduleId, request.TargetUserId,
-                cancellationToken);
-            await EnsureSwapFeasibleAsync(plan, excludeRequestId: request.Id, cancellationToken);
+            var plan = await _checker.LoadSwapAsync(request.UserId, request.SourceScheduleId.Value, request.TargetScheduleId,
+                request.TargetUserId, cancellationToken);
+            await _checker.EnsureSwapFeasibleAsync(plan, excludeRequestId: request.Id, RequestViewpoint.Requester, cancellationToken);
         }
 
         request.Status = accepted ? RequestStatus.Pending : RequestStatus.PeerDeclined;
@@ -448,10 +329,8 @@ public class LeaveRequestService : ILeaveRequestService
         decimal total, used, remaining;
         if (balance is null)
         {
-            var raw = await _settings.GetValueAsync(SystemSettingKeys.AnnualLeaveDays, cancellationToken);
-            total = decimal.TryParse(raw, NumberStyles.Number, CultureInfo.InvariantCulture, out var value) ? value : DefaultAnnualLeaveDays;
+            total = remaining = await AnnualLeave.DefaultDaysAsync(_settings, cancellationToken);
             used = 0;
-            remaining = total;
         }
         else
         {
@@ -470,13 +349,13 @@ public class LeaveRequestService : ILeaveRequestService
         await _requests.GetDetailByIdAsync(id, cancellationToken) ?? throw new NotFoundException("Đơn", id);
 
     private async Task<LeaveRequestDto> GetDtoAsync(int id, CancellationToken cancellationToken) =>
-        LeaveRequestDto.From(await LoadAsync(id, cancellationToken), CurrentUserId);
+        ToDto(await LoadAsync(id, cancellationToken));
 
-    private async Task<PaginatedResult<LeaveRequestDto>> QueryAsync(LeaveRequestQuery query, CancellationToken cancellationToken)
-    {
-        var me = CurrentUserId;
-        return (await _requests.GetDetailsPagedAsync(query, cancellationToken)).Map(d => LeaveRequestDto.From(d, me));
-    }
+    private LeaveRequestDto ToDto(LeaveRequestDetail detail) =>
+        LeaveRequestDto.From(detail, CurrentUserId, RequestAccess.CanReview(_currentUser, detail));
+
+    private async Task<PaginatedResult<LeaveRequestDto>> QueryAsync(LeaveRequestQuery query, CancellationToken cancellationToken) =>
+        (await _requests.GetDetailsPagedAsync(query, cancellationToken)).Map(ToDto);
 
     private static LeaveRequestQuery BuildQuery(LeaveRequestFilter filter)
     {

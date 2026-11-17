@@ -213,6 +213,37 @@ public class LeaveRequestRepository : BaseRepository<LeaveRequest>, ILeaveReques
             UserId = userId, Pending = RequestStatus.Pending, From = new DateTime(year, 1, 1), To = new DateTime(year, 12, 31)
         }, cancellationToken);
     }
+
+    public async Task<bool> TryCompleteReviewAsync(int id, string status, int reviewerId, DateTime reviewedAt, string? note,
+        CancellationToken cancellationToken = default)
+    {
+        const string sql = """
+            UPDATE `leave_requests`
+            SET `status` = @Status, `approved_by` = @ReviewerId, `approved_at` = @ReviewedAt, `approver_note` = @Note
+            WHERE `id` = @Id AND `status` = @Pending AND `is_deleted` = 0
+            """;
+        return await ExecuteAsync(sql, new
+        {
+            Id = id, Status = status, ReviewerId = reviewerId, ReviewedAt = reviewedAt, Note = note, Pending = RequestStatus.Pending
+        }, cancellationToken) == 1;
+    }
+
+    public async Task<IReadOnlyList<ApprovedLeave>> GetApprovedLeavesAsync(IEnumerable<int> userIds, DateTime fromDate, DateTime toDate,
+        CancellationToken cancellationToken = default)
+    {
+        var ids = userIds.Distinct().ToArray();
+        if (ids.Length == 0) return Array.Empty<ApprovedLeave>();
+        const string sql = """
+            SELECT r.`user_id` AS UserId, r.`start_date` AS StartDate, r.`end_date` AS EndDate, t.`name` AS LeaveTypeName
+            FROM `leave_requests` r JOIN `leave_types` t ON t.`id` = r.`leave_type_id`
+            WHERE r.`user_id` IN @Ids AND r.`is_deleted` = 0 AND t.`category` = @Category AND r.`status` = @Approved
+              AND r.`start_date` <= @ToDate AND r.`end_date` >= @FromDate
+            """;
+        return await QueryAsync<ApprovedLeave>(sql, new
+        {
+            Ids = ids, Category = RequestCategory.Leave, Approved = RequestStatus.Approved, FromDate = fromDate.Date, ToDate = toDate.Date
+        }, cancellationToken);
+    }
 }
 
 public class LeaveBalanceRepository : BaseRepository<LeaveBalance>, ILeaveBalanceRepository
@@ -226,4 +257,104 @@ public class LeaveBalanceRepository : BaseRepository<LeaveBalance>, ILeaveBalanc
     public Task<LeaveBalance?> GetByUserAndYearAsync(int userId, int year, CancellationToken cancellationToken = default) =>
         QuerySingleOrDefaultAsync<LeaveBalance>($"{SelectFrom} WHERE `user_id` = @UserId AND `year` = @Year",
             new { UserId = userId, Year = year }, cancellationToken);
+
+    public Task EnsureExistsAsync(int userId, int year, decimal defaultTotalDays, CancellationToken cancellationToken = default)
+    {
+        // UNIQUE(user_id, year): đã có thì giữ nguyên
+        const string sql = """
+            INSERT INTO `leave_balances` (`user_id`, `year`, `total_days`, `used_days`, `remaining_days`)
+            VALUES (@UserId, @Year, @Total, 0, @Total)
+            ON DUPLICATE KEY UPDATE `user_id` = `user_id`
+            """;
+        return ExecuteAsync(sql, new { UserId = userId, Year = year, Total = defaultTotalDays }, cancellationToken);
+    }
+
+    public async Task<bool> TryDeductAsync(int userId, int year, decimal days, CancellationToken cancellationToken = default)
+    {
+        const string sql = """
+            UPDATE `leave_balances`
+            SET `used_days` = `used_days` + @Days, `remaining_days` = `remaining_days` - @Days
+            WHERE `user_id` = @UserId AND `year` = @Year AND `remaining_days` >= @Days
+            """;
+        return await ExecuteAsync(sql, new { UserId = userId, Year = year, Days = days }, cancellationToken) == 1;
+    }
+
+    public async Task<bool> TryAdjustTotalAsync(int userId, int year, decimal deltaDays, decimal maxTotalDays,
+        CancellationToken cancellationToken = default)
+    {
+        const string sql = """
+            UPDATE `leave_balances`
+            SET `total_days` = `total_days` + @Delta, `remaining_days` = `remaining_days` + @Delta
+            WHERE `user_id` = @UserId AND `year` = @Year
+              AND `total_days` + @Delta >= `used_days` AND `total_days` + @Delta <= @Max
+            """;
+        return await ExecuteAsync(sql, new { UserId = userId, Year = year, Delta = deltaDays, Max = maxTotalDays }, cancellationToken) == 1;
+    }
+
+    public async Task<PaginatedResult<LeaveBalanceRow>> GetRowsPagedAsync(LeaveBalanceQuery query, CancellationToken cancellationToken = default)
+    {
+        var conditions = new List<string> { "u.`is_deleted` = 0", "u.`status` <> @Left" };
+        var parameters = new DynamicParameters(new
+        {
+            Left = UserStatus.Left, query.Year, Pending = RequestStatus.Pending,
+            From = new DateTime(query.Year, 1, 1), To = new DateTime(query.Year, 12, 31)
+        });
+        if (query.BranchId.HasValue)
+        {
+            conditions.Add("u.`branch_id` = @BranchId");
+            parameters.Add("BranchId", query.BranchId);
+        }
+        if (query.UserId.HasValue)
+        {
+            conditions.Add("u.`id` = @UserId");
+            parameters.Add("UserId", query.UserId);
+        }
+        AddSearchCondition(query.Search, new[] { "u.`full_name`", "u.`employee_code`" }, conditions, parameters);
+        parameters.Add("Skip", query.Skip);
+        parameters.Add("Take", query.NormalizedPageSize);
+
+        var where = string.Join(" AND ", conditions);
+        var sql = $"""
+            SELECT COUNT(*) FROM `users` u WHERE {where};
+            SELECT u.`id` AS UserId, u.`employee_code` AS EmployeeCode, u.`full_name` AS FullName, u.`avatar_url` AS AvatarUrl,
+                   u.`branch_id` AS BranchId, b.`name` AS BranchName,
+                   lb.`total_days` AS TotalDays, lb.`used_days` AS UsedDays, lb.`remaining_days` AS RemainingDays,
+                   COALESCE((SELECT SUM(r.`duration_days`) FROM `leave_requests` r JOIN `leave_types` t ON t.`id` = r.`leave_type_id`
+                             WHERE r.`user_id` = u.`id` AND r.`is_deleted` = 0 AND t.`deducts_balance` = 1 AND r.`status` = @Pending
+                               AND r.`start_date` BETWEEN @From AND @To), 0) AS PendingDays
+            FROM `users` u
+            LEFT JOIN `branches` b ON b.`id` = u.`branch_id`
+            LEFT JOIN `leave_balances` lb ON lb.`user_id` = u.`id` AND lb.`year` = @Year
+            WHERE {where}
+            ORDER BY u.`employee_code`
+            LIMIT @Take OFFSET @Skip;
+            """;
+
+        var connection = await Session.GetConnectionAsync(cancellationToken);
+        using var multi = await connection.QueryMultipleAsync(Command(sql, parameters, cancellationToken));
+        var total = await multi.ReadSingleAsync<int>();
+        var items = (await multi.ReadAsync<LeaveBalanceRow>()).ToList();
+        return PaginatedResult<LeaveBalanceRow>.Create(items, total, query.NormalizedPageIndex, query.NormalizedPageSize);
+    }
+}
+
+public class LeaveBalanceAdjustmentRepository : BaseRepository<LeaveBalanceAdjustment>, ILeaveBalanceAdjustmentRepository
+{
+    public LeaveBalanceAdjustmentRepository(DbSession session) : base(session)
+    {
+    }
+
+    protected override string TableName => "leave_balance_adjustments";
+
+    public Task<IReadOnlyList<LeaveBalanceAdjustmentDetail>> GetByUserAndYearAsync(int userId, int year, CancellationToken cancellationToken = default)
+    {
+        const string sql = """
+            SELECT a.`id` AS Id, a.`user_id` AS UserId, a.`year` AS Year, a.`delta_days` AS DeltaDays, a.`reason` AS Reason,
+                   a.`created_by` AS CreatedBy, a.`created_at` AS CreatedAt, c.`full_name` AS CreatedByName
+            FROM `leave_balance_adjustments` a LEFT JOIN `users` c ON c.`id` = a.`created_by`
+            WHERE a.`user_id` = @UserId AND a.`year` = @Year
+            ORDER BY a.`created_at` DESC, a.`id` DESC
+            """;
+        return QueryAsync<LeaveBalanceAdjustmentDetail>(sql, new { UserId = userId, Year = year }, cancellationToken);
+    }
 }

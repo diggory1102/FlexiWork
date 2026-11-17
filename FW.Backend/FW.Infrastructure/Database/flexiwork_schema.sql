@@ -22,6 +22,7 @@ DROP TABLE IF EXISTS conversation_members;
 DROP TABLE IF EXISTS conversations;
 DROP TABLE IF EXISTS shift_task_assignments;
 DROP TABLE IF EXISTS shift_tasks;
+DROP TABLE IF EXISTS leave_balance_adjustments;
 DROP TABLE IF EXISTS leave_balances;
 DROP TABLE IF EXISTS leave_requests;
 DROP TABLE IF EXISTS leave_types;
@@ -214,7 +215,7 @@ CREATE TABLE schedules (
     shift_id INT NOT NULL,
     branch_id INT NOT NULL,
     work_date DATE NOT NULL,
-    status VARCHAR(20) NOT NULL DEFAULT 'scheduled' COMMENT 'scheduled, in_progress, completed, absent, cancelled',
+    status VARCHAR(20) NOT NULL DEFAULT 'scheduled' COMMENT 'scheduled, in_progress, completed, absent, cancelled, on_leave',
     is_published TINYINT(1) NOT NULL DEFAULT 0 COMMENT '0: Lịch nháp (nhân viên chưa thấy), 1: Đã công bố',
     published_at DATETIME NULL,
     created_by INT NULL COMMENT 'Người xếp lịch (Quản lý / HR)',
@@ -372,6 +373,20 @@ CREATE TABLE leave_balances (
     UNIQUE KEY uq_user_leave_year (user_id, year),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB COMMENT='Quỹ ngày phép theo năm của từng nhân viên';
+
+-- 5.4. Lịch sử điều chỉnh quỹ phép (Leave Balance Adjustments) — HR cộng / trừ thủ công kèm lý do (UC 5.5)
+CREATE TABLE leave_balance_adjustments (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    year INT NOT NULL,
+    delta_days DECIMAL(4, 1) NOT NULL COMMENT 'Số ngày cộng (dương) / trừ (âm) vào tổng quỹ phép',
+    reason VARCHAR(255) NOT NULL,
+    created_by INT NULL COMMENT 'Người điều chỉnh',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_leave_adjust_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_leave_adjust_creator FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
+    INDEX idx_leave_adjust_user_year (user_id, year)
+) ENGINE=InnoDB COMMENT='Lịch sử HR điều chỉnh quỹ phép năm';
 
 -- =============================================================================
 -- 6. NHÓM BẢNG QUẢN LÝ ĐẦU VIỆC THEO CA (SHIFT TASKS)

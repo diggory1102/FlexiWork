@@ -1,4 +1,4 @@
-export type ScheduleStatus = 'scheduled' | 'in_progress' | 'completed' | 'absent' | 'cancelled';
+export type ScheduleStatus = 'scheduled' | 'in_progress' | 'completed' | 'absent' | 'cancelled' | 'on_leave';
 
 /** Khớp ScheduleDto ở backend. Giờ dạng "HH:mm", workDate dạng yyyy-MM-dd. */
 export interface Schedule {

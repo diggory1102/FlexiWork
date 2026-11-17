@@ -125,4 +125,27 @@ public class ScheduleRepository : BaseRepository<Schedule, long>, IScheduleRepos
             """,
             new { BranchId = branchId, FromDate = fromDate.Date, ToDate = toDate.Date, PublishedAt = publishedAt },
             cancellationToken);
+
+    public Task<int> MarkOnLeaveAsync(int userId, DateTime fromDate, DateTime toDate, CancellationToken cancellationToken = default)
+    {
+        const string sql = """
+            UPDATE `schedules` SET `status` = @OnLeave
+            WHERE `user_id` = @UserId AND `work_date` BETWEEN @FromDate AND @ToDate AND `status` IN @Open
+            """;
+        return ExecuteAsync(sql, new
+        {
+            UserId = userId, FromDate = fromDate.Date, ToDate = toDate.Date, OnLeave = ScheduleStatus.OnLeave,
+            Open = new[] { ScheduleStatus.Scheduled, ScheduleStatus.Absent }
+        }, cancellationToken);
+    }
+
+    public async Task<bool> TryReassignAsync(long scheduleId, int fromUserId, int toUserId, CancellationToken cancellationToken = default)
+    {
+        const string sql = """
+            UPDATE `schedules` SET `user_id` = @ToUserId
+            WHERE `id` = @Id AND `user_id` = @FromUserId AND `status` = @Scheduled
+            """;
+        return await ExecuteAsync(sql, new { Id = scheduleId, FromUserId = fromUserId, ToUserId = toUserId, Scheduled = ScheduleStatus.Scheduled },
+            cancellationToken) == 1;
+    }
 }
