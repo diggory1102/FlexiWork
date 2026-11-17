@@ -163,6 +163,7 @@ public static class DependencyInjection
         services.AddScoped<IPayrollConfigRepository, PayrollConfigRepository>();
         services.AddScoped<IPayrollPeriodRepository, PayrollPeriodRepository>();
         services.AddScoped<IPayslipRepository, PayslipRepository>();
+        services.AddScoped<IReportRepository, ReportRepository>();
         services.AddScoped<IShiftTaskAssignmentRepository, ShiftTaskAssignmentRepository>();
 
         return services;
