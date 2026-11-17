@@ -31,9 +31,17 @@ apiClient.interceptors.request.use((config) => {
 
 apiClient.interceptors.response.use(
   (response) => response,
-  (error: AxiosError<ApiResponse<unknown>>) => {
+  async (error: AxiosError<ApiResponse<unknown>>) => {
     const status = error.response?.status;
-    const body = error.response?.data;
+    let body = error.response?.data;
+    // Tải tệp (responseType: 'blob') lỗi → phần lỗi JSON của ApiResponse nằm trong Blob
+    if (body instanceof Blob) {
+      try {
+        body = JSON.parse(await body.text()) as ApiResponse<unknown>;
+      } catch {
+        body = undefined;
+      }
+    }
 
     // Phiên hết hạn khi đang dùng (không áp dụng cho chính request đăng nhập)
     // VD: mật khẩu vừa được đổi trên thiết bị khác → máy chủ thu hồi token, trang đăng nhập hiện lý do
@@ -86,4 +94,34 @@ export function getErrorMessage(error: unknown): string {
     return error.errors.length > 0 ? `${error.message} ${error.errors.join(' ')}` : error.message;
   }
   return error instanceof Error ? error.message : 'Đã xảy ra lỗi không xác định.';
+}
+
+/** Tên tệp trong header Content-Disposition (ưu tiên filename*=UTF-8''...). */
+function fileNameFrom(disposition: string | undefined): string | null {
+  if (!disposition) return null;
+  const encoded = /filename\*=(?:UTF-8'')?([^;]+)/i.exec(disposition);
+  if (encoded) {
+    try {
+      return decodeURIComponent(encoded[1].trim().replace(/^"|"$/g, ''));
+    } catch {
+      /* dùng filename thường */
+    }
+  }
+  const plain = /filename="?([^";]+)"?/i.exec(disposition);
+  return plain ? plain[1].trim() : null;
+}
+
+/** Tải tệp từ API (có JWT) rồi cho trình duyệt lưu; trả về tên tệp. Lỗi được chuẩn hóa như các request khác. */
+export async function downloadFile(url: string, params?: object): Promise<string> {
+  const response = await apiClient.get<Blob>(url, { params: params && cleanParams(params), responseType: 'blob', timeout: 120_000 });
+  const name = fileNameFrom(response.headers['content-disposition']) ?? 'tai-xuong';
+  const objectUrl = URL.createObjectURL(response.data);
+  const link = document.createElement('a');
+  link.href = objectUrl;
+  link.download = name;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(objectUrl);
+  return name;
 }

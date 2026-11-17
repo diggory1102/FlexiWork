@@ -180,6 +180,9 @@ public static class ServiceCollectionExtensions
     /// CORS: nếu khai báo "Cors:AllowedOrigins" thì chỉ cho phép các origin đó (kèm credentials cho SignalR),
     /// ngược lại cho phép mọi origin (chỉ nên dùng khi phát triển).
     /// </summary>
+    /// <summary>Header phản hồi mà trình duyệt được phép đọc khi gọi chéo origin — cần để web lấy tên tệp Excel tải về.</summary>
+    private static readonly string[] ExposedHeaders = { "Content-Disposition" };
+
     public static IServiceCollection AddCorsPolicy(this IServiceCollection services, IConfiguration configuration)
     {
         var origins = configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
@@ -190,11 +193,11 @@ public static class ServiceCollectionExtensions
             {
                 if (origins.Length > 0)
                 {
-                    policy.WithOrigins(origins).AllowAnyHeader().AllowAnyMethod().AllowCredentials();
+                    policy.WithOrigins(origins).AllowAnyHeader().AllowAnyMethod().AllowCredentials().WithExposedHeaders(ExposedHeaders);
                 }
                 else
                 {
-                    policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod();
+                    policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod().WithExposedHeaders(ExposedHeaders);
                 }
             });
         });

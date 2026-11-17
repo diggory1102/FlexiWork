@@ -19,6 +19,7 @@ import { RequestsPage } from '@/modules/requests/pages/RequestsPage';
 import { LeaveBalancesPage } from '@/modules/requests/pages/LeaveBalancesPage';
 import { LeaveTypesPage } from '@/modules/requests/pages/LeaveTypesPage';
 import { TasksPage } from '@/modules/tasks/pages/TasksPage';
+import { ReportsPage } from '@/modules/reports/pages/ReportsPage';
 import { ComingSoonPage } from '@/components/common/ComingSoonPage';
 import { NotFoundPage } from '@/components/common/NotFoundPage';
 import { useAuthStore } from '@/stores/authStore';
@@ -68,7 +69,7 @@ const router = createBrowserRouter([
                   comingSoon('/timesheets', 'Bảng công', 'Cấp bậc 5 — Tổng hợp bảng công'),
                   { path: '/tasks', element: <TasksPage /> },
                   comingSoon('/chat', 'Truyền thông nội bộ', 'Cấp bậc 5 — Realtime'),
-                  comingSoon('/reports', 'Báo cáo', 'Cấp bậc 5 — Báo cáo'),
+                  { path: '/reports', element: <ReportsPage /> },
                 ],
               },
               {

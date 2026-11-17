@@ -24,17 +24,19 @@ interface DataTableProps<T> {
   loading?: boolean;
   emptyText?: string;
   onRowClick?: (row: T) => void;
+  /** Độ rộng tối thiểu của bảng (px) — dưới mức này bảng cuộn ngang. Mặc định 720; bảng nhỏ trong ngăn / thẻ hẹp đặt thấp hơn. */
+  minWidth?: number;
 }
 
 const alignClass = { start: 'text-left', center: 'text-center', end: 'text-right' };
 
 /** Bảng dữ liệu (Astryx Table, chế độ tự ghép): trạng thái đang tải, rỗng, bấm dòng để xem chi tiết. */
-export function DataTable<T>({ columns, rows, rowKey, loading, emptyText = 'Chưa có dữ liệu', onRowClick }: DataTableProps<T>) {
+export function DataTable<T>({ columns, rows, rowKey, loading, emptyText = 'Chưa có dữ liệu', onRowClick, minWidth = 720 }: DataTableProps<T>) {
   const cellClass = (c: Column<T>) => `${c.align ? alignClass[c.align] : ''} ${c.className ?? ''}`;
 
   return (
-    <div className="relative overflow-x-auto">
-      <div className="min-w-[720px]">
+    <div className="relative -mb-4 overflow-x-auto pb-4">
+      <div style={{ minWidth }}>
         <Table density="balanced" hasHover verticalAlign="middle">
           <TableHeader>
             <TableRow>
