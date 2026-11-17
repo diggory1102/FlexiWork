@@ -8,18 +8,21 @@ import { SideNav, SideNavItem, SideNavSection } from '@astryxdesign/core/SideNav
 import { HStack, VStack } from '@astryxdesign/core/Stack';
 import { Text } from '@astryxdesign/core/Text';
 import { TopNav, TopNavHeading } from '@astryxdesign/core/TopNav';
-import { Bell, ChevronDown, KeyRound, LogOut, MessageSquare, Moon, Sun, UserRound } from 'lucide-react';
+import { ChevronDown, KeyRound, LogOut, Moon, Sun, UserRound } from 'lucide-react';
 import { menu, type MenuItem } from '@/config/menu';
 import { useAuthStore } from '@/stores/authStore';
 import { useUiStore } from '@/stores/uiStore';
 import { Avatar } from '@/components/ui/Layout';
 import { LogoMark } from '@/components/common/Logo';
+import { ChatButton, NotificationBell } from '@/components/common/HeaderBadges';
+import { RealtimeBridge } from '@/app/RealtimeBridge';
 import { roleLabels } from '@/lib/format';
 
 /** Khung giao diện Web Admin (Astryx AppShell): thanh trên + menu trái thu gọn được + vùng nội dung. */
 export function AdminLayout({ children }: { children?: ReactNode }) {
   return (
     <AppShell topNav={<Header />} sideNav={<Sidebar />} contentPadding={6}>
+      <RealtimeBridge />
       {children ?? <Outlet />}
     </AppShell>
   );
@@ -42,8 +45,8 @@ function Header() {
             icon={<Icon icon={colorMode === 'light' ? Moon : Sun} />}
             onClick={toggleColorMode}
           />
-          <IconButton variant="ghost" label="Tin nhắn" tooltip="Tin nhắn (Cấp 5)" icon={<Icon icon={MessageSquare} />} />
-          <IconButton variant="ghost" label="Thông báo" tooltip="Thông báo (Cấp 5)" icon={<Icon icon={Bell} />} />
+          <ChatButton />
+          <NotificationBell />
           <UserMenu />
         </HStack>
       }

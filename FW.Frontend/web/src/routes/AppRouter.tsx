@@ -22,8 +22,9 @@ import { TasksPage } from '@/modules/tasks/pages/TasksPage';
 import { TimesheetsPage } from '@/modules/timesheets/pages/TimesheetsPage';
 import { PayrollPage } from '@/modules/payroll/pages/PayrollPage';
 import { PayrollConfigPage } from '@/modules/payroll/pages/PayrollConfigPage';
+import { ChatPage } from '@/modules/chat/pages/ChatPage';
+import { NotificationsPage } from '@/modules/notifications/pages/NotificationsPage';
 import { ReportsPage } from '@/modules/reports/pages/ReportsPage';
-import { ComingSoonPage } from '@/components/common/ComingSoonPage';
 import { NotFoundPage } from '@/components/common/NotFoundPage';
 import { useAuthStore } from '@/stores/authStore';
 import { RoleGroups } from '@/types/auth';
@@ -40,8 +41,6 @@ function ChangePasswordRoute() {
   );
 }
 
-const comingSoon = (path: string, title: string, stage: string) => ({ path, element: <ComingSoonPage title={title} stage={stage} /> });
-
 const router = createBrowserRouter([
   {
     element: <RouterRoot />,
@@ -57,6 +56,7 @@ const router = createBrowserRouter([
             children: [
               { index: true, element: <DashboardPage /> },
               { path: '/profile', element: <ProfilePage /> },
+              { path: '/notifications', element: <NotificationsPage /> },
               {
                 element: <ProtectedRoute allowedRoles={RoleGroups.Managers} />,
                 children: [
@@ -71,7 +71,7 @@ const router = createBrowserRouter([
                   { path: '/attendance', element: <AttendanceLogsPage /> },
                   { path: '/timesheets', element: <TimesheetsPage /> },
                   { path: '/tasks', element: <TasksPage /> },
-                  comingSoon('/chat', 'Truyền thông nội bộ', 'Cấp bậc 5 — Realtime'),
+                  { path: '/chat', element: <ChatPage /> },
                   { path: '/reports', element: <ReportsPage /> },
                 ],
               },

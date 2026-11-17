@@ -13,7 +13,7 @@ export function ListCard({ children }: { children: ReactNode }) {
 }
 
 /** Ô tìm kiếm trên thanh lọc (có nút xóa nhanh). */
-export function SearchInput({ value, onChange, placeholder, width = 300 }: { value: string; onChange: (value: string) => void; placeholder: string; width?: number }) {
+export function SearchInput({ value, onChange, placeholder, width = 300 }: { value: string; onChange: (value: string) => void; placeholder: string; width?: number | string }) {
   return (
     <TextInput
       label="Tìm kiếm"
