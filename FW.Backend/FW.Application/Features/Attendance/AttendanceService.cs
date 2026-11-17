@@ -48,6 +48,7 @@ public class AttendanceService : IAttendanceService
     private readonly IBranchWifiRepository _wifis;
     private readonly IFaceProfileRepository _faces;
     private readonly IUserRepository _users;
+    private readonly IShiftTaskAssignmentRepository _taskAssignments;
     private readonly IFaceRecognitionService _recognition;
     private readonly IFileStorageService _storage;
     private readonly IUnitOfWork _unitOfWork;
@@ -64,6 +65,7 @@ public class AttendanceService : IAttendanceService
         IBranchWifiRepository wifis,
         IFaceProfileRepository faces,
         IUserRepository users,
+        IShiftTaskAssignmentRepository taskAssignments,
         IFaceRecognitionService recognition,
         IFileStorageService storage,
         IUnitOfWork unitOfWork,
@@ -79,6 +81,7 @@ public class AttendanceService : IAttendanceService
         _wifis = wifis;
         _faces = faces;
         _users = users;
+        _taskAssignments = taskAssignments;
         _recognition = recognition;
         _storage = storage;
         _unitOfWork = unitOfWork;
@@ -220,6 +223,7 @@ public class AttendanceService : IAttendanceService
             Note = JoinNote(null, warnings)
         };
 
+        var positionId = (await _users.GetByIdAsync(userId, cancellationToken))?.PositionId;
         var uploaded = await UploadAsync(photo, fileName, cancellationToken);
         log.CheckinImageUrl = uploaded.Url;
         try
@@ -229,6 +233,9 @@ public class AttendanceService : IAttendanceService
                 await _logs.AddAsync(log, ct);
                 target.Schedule.Status = ScheduleStatus.InProgress;
                 await _schedules.UpdateAsync(target.Schedule, ct);
+                // Giao checklist công việc của ca (Task 4.3)
+                await _taskAssignments.AssignForScheduleAsync(target.Schedule.Id, userId, target.Schedule.ShiftId,
+                    target.Schedule.BranchId, positionId, ct);
             }, cancellationToken);
         }
         catch (Exception)
@@ -244,6 +251,8 @@ public class AttendanceService : IAttendanceService
             ? $"Check-in thành công lúc {now:HH:mm}."
             : $"Đã ghi nhận check-in lúc {now:HH:mm}, chờ Quản lý duyệt.";
         if (log.LateMinutes > target.Shift.LateGraceMinutes) message += $" Bạn đi muộn {log.LateMinutes} phút.";
+        var (taskCount, _) = await _taskAssignments.CountAsync(target.Schedule.Id, mandatoryOnly: false, cancellationToken);
+        if (taskCount > 0) message += $" Ca này có {taskCount} việc trong checklist.";
 
         return new AttendanceResultDto(log.Id, log.ScheduleId, AttendanceActions.CheckIn, now, target.Shift.Name, log.Status,
             log.LateMinutes, 0, 0, gps, WifiLayerDto.From(wifi), face, warnings, message);
@@ -280,6 +289,7 @@ public class AttendanceService : IAttendanceService
 
         var warnings = new List<string>();
         if (!wifi.IsPassed) warnings.Add(WifiWarning(wifi, checkOut: true));
+        var (_, mandatoryPending) = await _taskAssignments.CountAsync(item.Schedule.Id, mandatoryOnly: true, cancellationToken);
 
         log.CheckoutTime = now;
         log.CheckoutLat = ToCoordinate(request.Latitude!.Value);
@@ -324,6 +334,7 @@ public class AttendanceService : IAttendanceService
             ? $"Check-out thành công lúc {now:HH:mm}. Giờ làm: {log.ActualWorkHours:0.##} giờ."
             : $"Đã ghi nhận check-out lúc {now:HH:mm}, chờ Quản lý duyệt.";
         if (log.EarlyMinutes > item.Shift.EarlyLeaveGraceMinutes) message += $" Bạn về sớm {log.EarlyMinutes} phút.";
+        if (mandatoryPending > 0) message += $" Còn {mandatoryPending} việc bắt buộc trong checklist chưa hoàn thành.";
 
         return new AttendanceResultDto(log.Id, log.ScheduleId, AttendanceActions.CheckOut, now, item.Shift.Name, log.Status,
             log.LateMinutes, log.EarlyMinutes, log.ActualWorkHours, gps, WifiLayerDto.From(wifi), face, warnings, message);

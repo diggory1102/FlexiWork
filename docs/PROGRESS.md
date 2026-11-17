@@ -266,8 +266,8 @@ flowchart TD
 
 > **Tổng quan Tiến độ Hiện tại:**
 > * **Giai đoạn đang thực hiện:** CẤP BẬC 4 - Đơn từ, Phê duyệt & Công việc theo ca (Cấp 3 đã xong)
-> * **Tiến độ tổng thể:** `25 / 53` Nhiệm vụ hoàn thành (`47%`)
-> * **Hành động tiếp theo:** **Task 4.3** — API checklist công việc theo ca (mẫu checklist, tự gán khi vào ca, tích hoàn thành kèm ảnh, tiến độ theo ca) (chạy migration `007` trước khi push Task 4.2). Việc nhỏ còn lại: kéo ghim trực tiếp trên bản đồ (Leaflet) — làm khi chốt nâng cấp Vite/React Router đang dở trong `package.json` của web.
+> * **Tiến độ tổng thể:** `26 / 53` Nhiệm vụ hoàn thành (`49%`)
+> * **Hành động tiếp theo:** **Task 4.4** — Mobile App: tạo & theo dõi đơn từ (nghỉ, đổi ca, OT, giải trình, trả lời đổi ca của đồng nghiệp, xem quỹ phép); checklist ca trực, tích hoàn thành và chụp ảnh minh chứng (chạy migration `007`, `008` trước khi push Task 4.2, 4.3). Việc nhỏ còn lại: kéo ghim trực tiếp trên bản đồ (Leaflet) — làm khi chốt nâng cấp Vite/React Router đang dở trong `package.json` của web.
 
 ### Các quyết định cần chốt
 
@@ -425,7 +425,7 @@ flowchart TD
 
 ---
 
-### 📌 CẤP BẬC 4: Đơn từ, Phê duyệt & Công việc theo ca `[2/5]`
+### 📌 CẤP BẬC 4: Đơn từ, Phê duyệt & Công việc theo ca `[3/5]`
 > 🎯 **Demo:** Nhân viên gửi đơn trên Mobile → Quản lý duyệt trên Web → quỹ phép và lịch tự cập nhật; checklist ca trực có ảnh minh chứng.
 
 - [x] **Task 4.1:** API Đơn từ: CRUD loại đơn (`leave_types`); tạo đơn nghỉ phép, đổi ca, OT (có giờ bắt đầu/kết thúc), giải trình đi muộn/về sớm kèm ảnh minh chứng. Bổ sung schema cho đơn OT.
@@ -439,7 +439,11 @@ flowchart TD
   - **Quỹ phép (UC 5.5)** `/api/leave-balances`: danh sách theo nhân viên (năm, chi nhánh, tìm kiếm — Quản lý chỉ xem chi nhánh mình), `POST adjust` (Admin/HR cộng / trừ tổng quỹ, bước 0,5 ngày, tối đa ±30 ngày / lần, tổng mới không nhỏ hơn số ngày đã dùng, không tự điều chỉnh quỹ của mình, chỉ năm trước / nay / sau), `GET {userId}/adjustments` (lịch sử kèm người điều chỉnh). Migration `007_leave_balance_adjustments.sql`.
   - Xếp lịch: không xếp được ca vào ngày nhân viên nghỉ theo đơn đã duyệt; đổi ca: người đang được duyệt nghỉ không nhận ca được. Web / mobile thêm nhãn "Nghỉ phép" cho trạng thái ca mới.
   - Test: +5 integration test (duyệt nghỉ trừ phép + ca nghỉ + chặn xếp ca; phạm vi, tự duyệt, từ chối thiếu lý do, hoàn tác khi thiếu quỹ; đổi ca chuyển người + chồng giờ phát hiện lúc duyệt; OT kiểm tra lại + giải trình làm hợp lệ lượt chấm công; HR điều chỉnh quỹ & quyền xem) — tổng 71 integration, 226 unit; gọi thử qua HTTP: duyệt / duyệt lại / tự duyệt / điều chỉnh / lịch sử / phạm vi.
-- [ ] **Task 4.3:** API Checklist công việc: mẫu checklist theo ca (`shift_tasks`); tự động gán khi nhân viên vào ca; tích hoàn thành kèm ảnh hiện trường; API tiến độ theo ca.
+- [x] **Task 4.3:** API Checklist công việc: mẫu checklist theo ca (`shift_tasks`); tự động gán khi nhân viên vào ca; tích hoàn thành kèm ảnh hiện trường; API tiến độ theo ca.
+  - *Đã làm (17/11/2026):* migration `008_shift_task_checklists.sql`. **Mẫu checklist** gắn với ca, thêm: chi nhánh (trống = mọi chi nhánh — để Quản lý thêm việc riêng của chi nhánh mình vào ca dùng chung), chức vụ (trống = mọi người — UC 6.1 "theo vị trí"), giai đoạn **đầu / trong / cuối ca**, thứ tự, **bắt buộc ảnh hiện trường**; tối đa 30 việc / ca / phạm vi. Quyền theo ma trận: **Admin** thêm / sửa / xóa mọi việc, **Quản lý** việc của chi nhánh mình (không sửa việc chung), **HR chỉ xem**; xóa mềm — ca đã giao vẫn giữ lịch sử.
+  - **Giao việc tự động lúc check-in** (cùng transaction với lượt chấm công; `UNIQUE(schedule_id, task_id)` nên chạy lại không trùng); việc mới thêm vào mẫu khi ca đang diễn ra được bổ sung khi nhân viên mở checklist. Check-in báo "Ca này có N việc trong checklist"; check-out nhắc "Còn N việc bắt buộc chưa hoàn thành" — **không chặn check-out, không đổi trạng thái chấm công** (tiến độ hiện cho Quản lý).
+  - API `/api/shift-tasks`: `templates` (CRUD), `me` (checklist các ca của tôi hôm nay — ca chưa vào thì hiện **việc dự kiến**), `schedules/{id}` (người làm ca / Quản lý chi nhánh), `assignments/{id}/complete` (form-data: ghi chú + ảnh JPG/PNG/WEBP/HEIC ≤ 5 MB) và `uncomplete` (chỉ người được giao, chỉ khi ca đang diễn ra; bỏ tích xóa ảnh), `progress` (UC 6.4: từng ca trong ngày — tổng / xong / bắt buộc, %, số ca chưa vào, số việc bắt buộc còn dở; Quản lý chỉ chi nhánh mình). Quy tắc thuần ở `ShiftTaskRules` (Domain).
+  - Test: +19 unit test (`ShiftTaskRulesTests`) + 2 bảng trong `EntitySchemaMappingTests`; +3 integration test (quyền mẫu checklist theo vai trò & chi nhánh; việc dự kiến → giao việc theo chi nhánh & chức vụ → tích kèm ảnh / bỏ tích / bổ sung việc mới / khóa sau check-out; tiến độ) + kiểm tra check-in giao việc & check-out nhắc việc trong test chấm công — tổng 74 integration, 249 unit; migration chạy 2 lần trên schema cũ khớp schema mới; gọi thử qua HTTP (form-data ảnh, 403 / 400).
 - [ ] **Task 4.4:** Mobile App: tạo & theo dõi đơn từ; to-do list ca trực, tích hoàn thành và chụp ảnh minh chứng.
 - [ ] **Task 4.5:** Web Admin: duyệt/từ chối đơn, quản lý loại đơn & quỹ phép; quản lý checklist mẫu; giám sát tiến độ task theo ca.
 

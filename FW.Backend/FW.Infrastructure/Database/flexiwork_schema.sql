@@ -392,19 +392,28 @@ CREATE TABLE leave_balance_adjustments (
 -- 6. NHÓM BẢNG QUẢN LÝ ĐẦU VIỆC THEO CA (SHIFT TASKS)
 -- =============================================================================
 
--- 6.1. Danh mục đầu việc chuẩn theo ca (Shift Tasks)
+-- 6.1. Danh mục đầu việc chuẩn theo ca (Shift Tasks) — mẫu checklist (UC 6.1)
 CREATE TABLE shift_tasks (
     id INT AUTO_INCREMENT PRIMARY KEY,
     shift_id INT NOT NULL,
+    branch_id INT NULL COMMENT 'NULL = áp dụng mọi chi nhánh xếp ca này; có giá trị = việc riêng của chi nhánh',
+    position_id INT NULL COMMENT 'NULL = mọi nhân viên; có giá trị = chỉ giao cho nhân viên giữ chức vụ này',
     title VARCHAR(150) NOT NULL,
     description TEXT NULL,
+    phase VARCHAR(10) NOT NULL DEFAULT 'during' COMMENT 'start: đầu ca, during: trong ca, end: cuối ca',
+    sort_order INT NOT NULL DEFAULT 0 COMMENT 'Thứ tự trong cùng giai đoạn',
     is_mandatory TINYINT(1) NOT NULL DEFAULT 1 COMMENT '1: Bắt buộc hoàn thành trước khi hết ca',
+    requires_photo TINYINT(1) NOT NULL DEFAULT 0 COMMENT '1: Phải chụp ảnh hiện trường khi tích hoàn thành',
     is_deleted TINYINT(1) NOT NULL DEFAULT 0,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (shift_id) REFERENCES shifts(id) ON DELETE CASCADE
+    updated_at DATETIME NULL ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (shift_id) REFERENCES shifts(id) ON DELETE CASCADE,
+    CONSTRAINT fk_shift_task_branch FOREIGN KEY (branch_id) REFERENCES branches(id) ON DELETE CASCADE,
+    CONSTRAINT fk_shift_task_position FOREIGN KEY (position_id) REFERENCES positions(id) ON DELETE SET NULL,
+    INDEX idx_shift_task_shift_branch (shift_id, branch_id)
 ) ENGINE=InnoDB COMMENT='Mẫu checklist công việc gắn theo từng loại ca';
 
--- 6.2. Phân công & Thực hiện checklist theo ca trực (Shift Task Assignments)
+-- 6.2. Phân công & Thực hiện checklist theo ca trực (Shift Task Assignments) — tự giao khi nhân viên check-in
 CREATE TABLE shift_task_assignments (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     task_id INT NOT NULL,
@@ -413,11 +422,14 @@ CREATE TABLE shift_task_assignments (
     is_completed TINYINT(1) NOT NULL DEFAULT 0,
     completed_at DATETIME NULL,
     proof_image_url VARCHAR(255) NULL COMMENT 'Ảnh chụp bằng chứng hoàn thành nhiệm vụ',
+    proof_image_public_id VARCHAR(255) NULL COMMENT 'Mã ảnh trên dịch vụ lưu ảnh (để xóa khi bỏ tích)',
     note VARCHAR(255) NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NULL ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (task_id) REFERENCES shift_tasks(id) ON DELETE CASCADE,
     FOREIGN KEY (schedule_id) REFERENCES schedules(id) ON DELETE CASCADE,
     FOREIGN KEY (assigned_to) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE KEY uq_task_assignment (schedule_id, task_id),
     INDEX idx_task_schedule (schedule_id, is_completed)
 ) ENGINE=InnoDB COMMENT='Checklist công việc thực tế được giao trong ca trực';
 

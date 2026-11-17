@@ -102,7 +102,7 @@ public class AttendanceServiceTests
             var s = Session;
             return new AttendanceService(
                 new AttendanceLogRepository(s), new ScheduleRepository(s), new ShiftRepository(s), new BranchRepository(s),
-                new BranchWifiRepository(s), new FaceProfileRepository(s), new UserRepository(s),
+                new BranchWifiRepository(s), new FaceProfileRepository(s), new UserRepository(s), new ShiftTaskAssignmentRepository(s),
                 Face, Storage, s, new TestUser(userId ?? UserId), Clock,
                 Options.Create(new AttendanceSettings()), NullLogger<AttendanceService>.Instance);
         }
@@ -174,6 +174,10 @@ public class AttendanceServiceTests
         var ctx = await SetupAsync(new DateTime(2032, 4, 5));
         await using var _ = ctx.Session;
         var service = ctx.Service();
+        await new ShiftTaskRepository(ctx.Session).AddAsync(new ShiftTask
+        {
+            ShiftId = ctx.Shift.Id, BranchId = Branch1, Title = "Mở két đầu ca", Phase = TaskPhase.Start, IsMandatory = true
+        });
 
         // 06:30: chưa mở khung check-in (mở lúc 07:00)
         ctx.Clock.Now = ctx.At(6, 30);
@@ -198,6 +202,8 @@ public class AttendanceServiceTests
         Assert.Equal(AttendanceStatus.Valid, checkIn.Status);
         Assert.Equal(7, checkIn.LateMinutes);
         Assert.Contains("đi muộn 7 phút", checkIn.Message);
+        Assert.Contains("1 việc trong checklist", checkIn.Message);
+        Assert.Single(await new ShiftTaskAssignmentRepository(ctx.Session).GetDetailsByScheduleIdsAsync(new[] { ctx.Schedule.Id }));
         Assert.InRange(checkIn.Gps.DistanceMeters, 19.5, 20.5);
         Assert.Equal("matched", checkIn.Wifi.Status);
         Assert.Equal(0.72, checkIn.Face.Score);
@@ -223,6 +229,8 @@ public class AttendanceServiceTests
         Assert.Equal(10, checkOut.EarlyMinutes);
         Assert.Equal(7.74m, checkOut.ActualWorkHours);
         Assert.Contains("về sớm 10 phút", checkOut.Message);
+        Assert.Contains("Còn 1 việc bắt buộc", checkOut.Message);
+        Assert.Equal(AttendanceStatus.Valid, checkOut.Status); // việc chưa xong không làm lượt chấm công phải chờ duyệt
 
         log = await logs.GetByIdAsync(checkIn.LogId);
         Assert.Equal(ctx.At(16, 50), log!.CheckoutTime);

@@ -93,12 +93,12 @@ INSERT INTO leave_balances (id, user_id, year, total_days, used_days, remaining_
 ON DUPLICATE KEY UPDATE remaining_days=VALUES(remaining_days);
 
 -- 12. SEED ĐẦU VIỆC CHUẨN THEO CA (Shift Tasks)
-INSERT INTO shift_tasks (id, shift_id, title, description, is_mandatory) VALUES
-(1, 1, 'Kiểm tra vệ sinh và mở cửa cửa hàng', 'Bật đèn, điều hòa, kiểm tra khu vực bàn đón khách', 1),
-(2, 1, 'Kiểm đếm tiền đầu ca tại két', 'Đếm tiền mặt và ghi vào biên bản bàn giao đầu ca', 1),
-(3, 2, 'Bàn giao quỹ tiền mặt cuối ngày', 'Chốt số liệu doanh thu POS và niêm phong túi tiền', 1),
-(4, 4, 'Khóa cổng và kiểm tra hệ thống PCCC', 'Đảm bảo cửa cuốn hạ hết và ngắt nguồn điện không thiết yếu', 1)
-ON DUPLICATE KEY UPDATE title=VALUES(title);
+INSERT INTO shift_tasks (id, shift_id, title, description, phase, sort_order, is_mandatory, requires_photo) VALUES
+(1, 1, 'Kiểm tra vệ sinh và mở cửa cửa hàng', 'Bật đèn, điều hòa, kiểm tra khu vực bàn đón khách', 'start', 1, 1, 1),
+(2, 1, 'Kiểm đếm tiền đầu ca tại két', 'Đếm tiền mặt và ghi vào biên bản bàn giao đầu ca', 'start', 2, 1, 0),
+(3, 2, 'Bàn giao quỹ tiền mặt cuối ngày', 'Chốt số liệu doanh thu POS và niêm phong túi tiền', 'end', 1, 1, 1),
+(4, 4, 'Khóa cổng và kiểm tra hệ thống PCCC', 'Đảm bảo cửa cuốn hạ hết và ngắt nguồn điện không thiết yếu', 'end', 1, 1, 1)
+ON DUPLICATE KEY UPDATE title = VALUES(title), phase = VALUES(phase), requires_photo = VALUES(requires_photo);
 
 -- 13. -- Quy tắc vi phạm & số công chuẩn mặc định (HR sửa được trên Web Admin)
 INSERT INTO violation_rules (violation_type, min_minutes, deduct_work_units, penalty_amount, description) VALUES

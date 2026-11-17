@@ -5,6 +5,7 @@ using FW.Application.Features.Organization;
 using FW.Application.Features.Requests;
 using FW.Application.Features.Scheduling;
 using FW.Application.Features.Setup;
+using FW.Application.Features.ShiftTasks;
 using FW.Application.Features.Users;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -35,6 +36,7 @@ public static class DependencyInjection
         services.AddScoped<IRequestScheduleChecker, RequestScheduleChecker>();
         services.AddScoped<ILeaveApprovalService, LeaveApprovalService>();
         services.AddScoped<ILeaveBalanceService, LeaveBalanceService>();
+        services.AddScoped<IShiftTaskService, ShiftTaskService>();
 
         services.AddScoped<IUserService, UserService>();
         services.AddScoped<IProfileService, ProfileService>();
