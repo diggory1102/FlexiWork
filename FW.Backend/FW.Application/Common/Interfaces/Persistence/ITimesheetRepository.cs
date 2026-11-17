@@ -33,6 +33,15 @@ public interface ITimesheetRepository : IGenericRepository<MonthlyTimesheet, lon
 
     Task<TimesheetRow?> GetDetailByIdAsync(long id, CancellationToken cancellationToken = default);
 
+    /// <summary>Mọi bảng công đã lưu của tháng (mọi trạng thái, mọi chi nhánh) — dùng tính bảng lương.</summary>
+    Task<IReadOnlyList<MonthlyTimesheet>> GetByMonthAsync(int year, int month, CancellationToken cancellationToken = default);
+
+    /// <summary>Ghi lương quy đổi tạm tính (Task 5.5) — chỉ cột này, không đụng trạng thái / số liệu công (kể cả bảng đã khóa).</summary>
+    Task SetCalculatedSalariesAsync(IReadOnlyDictionary<long, decimal> salaries, CancellationToken cancellationToken = default);
+
+    /// <summary>Chuyển các bảng công đã khóa của tháng sang đã chốt lương. <returns>Số bảng công đã chốt.</returns></summary>
+    Task<int> FinalizeLockedAsync(int year, int month, CancellationToken cancellationToken = default);
+
     /// <summary>Bảng công đã lưu của các nhân viên trong tháng.</summary>
     Task<IReadOnlyList<MonthlyTimesheet>> GetByUsersAsync(int year, int month, IReadOnlyCollection<int> userIds, CancellationToken cancellationToken = default);
 

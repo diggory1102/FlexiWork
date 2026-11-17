@@ -44,6 +44,8 @@ public static class DependencyInjection
         services.AddScoped<INotifier, Notifier>();
         services.AddScoped<ITimesheetService, TimesheetService>();
         services.AddScoped<IPayrollConfigService, PayrollConfigService>();
+        services.AddScoped<IPayrollService, PayrollService>();
+        services.AddScoped<IPayslipService, PayslipService>();
         services.AddScoped<ITimesheetGuard, TimesheetGuard>();
         services.AddScoped<IChatService, ChatService>();
         services.AddScoped<INotificationService, NotificationService>();

@@ -20,7 +20,10 @@ public static class NotificationType
     /// <summary>Được giao checklist công việc khi vào ca. reference_id = mã lịch (schedule_id).</summary>
     public const string TaskAssigned = "task_assigned";
 
-    public static readonly IReadOnlyList<string> All = new[] { Attendance, LeaveApproval, LeaveRequest, ScheduleNew, TaskAssigned };
+    /// <summary>Phiếu lương của kỳ đã chốt sẵn sàng. reference_id = mã kỳ lương.</summary>
+    public const string Payslip = "payslip";
+
+    public static readonly IReadOnlyList<string> All = new[] { Attendance, LeaveApproval, LeaveRequest, ScheduleNew, TaskAssigned, Payslip };
 
     public static bool IsValid(string? type) => type is not null && All.Contains(type);
 }

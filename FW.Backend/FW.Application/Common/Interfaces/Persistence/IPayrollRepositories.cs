@@ -25,6 +25,8 @@ public interface IUserAllowanceRepository
 {
     Task<IReadOnlyList<UserAllowance>> GetByUserAsync(int userId, CancellationToken cancellationToken = default);
 
+    Task<IReadOnlyList<UserAllowance>> GetByUsersAsync(IReadOnlyCollection<int> userIds, CancellationToken cancellationToken = default);
+
     /// <summary>Thay toàn bộ phụ cấp gán riêng của nhân viên (gọi trong transaction).</summary>
     Task ReplaceForUserAsync(int userId, IReadOnlyCollection<UserAllowance> items, CancellationToken cancellationToken = default);
 }
@@ -68,6 +70,9 @@ public interface IPayrollConfigRepository
     Task<PaginatedResult<PayrollEmployeeRow>> GetEmployeesPagedAsync(PayrollEmployeeQuery query, CancellationToken cancellationToken = default);
 
     Task<PayrollEmployeeRow?> GetEmployeeAsync(int userId, CancellationToken cancellationToken = default);
+
+    /// <summary>Cấu hình lương của nhiều nhân viên (tính bảng lương).</summary>
+    Task<IReadOnlyList<PayrollEmployeeRow>> GetEmployeesByIdsAsync(IReadOnlyCollection<int> userIds, CancellationToken cancellationToken = default);
 
     /// <summary>Ghi lương cơ bản và đơn giá giờ riêng (null = xóa). false nếu nhân viên không tồn tại.</summary>
     Task<bool> UpdatePayAsync(int userId, decimal? baseSalary, decimal? hourlyRate, CancellationToken cancellationToken = default);

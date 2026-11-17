@@ -48,6 +48,11 @@ public class UserAllowanceRepository : BaseRepository<UserAllowance>, IUserAllow
     public Task<IReadOnlyList<UserAllowance>> GetByUserAsync(int userId, CancellationToken cancellationToken = default) =>
         QueryAsync<UserAllowance>($"{SelectFrom} WHERE `user_id` = @UserId ORDER BY `allowance_id`", new { UserId = userId }, cancellationToken);
 
+    public Task<IReadOnlyList<UserAllowance>> GetByUsersAsync(IReadOnlyCollection<int> userIds, CancellationToken cancellationToken = default) =>
+        userIds.Count == 0
+            ? Task.FromResult<IReadOnlyList<UserAllowance>>(Array.Empty<UserAllowance>())
+            : QueryAsync<UserAllowance>($"{SelectFrom} WHERE `user_id` IN @Ids", new { Ids = userIds }, cancellationToken);
+
     public async Task ReplaceForUserAsync(int userId, IReadOnlyCollection<UserAllowance> items, CancellationToken cancellationToken = default)
     {
         await ExecuteAsync("DELETE FROM `user_allowances` WHERE `user_id` = @UserId", new { UserId = userId }, cancellationToken);
@@ -120,6 +125,11 @@ public class PayrollConfigRepository : BaseRepository<User>, IPayrollConfigRepos
 
     public Task<PayrollEmployeeRow?> GetEmployeeAsync(int userId, CancellationToken cancellationToken = default) =>
         QuerySingleOrDefaultAsync<PayrollEmployeeRow>($"{RowSelect} WHERE u.`is_deleted` = 0 AND u.`id` = @Id", new { Id = userId }, cancellationToken);
+
+    public Task<IReadOnlyList<PayrollEmployeeRow>> GetEmployeesByIdsAsync(IReadOnlyCollection<int> userIds, CancellationToken cancellationToken = default) =>
+        userIds.Count == 0
+            ? Task.FromResult<IReadOnlyList<PayrollEmployeeRow>>(Array.Empty<PayrollEmployeeRow>())
+            : QueryAsync<PayrollEmployeeRow>($"{RowSelect} WHERE u.`id` IN @Ids", new { Ids = userIds }, cancellationToken);
 
     public async Task<bool> UpdatePayAsync(int userId, decimal? baseSalary, decimal? hourlyRate, CancellationToken cancellationToken = default) =>
         await ExecuteAsync("""

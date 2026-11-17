@@ -142,4 +142,19 @@ public class TimesheetRepository : BaseRepository<MonthlyTimesheet, long>, ITime
             SELECT EXISTS(SELECT 1 FROM `monthly_timesheets`
                           WHERE `user_id` = @UserId AND `year` = @Year AND `month` = @Month AND `status` IN @Frozen)
             """, new { UserId = userId, Year = year, Month = month, Frozen = new[] { TimesheetStatus.Locked, TimesheetStatus.Finalized } }, cancellationToken);
+
+    public Task<IReadOnlyList<MonthlyTimesheet>> GetByMonthAsync(int year, int month, CancellationToken cancellationToken = default) =>
+        QueryAsync<MonthlyTimesheet>($"{SelectFrom} WHERE `year` = @Year AND `month` = @Month ORDER BY `user_id`", new { Year = year, Month = month }, cancellationToken);
+
+    public async Task SetCalculatedSalariesAsync(IReadOnlyDictionary<long, decimal> salaries, CancellationToken cancellationToken = default)
+    {
+        foreach (var (id, salary) in salaries)
+        {
+            await ExecuteAsync("UPDATE `monthly_timesheets` SET `calculated_salary` = @Salary WHERE `id` = @Id", new { Id = id, Salary = salary }, cancellationToken);
+        }
+    }
+
+    public Task<int> FinalizeLockedAsync(int year, int month, CancellationToken cancellationToken = default) =>
+        ExecuteAsync("UPDATE `monthly_timesheets` SET `status` = @Finalized WHERE `year` = @Year AND `month` = @Month AND `status` = @Locked",
+            new { Year = year, Month = month, Finalized = TimesheetStatus.Finalized, Locked = TimesheetStatus.Locked }, cancellationToken);
 }
