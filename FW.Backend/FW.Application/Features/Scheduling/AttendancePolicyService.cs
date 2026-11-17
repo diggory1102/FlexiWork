@@ -11,6 +11,9 @@ public static class SystemSettingKeys
 {
     /// <summary>Số công chuẩn trong tháng (lương tháng ÷ công chuẩn × ngày công thực tế).</summary>
     public const string StandardWorkDays = "standard_work_days";
+
+    /// <summary>Số ngày phép năm mặc định của mỗi nhân viên khi chưa khởi tạo quỹ phép riêng.</summary>
+    public const string AnnualLeaveDays = "annual_leave_days";
 }
 
 public interface IAttendancePolicyService

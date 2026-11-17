@@ -78,13 +78,14 @@ INSERT INTO shifts (id, shift_code, name, start_time, end_time, break_minutes, w
 ON DUPLICATE KEY UPDATE name=VALUES(name);
 
 -- 10. SEED DANH MỤC LOẠI ĐƠN (Leave Types)
-INSERT INTO leave_types (id, name, is_paid, requires_attachment) VALUES
-(1, 'Nghỉ phép năm (Annual Leave)', 1, 0),
-(2, 'Nghỉ ốm / Khám chữa bệnh', 1, 1),
-(3, 'Nghỉ việc riêng không hưởng lương', 0, 0),
-(4, 'Đơn xin đổi ca làm việc', 1, 0),
-(5, 'Đơn xin làm thêm giờ (OT)', 1, 0)
-ON DUPLICATE KEY UPDATE name=VALUES(name);
+INSERT INTO leave_types (id, name, category, is_paid, deducts_balance, requires_attachment, description) VALUES
+(1, 'Nghỉ phép năm (Annual Leave)', 'leave', 1, 1, 0, 'Có hưởng lương, trừ vào quỹ phép năm'),
+(2, 'Nghỉ ốm / Khám chữa bệnh', 'leave', 1, 0, 1, 'Cần ảnh giấy khám / đơn thuốc'),
+(3, 'Nghỉ việc riêng không hưởng lương', 'leave', 0, 0, 0, NULL),
+(4, 'Đơn xin đổi ca làm việc', 'shift_swap', 1, 0, 0, 'Đổi ca với đồng nghiệp hoặc nhờ đồng nghiệp làm thay — đồng nghiệp phải đồng ý trước'),
+(5, 'Đơn xin làm thêm giờ (OT)', 'overtime', 1, 0, 0, NULL),
+(6, 'Giải trình đi muộn / về sớm', 'explanation', 1, 0, 0, 'Giải trình cho một lượt chấm công đi muộn, về sớm hoặc đang chờ duyệt')
+ON DUPLICATE KEY UPDATE name = VALUES(name), category = VALUES(category), deducts_balance = VALUES(deducts_balance);
 
 -- 11. SEED QUỸ PHÉP NĂM (Leave Balances)
 INSERT INTO leave_balances (id, user_id, year, total_days, used_days, remaining_days) VALUES
@@ -110,7 +111,8 @@ INSERT INTO violation_rules (violation_type, min_minutes, deduct_work_units, pen
 ON DUPLICATE KEY UPDATE description = description;
 
 INSERT INTO system_settings (setting_key, setting_value, description) VALUES
-('standard_work_days', '26', 'Số công chuẩn trong tháng (dùng tính lương nhân viên toàn thời gian)')
+('standard_work_days', '26', 'Số công chuẩn trong tháng (dùng tính lương nhân viên toàn thời gian)'),
+('annual_leave_days', '12', 'Số ngày phép năm mặc định của mỗi nhân viên (khi chưa khởi tạo quỹ phép riêng)')
 ON DUPLICATE KEY UPDATE setting_key = setting_key;
 
 SET FOREIGN_KEY_CHECKS = 1;

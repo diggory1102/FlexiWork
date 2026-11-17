@@ -2,6 +2,7 @@ using FW.Application.Features.Attendance;
 using FW.Application.Features.Auth;
 using FW.Application.Features.FaceId;
 using FW.Application.Features.Organization;
+using FW.Application.Features.Requests;
 using FW.Application.Features.Scheduling;
 using FW.Application.Features.Setup;
 using FW.Application.Features.Users;
@@ -29,6 +30,8 @@ public static class DependencyInjection
         services.AddScoped<IScheduleService, ScheduleService>();
         services.AddScoped<IAttendanceService, AttendanceService>();
         services.AddScoped<IAttendanceLogService, AttendanceLogService>();
+        services.AddScoped<ILeaveTypeService, LeaveTypeService>();
+        services.AddScoped<ILeaveRequestService, LeaveRequestService>();
 
         services.AddScoped<IUserService, UserService>();
         services.AddScoped<IProfileService, ProfileService>();

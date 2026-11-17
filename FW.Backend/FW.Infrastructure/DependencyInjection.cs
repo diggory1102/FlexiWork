@@ -150,6 +150,9 @@ public static class DependencyInjection
         services.AddScoped<IFaceProfileRepository, FaceProfileRepository>();
         services.AddScoped<IViolationRuleRepository, ViolationRuleRepository>();
         services.AddScoped<ISystemSettingRepository, SystemSettingRepository>();
+        services.AddScoped<ILeaveTypeRepository, LeaveTypeRepository>();
+        services.AddScoped<ILeaveRequestRepository, LeaveRequestRepository>();
+        services.AddScoped<ILeaveBalanceRepository, LeaveBalanceRepository>();
 
         return services;
     }

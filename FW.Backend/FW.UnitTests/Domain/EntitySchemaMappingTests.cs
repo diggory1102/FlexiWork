@@ -27,6 +27,9 @@ public class EntitySchemaMappingTests
         { typeof(FaceProfile), "face_profiles" },
         { typeof(ViolationRule), "violation_rules" },
         { typeof(AttendanceLog), "attendance_logs" },
+        { typeof(LeaveType), "leave_types" },
+        { typeof(LeaveRequest), "leave_requests" },
+        { typeof(LeaveBalance), "leave_balances" },
     };
 
     [Theory]

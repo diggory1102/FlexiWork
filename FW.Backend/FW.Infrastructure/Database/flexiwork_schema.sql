@@ -294,45 +294,69 @@ CREATE TABLE attendance_logs (
 -- 5. NHÓM BẢNG QUẢN LÝ ĐƠN TỪ & NGHỈ PHÉP (LEAVE & REQUESTS)
 -- =============================================================================
 
--- 5.1. Phân loại đơn từ (Leave Types)
+-- 5.1. Phân loại đơn từ (Leave Types) — HR/Admin cấu hình (UC 1.4)
 CREATE TABLE leave_types (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(100) NOT NULL COMMENT 'Nghỉ phép năm, Nghỉ không lương, Đổi ca, Đi muộn/Về sớm, Làm thêm giờ OT',
+    name VARCHAR(100) NOT NULL COMMENT 'Nghỉ phép năm, Nghỉ không lương, Đổi ca, Làm thêm giờ OT, Giải trình đi muộn/về sớm',
+    category VARCHAR(20) NOT NULL DEFAULT 'leave' COMMENT 'leave: nghỉ theo ngày, shift_swap: đổi ca / nhờ làm thay, overtime: làm thêm giờ, explanation: giải trình đi muộn/về sớm',
+    description VARCHAR(255) NULL,
     is_paid TINYINT(1) NOT NULL DEFAULT 1 COMMENT '1: Có hưởng lương',
+    deducts_balance TINYINT(1) NOT NULL DEFAULT 0 COMMENT '1: Trừ quỹ phép năm khi được duyệt (chỉ áp dụng loại nghỉ)',
     requires_attachment TINYINT(1) NOT NULL DEFAULT 0 COMMENT '1: Bắt buộc gửi kèm minh chứng',
-    is_deleted TINYINT(1) NOT NULL DEFAULT 0
+    is_active TINYINT(1) NOT NULL DEFAULT 1 COMMENT '0: Ngừng nhận đơn mới loại này',
+    is_deleted TINYINT(1) NOT NULL DEFAULT 0,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NULL ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_leave_type_category (category)
 ) ENGINE=InnoDB COMMENT='Danh mục các loại đơn từ';
 
--- 5.2. Đơn xin nghỉ / Yêu cầu phê duyệt (Leave Requests)
+-- 5.2. Đơn từ / Yêu cầu phê duyệt (Leave Requests) — nghỉ, đổi ca, OT, giải trình
 CREATE TABLE leave_requests (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL COMMENT 'Người tạo đơn',
+    branch_id INT NULL COMMENT 'Chi nhánh xử lý đơn (chi nhánh của người tạo / của ca đổi) — phạm vi duyệt của Quản lý',
     leave_type_id INT NOT NULL,
-    start_date DATE NOT NULL,
+    start_date DATE NOT NULL COMMENT 'Ngày bắt đầu nghỉ / ngày của ca đổi / ngày OT / ngày công được giải trình',
     end_date DATE NOT NULL,
-    duration_days DECIMAL(3, 1) NOT NULL DEFAULT 1.0,
-    
+    duration_days DECIMAL(3, 1) NOT NULL DEFAULT 0.0 COMMENT 'Số ngày nghỉ (chỉ đơn nghỉ)',
+
+    -- Dành riêng cho đơn làm thêm giờ (OT)
+    start_at DATETIME NULL COMMENT 'Giờ bắt đầu OT',
+    end_at DATETIME NULL COMMENT 'Giờ kết thúc OT (có thể sang ngày hôm sau)',
+    duration_hours DECIMAL(5, 2) NULL COMMENT 'Số giờ OT',
+
     -- Dành riêng cho đơn đổi ca
-    target_user_id INT NULL COMMENT 'Người được yêu cầu đổi ca',
+    target_user_id INT NULL COMMENT 'Người được yêu cầu đổi ca / làm thay',
     source_schedule_id BIGINT NULL COMMENT 'Ca muốn đổi của người tạo đơn',
-    target_schedule_id BIGINT NULL COMMENT 'Ca muốn nhận của người được đổi',
-    
+    target_schedule_id BIGINT NULL COMMENT 'Ca muốn nhận của người được đổi (NULL = nhờ làm thay, không nhận ca lại)',
+    peer_responded_at DATETIME NULL COMMENT 'Thời điểm đồng nghiệp đồng ý / từ chối đổi ca',
+    peer_note VARCHAR(255) NULL,
+
+    -- Dành riêng cho đơn giải trình
+    attendance_log_id BIGINT NULL COMMENT 'Lượt chấm công được giải trình (đi muộn / về sớm / chờ duyệt)',
+
     reason TEXT NOT NULL,
     attachment_url VARCHAR(255) NULL,
-    status VARCHAR(20) NOT NULL DEFAULT 'pending' COMMENT 'pending, approved, rejected, cancelled',
+    attachment_public_id VARCHAR(255) NULL COMMENT 'Mã tệp trên dịch vụ lưu ảnh (để xóa)',
+    status VARCHAR(20) NOT NULL DEFAULT 'pending' COMMENT 'pending_peer, pending, approved, rejected, peer_declined, cancelled',
     approved_by INT NULL COMMENT 'Người duyệt',
     approved_at DATETIME NULL,
     approver_note VARCHAR(255) NULL,
     is_deleted TINYINT(1) NOT NULL DEFAULT 0,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    
+    updated_at DATETIME NULL ON UPDATE CURRENT_TIMESTAMP,
+
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_leave_request_branch FOREIGN KEY (branch_id) REFERENCES branches(id) ON DELETE SET NULL,
     FOREIGN KEY (leave_type_id) REFERENCES leave_types(id) ON DELETE RESTRICT,
     FOREIGN KEY (target_user_id) REFERENCES users(id) ON DELETE SET NULL,
     FOREIGN KEY (source_schedule_id) REFERENCES schedules(id) ON DELETE SET NULL,
     FOREIGN KEY (target_schedule_id) REFERENCES schedules(id) ON DELETE SET NULL,
+    CONSTRAINT fk_leave_request_attendance FOREIGN KEY (attendance_log_id) REFERENCES attendance_logs(id) ON DELETE SET NULL,
     FOREIGN KEY (approved_by) REFERENCES users(id) ON DELETE SET NULL,
     INDEX idx_leave_user_status (user_id, status),
+    INDEX idx_leave_branch_status (branch_id, status),
+    INDEX idx_leave_target_status (target_user_id, status),
     INDEX idx_leave_approver (approved_by)
 ) ENGINE=InnoDB COMMENT='Bảng tiếp nhận và phê duyệt đơn từ';
 

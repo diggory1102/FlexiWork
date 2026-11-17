@@ -266,8 +266,8 @@ flowchart TD
 
 > **Tổng quan Tiến độ Hiện tại:**
 > * **Giai đoạn đang thực hiện:** CẤP BẬC 4 - Đơn từ, Phê duyệt & Công việc theo ca (Cấp 3 đã xong)
-> * **Tiến độ tổng thể:** `23 / 53` Nhiệm vụ hoàn thành (`43%`)
-> * **Hành động tiếp theo:** **Task 4.1** — API Đơn từ (loại đơn, nghỉ phép, đổi ca, OT, giải trình đi muộn/về sớm). Việc nhỏ còn lại: kéo ghim trực tiếp trên bản đồ (Leaflet) — làm khi chốt nâng cấp Vite/React Router đang dở trong `package.json` của web.
+> * **Tiến độ tổng thể:** `24 / 53` Nhiệm vụ hoàn thành (`45%`)
+> * **Hành động tiếp theo:** **Task 4.2** — Duyệt đơn (transaction): trừ quỹ phép, gán nghỉ lên lịch, hoán đổi lịch khi đổi ca, cập nhật chấm công khi giải trình được chấp nhận; HR điều chỉnh quỹ phép (chạy migration `006` trước khi push Task 4.1). Việc nhỏ còn lại: kéo ghim trực tiếp trên bản đồ (Leaflet) — làm khi chốt nâng cấp Vite/React Router đang dở trong `package.json` của web.
 
 ### Các quyết định cần chốt
 
@@ -279,7 +279,8 @@ flowchart TD
 | ~~Ca gãy~~ | Task 2.2 | ✅ **Đã chốt:** tách thành 2 ca trong cùng ngày (ca nối tiếp không tính chồng giờ). Ca xoay là cách xếp lịch (Task 2.3), không phải thuộc tính của ca |
 | ~~Quyền khai báo khung ca~~ | Task 2.2 | ✅ **Đã chốt (14/11/2026):** Admin/HR quản lý mọi ca (dùng chung + ca riêng của chi nhánh); Quản lý chi nhánh thêm/sửa/xóa ca riêng của chi nhánh mình (UC 3.1), chỉ xem ca dùng chung. Ca đã được xếp lịch không đổi được giờ, giờ nghỉ, hệ số công, ca đêm, chi nhánh — tạo ca mới thay thế; còn lịch từ hôm nay trở đi thì không xóa được. Ca dài tối đa 16 giờ |
 | ~~Quy tắc vi phạm~~ | Task 2.2 | ✅ **Đã chốt (14/11/2026):** áp dụng toàn công ty, **theo bậc** (`violation_rules`: từ X phút → trừ Y công / phạt Z đồng, chỉ áp dụng bậc cao nhất thỏa mãn, bậc sau không nhẹ hơn bậc trước). Vượt số phút cho phép của ca thì tính **toàn bộ** số phút muộn/sớm. Số công chuẩn tháng ở `system_settings.standard_work_days` (mặc định 26). Mặc định: muộn/sớm từ 1' phạt 20.000đ, từ 15' phạt 50.000đ, từ 60' trừ 0,5 công + 50.000đ |
-| Đơn đổi ca cần đồng nghiệp đồng ý trước | Task 4.2 | Có |
+| ~~Đơn đổi ca cần đồng nghiệp đồng ý trước~~ | Task 4.1, 4.2 | ✅ **Đã chốt (17/11/2026):** có — đơn đổi ca ở trạng thái `pending_peer`, đồng nghiệp đồng ý mới chuyển `pending` tới Quản lý; từ chối → `peer_declined` (kết thúc). Hỗ trợ cả **đổi ca 2 chiều** và **nhờ làm thay** (không nhận ca lại) |
+| ~~Quy tắc tạo đơn~~ | Task 4.1 | ✅ **Đã chốt (17/11/2026):** loại đơn có **nhóm** (nghỉ / đổi ca / OT / giải trình) — HR đặt tên tùy ý, nghiệp vụ theo nhóm. **Nghỉ** tính theo ngày (gồm 2 đầu, không có nửa ngày), tối đa 30 ngày / đơn, xin bù tối đa 7 ngày trước, xin trước tối đa 1 năm; loại trừ phép năm: không vắt sang năm sau, ngày xin ≤ quỹ còn lại − ngày của đơn đang chờ; chưa khởi tạo quỹ phép → mặc định `system_settings.annual_leave_days` = 12. **OT** 30 phút – 12 giờ, được qua nửa đêm, không trùng ca đã xếp (nối tiếp sau ca thì được), không trùng OT khác; bù tối đa 7 ngày, trước tối đa 60 ngày. **Đổi ca** chỉ ca đã công bố, chưa bắt đầu, cùng chi nhánh; người nhận ca không bị trùng / chồng giờ; kiểm tra lại khi đồng nghiệp đồng ý. **Giải trình** lượt chấm công đi muộn / về sớm / chờ duyệt của chính mình trong 7 ngày, mỗi lượt 1 đơn. Ảnh minh chứng tùy chọn, bắt buộc với loại được cấu hình (VD nghỉ ốm). Rút đơn khi chưa duyệt |
 | Chống giả mạo khuôn mặt (liveness) | Task 6.2 | `[Tùy chọn]` |
 | ~~Phát hiện "trùng thiết bị" (1 điện thoại chấm công cho nhiều người)~~ | Task 3.2 | ✅ **Đã chốt (15/11/2026):** lưu mã thiết bị mỗi lượt; người thứ hai check-in trên cùng điện thoại trong cùng ngày công → `pending_approval`, ghi chú mã nhân viên đã dùng máy đó (Quản lý duyệt ở UC 4.6, cảnh báo trên Dashboard ở Cấp 5) |
 | ~~Giao diện Web Admin~~ | Task 1.6 trở đi | ✅ **Đã chốt:** tham khảo bố cục HRM iPOS, thương hiệu & hình ảnh riêng FlexiWork, bỏ Tuyển dụng/Bảng giá, Hợp đồng gộp vào hồ sơ NV, Lương → Bảng công (lương tạm tính) |
@@ -424,10 +425,14 @@ flowchart TD
 
 ---
 
-### 📌 CẤP BẬC 4: Đơn từ, Phê duyệt & Công việc theo ca `[0/5]`
+### 📌 CẤP BẬC 4: Đơn từ, Phê duyệt & Công việc theo ca `[1/5]`
 > 🎯 **Demo:** Nhân viên gửi đơn trên Mobile → Quản lý duyệt trên Web → quỹ phép và lịch tự cập nhật; checklist ca trực có ảnh minh chứng.
 
-- [ ] **Task 4.1:** API Đơn từ: CRUD loại đơn (`leave_types`); tạo đơn nghỉ phép, đổi ca, OT (có giờ bắt đầu/kết thúc), giải trình đi muộn/về sớm kèm ảnh minh chứng. Bổ sung schema cho đơn OT.
+- [x] **Task 4.1:** API Đơn từ: CRUD loại đơn (`leave_types`); tạo đơn nghỉ phép, đổi ca, OT (có giờ bắt đầu/kết thúc), giải trình đi muộn/về sớm kèm ảnh minh chứng. Bổ sung schema cho đơn OT.
+  - *Đã làm (17/11/2026):* migration `006_leave_requests_categories.sql` (chạy lại an toàn): `leave_types` thêm `category`, `deducts_balance`, `description`, `is_active`; `leave_requests` thêm `branch_id` (phạm vi duyệt), `start_at` / `end_at` / `duration_hours` (OT), `peer_responded_at` / `peer_note` (đổi ca), `attendance_log_id` (giải trình), `attachment_public_id`; trạng thái `pending_peer → pending → approved / rejected`, `peer_declined`, `cancelled`.
+  - API **Loại đơn** `/api/leave-types`: mọi người xem loại đang nhận đơn; Admin/HR thêm / sửa / tạm ngừng / xóa (tên không trùng; chỉ nhóm nghỉ trừ phép năm; đã có đơn thì không đổi nhóm; còn đơn chờ thì không xóa).
+  - API **Đơn** `/api/leave-requests`: tạo đơn (form-data + ảnh JPG/PNG/WEBP/HEIC ≤ 5 MB), `GET me` (đơn của tôi), `GET peer` (đơn đổi ca gửi tới tôi), `GET` (Quản lý: chi nhánh mình; Admin/HR: mọi chi nhánh — lọc trạng thái, nhóm, khoảng ngày, tên / mã NV), `GET {id}`, `POST {id}/cancel`, `POST {id}/peer-response`; `GET /api/leave-balances/me` (tổng, đã dùng, còn lại, đang chờ, còn xin được). Quy tắc nghiệp vụ thuần ở `RequestRules` (Domain).
+  - Test: +22 unit test (`RequestRulesTests`) + 3 bảng trong `EntitySchemaMappingTests` (224 unit test); +6 integration test (loại đơn, đơn nghỉ & quỹ phép & ảnh bắt buộc, OT trùng ca, đổi ca đồng ý / từ chối / chồng giờ / ca nháp, giải trình, phạm vi xem); migration chạy 2 lần trên schema cũ → cột khớp schema mới; gọi thử qua HTTP: form-data ngày / giờ, OT qua nửa đêm 3,5 giờ, ảnh lưu được, 403 / 400 đúng chỗ.
 - [ ] **Task 4.2:** Quy trình Phê duyệt (transaction): Quản lý duyệt theo chi nhánh, HR duyệt toàn bộ; tự động trừ quỹ phép (`leave_balances`), cập nhật `schedules` / `attendance_logs`, hoán đổi lịch khi đổi ca; HR điều chỉnh quỹ phép.
 - [ ] **Task 4.3:** API Checklist công việc: mẫu checklist theo ca (`shift_tasks`); tự động gán khi nhân viên vào ca; tích hoàn thành kèm ảnh hiện trường; API tiến độ theo ca.
 - [ ] **Task 4.4:** Mobile App: tạo & theo dõi đơn từ; to-do list ca trực, tích hoàn thành và chụp ảnh minh chứng.
