@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using FW.Application.Common.Interfaces;
 using FW.Application.Common.Settings;
+using FW.Application.Features.FaceId;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.ML.OnnxRuntime;
@@ -60,18 +61,7 @@ public sealed class OnnxFaceRecognitionService : IFaceRecognitionService, IDispo
     }
 
     /// <summary>Độ tương đồng cosine của hai vector (đã chuẩn hóa thì bằng tích vô hướng), trong [-1, 1].</summary>
-    public static double CosineSimilarity(IReadOnlyList<float> a, IReadOnlyList<float> b)
-    {
-        if (a.Count != b.Count || a.Count == 0) return 0;
-        double dot = 0, na = 0, nb = 0;
-        for (var i = 0; i < a.Count; i++)
-        {
-            dot += a[i] * b[i];
-            na += a[i] * a[i];
-            nb += b[i] * b[i];
-        }
-        return na == 0 || nb == 0 ? 0 : dot / Math.Sqrt(na * nb);
-    }
+    public static double CosineSimilarity(IReadOnlyList<float> a, IReadOnlyList<float> b) => FaceSimilarity.Cosine(a, b);
 
     private sealed record Analysis(string? Error, DetectedFace? Face, IReadOnlyList<int>? BoundingBox, float[]? Embedding);
 

@@ -2,16 +2,19 @@ using FW.Application.Common.Exceptions;
 using FW.Application.Common.Interfaces;
 using FW.Application.Common.Interfaces.Persistence;
 using FW.Application.Common.Models;
+using FW.Application.Common.Settings;
 using FW.Application.Features.FaceId;
 using FW.Domain.Entities;
 using FW.Domain.Enums;
 using FW.UnitTests.Fakes;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 
 namespace FW.UnitTests.Users;
 
 /// <summary>
-/// Đăng ký Face ID (Task 2.4): chỉ tự đăng ký lần đầu, ảnh không có mặt thì không lưu, Quản lý/HR đặt lại theo phạm vi chi nhánh.
+/// Đăng ký Face ID (Task 2.4): chỉ tự đăng ký lần đầu, ảnh không có mặt thì không lưu, Quản lý/HR đặt lại theo phạm vi chi nhánh;
+/// khuôn mặt đã đăng ký cho nhân viên đang làm khác thì bị từ chối (chống hai tài khoản dùng chung một người).
 /// </summary>
 public class FaceProfileServiceTests
 {
@@ -46,6 +49,10 @@ public class FaceProfileServiceTests
 
     private sealed class FakeProfiles : IFaceProfileRepository
     {
+        private readonly FakeUserRepository _users;
+
+        public FakeProfiles(FakeUserRepository users) => _users = users;
+
         public Dictionary<int, FaceProfile> Items { get; } = new();
 
         public Task<FaceProfile?> GetByUserIdAsync(int userId, CancellationToken cancellationToken = default) => Task.FromResult(Items.GetValueOrDefault(userId));
@@ -63,6 +70,11 @@ public class FaceProfileServiceTests
         public Task<IReadOnlySet<int>> GetRegisteredUserIdsAsync(IEnumerable<int> userIds, CancellationToken cancellationToken = default) =>
             Task.FromResult<IReadOnlySet<int>>(userIds.Where(Items.ContainsKey).ToHashSet());
 
+        public Task<IReadOnlyList<FaceProfile>> GetOtherActiveProfilesAsync(int excludeUserId, CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<FaceProfile>>(Items.Values
+                .Where(p => p.UserId != excludeUserId && _users.Users.Any(u => u.Id == p.UserId && u.IsActive))
+                .ToList());
+
         // Không dùng trong nghiệp vụ Face ID
         public Task<FaceProfile?> GetByIdAsync(int id, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<IReadOnlyList<FaceProfile>> GetAllAsync(CancellationToken cancellationToken = default) => throw new NotSupportedException();
@@ -74,18 +86,19 @@ public class FaceProfileServiceTests
     }
 
     private readonly FakeUserRepository _users = new();
-    private readonly FakeProfiles _profiles = new();
+    private readonly FakeProfiles _profiles;
     private readonly FakeStorage _storage = new();
     private readonly FakeRecognition _recognition = new();
     private readonly User _employee;
 
     public FaceProfileServiceTests()
     {
+        _profiles = new FakeProfiles(_users);
         _employee = _users.Add(new User { EmployeeCode = "EMP1", Email = "nv@test.vn", FullName = "Nhân viên", BranchId = 1 }, RoleNames.Employee);
     }
 
     private FaceProfileService Service(ICurrentUserService user) =>
-        new(_profiles, _users, _recognition, _storage, user, NullLogger<FaceProfileService>.Instance);
+        new(_profiles, _users, _recognition, _storage, user, Options.Create(new FaceRecognitionSettings()), NullLogger<FaceProfileService>.Instance);
 
     private FaceProfileService AsEmployee() => Service(new FakeCurrentUser(1, RoleNames.Employee) { UserId = _employee.Id });
 
@@ -146,5 +159,74 @@ public class FaceProfileServiceTests
 
         // Đặt lại xong thì nhân viên tự đăng ký lại được
         Assert.True((await Register(AsEmployee())).Registered);
+    }
+
+    /// <summary>Vector có <paramref name="same"/> chiều cùng dấu với vector mẫu (toàn 0,1), phần còn lại ngược dấu → cosine = (2·same − 512)/512.</summary>
+    private static float[] FaceWithCosine(int same) => Enumerable.Range(0, 512).Select(i => i < same ? 0.1f : -0.1f).ToArray();
+
+    private FaceProfileService AsSecondEmployee(out User second)
+    {
+        second = _users.Add(new User { EmployeeCode = "EMP2", Email = "nv2@test.vn", FullName = "Nhân viên 2", BranchId = 1 }, RoleNames.Employee);
+        return Service(new FakeCurrentUser(1, RoleNames.Employee) { UserId = second.Id });
+    }
+
+    [Fact]
+    public async Task The_same_face_cannot_be_registered_for_two_accounts()
+    {
+        await Register(AsEmployee());
+        var second = AsSecondEmployee(out var other);
+
+        var error = await Assert.ThrowsAsync<BadRequestException>(() => Register(second));
+
+        Assert.Contains("tài khoản khác", error.Message);
+        Assert.DoesNotContain("EMP1", error.Message); // không lộ ai là người trùng
+        Assert.Single(_storage.Uploaded);            // ảnh của lần bị từ chối không được lưu
+        Assert.False(_profiles.Items.ContainsKey(other.Id));
+    }
+
+    [Fact]
+    public async Task A_different_face_is_accepted_for_the_second_account()
+    {
+        await Register(AsEmployee());
+        _recognition.Result = new FaceExtractResult(true, "ok", true, new[] { 1, 2, 3, 4 }, FaceWithCosine(256)); // cosine = 0 với mặt đầu
+        var second = AsSecondEmployee(out var other);
+
+        Assert.True((await Register(second)).Registered);
+        Assert.True(_profiles.Items.ContainsKey(other.Id));
+    }
+
+    [Theory]
+    [InlineData(358, true)]  // cosine ≈ 0,398: giống nhưng dưới ngưỡng chặn 0,50 → cho đăng ký
+    [InlineData(384, false)] // cosine = 0,50: chạm ngưỡng → từ chối
+    [InlineData(460, false)] // cosine ≈ 0,80
+    public async Task Duplicate_check_uses_the_configured_threshold(int sameDimensions, bool accepted)
+    {
+        await Register(AsEmployee());
+        _recognition.Result = new FaceExtractResult(true, "ok", true, new[] { 1, 2, 3, 4 }, FaceWithCosine(sameDimensions));
+        var second = AsSecondEmployee(out _);
+
+        if (accepted) Assert.True((await Register(second)).Registered);
+        else await Assert.ThrowsAsync<BadRequestException>(() => Register(second));
+    }
+
+    [Fact]
+    public async Task The_face_of_a_former_employee_does_not_block_a_new_registration()
+    {
+        await Register(AsEmployee());
+        _employee.Status = UserStatus.Left;
+        var second = AsSecondEmployee(out var other);
+
+        Assert.True((await Register(second)).Registered);
+        Assert.True(_profiles.Items.ContainsKey(other.Id));
+    }
+
+    [Fact]
+    public async Task After_a_reset_the_same_person_can_register_again_without_matching_their_own_old_face()
+    {
+        var service = AsEmployee();
+        await Register(service);
+        await Service(new FakeCurrentUser(1, RoleNames.Manager)).ResetAsync(_employee.Id);
+
+        Assert.True((await Register(service)).Registered);
     }
 }

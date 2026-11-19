@@ -19,6 +19,13 @@ public class FaceRecognitionSettings
     /// <summary>Độ tương đồng cosine tối thiểu để coi là cùng một người (hiệu chỉnh ở thực nghiệm Chương 4).</summary>
     public double MatchThreshold { get; set; } = 0.40;
 
+    /// <summary>
+    /// Chặn đăng ký trùng: nếu khuôn mặt mới giống khuôn mặt đã đăng ký của một nhân viên đang làm khác từ ngưỡng này trở lên thì từ chối
+    /// (một người dùng chung khuôn mặt cho hai tài khoản để chấm công hộ). Đặt cao hơn <see cref="MatchThreshold"/> để không chặn nhầm
+    /// người có nét giống nhau; hiệu chỉnh bằng ảnh thật ở Task 6.2 / 6.5.
+    /// </summary>
+    public double DuplicateThreshold { get; set; } = 0.50;
+
     /// <summary>Cạnh ngắn tối thiểu (px, trên ảnh gốc) của khuôn mặt — nhỏ hơn thì yêu cầu chụp gần hơn.</summary>
     public int MinFaceSize { get; set; } = 64;
 

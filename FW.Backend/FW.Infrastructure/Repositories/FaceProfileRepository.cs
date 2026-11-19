@@ -39,6 +39,14 @@ public class FaceProfileRepository : BaseRepository<FaceProfile>, IFaceProfileRe
     public async Task<bool> DeleteByUserIdAsync(int userId, CancellationToken cancellationToken = default) =>
         await ExecuteAsync("DELETE FROM `face_profiles` WHERE `user_id` = @UserId", new { UserId = userId }, cancellationToken) > 0;
 
+    public Task<IReadOnlyList<FaceProfile>> GetOtherActiveProfilesAsync(int excludeUserId, CancellationToken cancellationToken = default) =>
+        QueryAsync<FaceProfile>("""
+            SELECT fp.*
+            FROM `face_profiles` fp
+            JOIN `users` u ON u.`id` = fp.`user_id`
+            WHERE fp.`user_id` <> @UserId AND u.`is_deleted` = 0 AND u.`status` = 'active'
+            """, new { UserId = excludeUserId }, cancellationToken);
+
     public async Task<IReadOnlySet<int>> GetRegisteredUserIdsAsync(IEnumerable<int> userIds, CancellationToken cancellationToken = default)
     {
         var ids = userIds.Distinct().ToArray();

@@ -2,8 +2,10 @@ using FW.Application.Common.Exceptions;
 using FW.Application.Common.Interfaces;
 using FW.Application.Common.Interfaces.Persistence;
 using FW.Application.Common.Security;
+using FW.Application.Common.Settings;
 using FW.Domain.Entities;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace FW.Application.Features.FaceId;
 
@@ -31,7 +33,9 @@ public interface IFaceProfileService
 /// <summary>
 /// Đăng ký dữ liệu Face ID (UC 2.4): ảnh mẫu → trích vector đặc trưng 512 chiều → lưu <c>face_profiles</c>, ảnh lưu kho ảnh.
 /// Chống gian lận: nhân viên chỉ tự đăng ký khi chưa có dữ liệu; muốn thay phải được Quản lý/HR đặt lại, tránh việc tự đổi
-/// sang khuôn mặt người khác để nhờ chấm công hộ. Vector đặc trưng không bao giờ trả về client.
+/// sang khuôn mặt người khác để nhờ chấm công hộ. Khuôn mặt giống một nhân viên đang làm khác (từ
+/// <see cref="FaceRecognitionSettings.DuplicateThreshold"/>) bị từ chối để hai tài khoản không dùng chung một người.
+/// Vector đặc trưng không bao giờ trả về client.
 /// </summary>
 public class FaceProfileService : IFaceProfileService
 {
@@ -39,6 +43,7 @@ public class FaceProfileService : IFaceProfileService
     public static readonly IReadOnlyList<string> AllowedTypes = new[] { "image/jpeg", "image/png", "image/webp", "image/heic", "image/heif" };
     public const string StorageFolder = "faces";
 
+    private readonly FaceRecognitionSettings _settings;
     private readonly IFaceProfileRepository _profiles;
     private readonly IUserRepository _users;
     private readonly IFaceRecognitionService _recognition;
@@ -52,8 +57,10 @@ public class FaceProfileService : IFaceProfileService
         IFaceRecognitionService recognition,
         IFileStorageService storage,
         ICurrentUserService currentUser,
+        IOptions<FaceRecognitionSettings> settings,
         ILogger<FaceProfileService> logger)
     {
+        _settings = settings.Value;
         _profiles = profiles;
         _users = users;
         _recognition = recognition;
@@ -87,6 +94,8 @@ public class FaceProfileService : IFaceProfileService
         {
             throw new BadRequestException(extracted.Message);
         }
+
+        await EnsureNotRegisteredByAnotherAsync(userId, extracted.Embedding, cancellationToken);
 
         image.Position = 0;
         var uploaded = await _storage.UploadImageAsync(image, fileName, StorageFolder, cancellationToken);
@@ -131,6 +140,34 @@ public class FaceProfileService : IFaceProfileService
     // ------------------------------------------------------------------
 
     private int CurrentUserId => _currentUser.UserId ?? throw new UnauthorizedException();
+
+    /// <summary>
+    /// Chống hai tài khoản dùng chung một khuôn mặt (nhờ chấm công hộ): so vector mới với khuôn mặt của mọi nhân viên đang làm khác.
+    /// Không nêu tên người trùng cho nhân viên (bảo mật thông tin); chỉ ghi log để Nhân sự tra cứu.
+    /// </summary>
+    private async Task EnsureNotRegisteredByAnotherAsync(int userId, IReadOnlyList<float> embedding, CancellationToken cancellationToken)
+    {
+        var threshold = _settings.DuplicateThreshold;
+        var others = await _profiles.GetOtherActiveProfilesAsync(userId, cancellationToken);
+        FaceProfile? closest = null;
+        var best = double.MinValue;
+        foreach (var other in others)
+        {
+            var similarity = FaceSimilarity.Cosine(embedding, other.FaceEncoding);
+            if (similarity > best)
+            {
+                best = similarity;
+                closest = other;
+            }
+        }
+
+        if (closest == null || best < threshold) return;
+
+        _logger.LogWarning("Chặn đăng ký khuôn mặt trùng: nhân viên {UserId} giống nhân viên {OtherUserId} (độ giống {Similarity:0.000} ≥ ngưỡng {Threshold:0.00})",
+            userId, closest.UserId, best, threshold);
+        throw new BadRequestException("Khuôn mặt này đã được đăng ký cho một tài khoản khác nên không thể dùng cho tài khoản của bạn. " +
+                                      "Nếu đây là nhầm lẫn, hãy liên hệ Quản lý hoặc bộ phận Nhân sự.");
+    }
 
     private async Task<FaceProfileStatusDto> StatusOfAsync(int userId, CancellationToken cancellationToken)
     {

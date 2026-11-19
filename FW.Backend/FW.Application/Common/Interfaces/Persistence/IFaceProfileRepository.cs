@@ -15,6 +15,9 @@ public interface IFaceProfileRepository : IGenericRepository<FaceProfile>
 
     Task<bool> DeleteByUserIdAsync(int userId, CancellationToken cancellationToken = default);
 
+    /// <summary>Dữ liệu khuôn mặt của mọi nhân viên đang làm việc, trừ <paramref name="excludeUserId"/> (để chặn đăng ký trùng khuôn mặt).</summary>
+    Task<IReadOnlyList<FaceProfile>> GetOtherActiveProfilesAsync(int excludeUserId, CancellationToken cancellationToken = default);
+
     /// <summary>Trong các nhân viên cho trước, những ai đã đăng ký khuôn mặt (hiển thị trạng thái Face ID trên danh sách).</summary>
     Task<IReadOnlySet<int>> GetRegisteredUserIdsAsync(IEnumerable<int> userIds, CancellationToken cancellationToken = default);
 }
