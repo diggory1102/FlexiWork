@@ -50,7 +50,7 @@ public class AttendanceServiceTests
         public bool IsInRole(string role) => role == RoleNames.Employee;
     }
 
-    /// <summary>Trả về độ tương đồng cấu hình sẵn (ngưỡng 0,40 như cấu hình thật).</summary>
+    /// <summary>Trả về độ tương đồng cấu hình sẵn (ngưỡng 0,35 như cấu hình thật).</summary>
     private sealed class StubFace : IFaceRecognitionService
     {
         public double Score { get; set; } = 0.72;
@@ -64,8 +64,8 @@ public class AttendanceServiceTests
         {
             Calls++;
             return Task.FromResult(Error != null
-                ? new FaceVerifyResult(false, Error, false, 0, 0.40)
-                : new FaceVerifyResult(true, "ok", Score >= 0.40, Score, 0.40));
+                ? new FaceVerifyResult(false, Error, false, 0, 0.35)
+                : new FaceVerifyResult(true, "ok", Score >= 0.35, Score, 0.35));
         }
     }
 

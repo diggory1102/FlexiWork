@@ -147,7 +147,7 @@ public class FaceProfileService : IFaceProfileService
     /// </summary>
     private async Task EnsureNotRegisteredByAnotherAsync(int userId, IReadOnlyList<float> embedding, CancellationToken cancellationToken)
     {
-        var threshold = _settings.DuplicateThreshold;
+        var threshold = _settings.EffectiveDuplicateThreshold;
         var others = await _profiles.GetOtherActiveProfilesAsync(userId, cancellationToken);
         FaceProfile? closest = null;
         var best = double.MinValue;

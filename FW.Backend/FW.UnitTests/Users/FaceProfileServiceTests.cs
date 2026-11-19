@@ -97,8 +97,8 @@ public class FaceProfileServiceTests
         _employee = _users.Add(new User { EmployeeCode = "EMP1", Email = "nv@test.vn", FullName = "Nhân viên", BranchId = 1 }, RoleNames.Employee);
     }
 
-    private FaceProfileService Service(ICurrentUserService user) =>
-        new(_profiles, _users, _recognition, _storage, user, Options.Create(new FaceRecognitionSettings()), NullLogger<FaceProfileService>.Instance);
+    private FaceProfileService Service(ICurrentUserService user, FaceRecognitionSettings? settings = null) =>
+        new(_profiles, _users, _recognition, _storage, user, Options.Create(settings ?? new FaceRecognitionSettings()), NullLogger<FaceProfileService>.Instance);
 
     private FaceProfileService AsEmployee() => Service(new FakeCurrentUser(1, RoleNames.Employee) { UserId = _employee.Id });
 
@@ -196,8 +196,9 @@ public class FaceProfileServiceTests
     }
 
     [Theory]
-    [InlineData(358, true)]  // cosine ≈ 0,398: giống nhưng dưới ngưỡng chặn 0,50 → cho đăng ký
-    [InlineData(384, false)] // cosine = 0,50: chạm ngưỡng → từ chối
+    [InlineData(330, true)]  // cosine ≈ 0,289: dưới ngưỡng chặn mặc định 0,35 → cho đăng ký
+    [InlineData(345, true)]  // cosine ≈ 0,348: sát nhưng vẫn dưới ngưỡng
+    [InlineData(346, false)] // cosine ≈ 0,352: chạm ngưỡng → từ chối
     [InlineData(460, false)] // cosine ≈ 0,80
     public async Task Duplicate_check_uses_the_configured_threshold(int sameDimensions, bool accepted)
     {
@@ -207,6 +208,24 @@ public class FaceProfileServiceTests
 
         if (accepted) Assert.True((await Register(second)).Registered);
         else await Assert.ThrowsAsync<BadRequestException>(() => Register(second));
+    }
+
+    [Theory]
+    [InlineData(0.40, 0.50, 358, false)] // cosine ≈ 0,398 < ngưỡng chấm công 0,40: chưa qua được chấm công của người kia → cho đăng ký
+    [InlineData(0.30, 0.50, 358, true)]  // hạ ngưỡng chấm công xuống 0,30: 0,398 đã qua được → phải bị coi là trùng dù DuplicateThreshold đặt 0,50
+    [InlineData(0.45, 0.30, 358, true)]  // ngưỡng chặn trùng đặt thấp hơn thì dùng ngưỡng thấp hơn (chặt hơn)
+    public async Task The_duplicate_threshold_never_exceeds_the_match_threshold(double match, double duplicate, int sameDimensions, bool blocked)
+    {
+        var settings = new FaceRecognitionSettings { MatchThreshold = match, DuplicateThreshold = duplicate };
+        Assert.Equal(Math.Min(match, duplicate), settings.EffectiveDuplicateThreshold);
+
+        await Register(Service(new FakeCurrentUser(1, RoleNames.Employee) { UserId = _employee.Id }, settings));
+        _recognition.Result = new FaceExtractResult(true, "ok", true, new[] { 1, 2, 3, 4 }, FaceWithCosine(sameDimensions));
+        var other = _users.Add(new User { EmployeeCode = "EMP2", Email = "nv2@test.vn", FullName = "Nhân viên 2", BranchId = 1 }, RoleNames.Employee);
+        var second = Service(new FakeCurrentUser(1, RoleNames.Employee) { UserId = other.Id }, settings);
+
+        if (blocked) await Assert.ThrowsAsync<BadRequestException>(() => Register(second));
+        else Assert.True((await Register(second)).Registered);
     }
 
     [Fact]

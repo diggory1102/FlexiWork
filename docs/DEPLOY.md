@@ -119,7 +119,7 @@ Render gói free ngủ sau ~15 phút không có truy cập. Một service chạy
 Nhận diện khuôn mặt chạy ngay trong `flexiwork-api` bằng ONNX Runtime với bộ mô hình InsightFace **buffalo_sc** (SCRFD phát hiện mặt + ArcFace MobileFaceNet trích vector 512 chiều). Dockerfile tự tải mô hình (~16 MB, kiểm tra mã băm SHA-256) ở stage `models` — Render build lâu hơn khoảng 1 phút, không cần biến môi trường nào.
 
 - **Chạy trên máy:** tải mô hình một lần: `powershell -ExecutionPolicy Bypass -File FW.Backend\scripts\download-face-models.ps1` (file `.onnx` không lưu trong repo).
-- **Tham số** (section `FaceRecognition`, đổi trên Render bằng biến `FaceRecognition__MatchThreshold`…): ngưỡng khớp khi chấm công mặc định `0.40` (hiệu chỉnh ở thực nghiệm Chương 4), ngưỡng chặn đăng ký trùng khuôn mặt `FaceRecognition__DuplicateThreshold` mặc định `0.50`, kích thước ảnh phát hiện `640`.
+- **Tham số** (section `FaceRecognition`, đổi trên Render bằng biến `FaceRecognition__MatchThreshold`…): ngưỡng khớp khi chấm công mặc định `0.35`, ngưỡng chặn đăng ký trùng khuôn mặt `FaceRecognition__DuplicateThreshold` mặc định `0.35` (thực tế không bao giờ cao hơn ngưỡng khớp), kích thước ảnh phát hiện `640`. Căn cứ chọn ngưỡng và cách đo lại bằng ảnh của nhóm: `docs/FACE_THRESHOLD.md`.
 - Mô hình InsightFace chỉ dùng cho nghiên cứu / phi thương mại — phù hợp phạm vi khóa luận.
 
 ## Bước 7b — Gợi ý địa điểm khi gõ (Geoapify) — tùy chọn

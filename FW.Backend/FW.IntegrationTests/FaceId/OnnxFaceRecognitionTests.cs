@@ -51,7 +51,7 @@ public class OnnxFaceRecognitionTests
         var garbage = await service.VerifyAsync(new MemoryStream(new byte[] { 1, 2, 3 }), "x.jpg", new float[512]);
         Assert.False(garbage.Success);
         Assert.Contains("không hợp lệ", garbage.Message);
-        Assert.Equal(0.40, garbage.Threshold);
+        Assert.Equal(new FaceRecognitionSettings().MatchThreshold, garbage.Threshold);
     }
 
     [Fact]
