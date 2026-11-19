@@ -69,8 +69,12 @@ public class ReportRepository : BaseRepository<Schedule, long>, IReportRepositor
                    COALESCE(SUM(CASE WHEN r.`status` = 'approved' THEN r.`duration_days` ELSE 0 END), 0) AS ApprovedDays,
                    COALESCE(SUM(CASE WHEN r.`status` = 'pending' THEN r.`duration_days` ELSE 0 END), 0) AS PendingDays
             FROM `leave_types` t
-            LEFT JOIN `leave_requests` r ON r.`leave_type_id` = t.`id` AND r.`is_deleted` = 0 AND YEAR(r.`start_date`) = @Year
-                 AND EXISTS(SELECT 1 FROM `users` u WHERE u.`id` = r.`user_id` AND (@BranchId IS NULL OR u.`branch_id` = @BranchId))
+            LEFT JOIN (
+                SELECT r0.`leave_type_id`, r0.`status`, r0.`duration_days`
+                FROM `leave_requests` r0
+                JOIN `users` u ON u.`id` = r0.`user_id`
+                WHERE r0.`is_deleted` = 0 AND YEAR(r0.`start_date`) = @Year AND (@BranchId IS NULL OR u.`branch_id` = @BranchId)
+            ) r ON r.`leave_type_id` = t.`id`
             WHERE t.`category` = 'leave' AND t.`is_deleted` = 0
             GROUP BY t.`id`, t.`name`, t.`is_paid`, t.`deducts_balance`
             ORDER BY t.`id`

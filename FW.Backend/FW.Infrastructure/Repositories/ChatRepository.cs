@@ -100,7 +100,9 @@ public class ChatRepository : BaseRepository<Message, long>, IChatRepository
         JOIN `conversations` c ON c.`id` = cm.`conversation_id` AND c.`is_deleted` = 0
         LEFT JOIN `conversation_members` ocm ON ocm.`conversation_id` = c.`id` AND c.`type` = 'direct' AND ocm.`user_id` <> @Me
         LEFT JOIN `users` ou ON ou.`id` = ocm.`user_id`
-        LEFT JOIN `messages` lm ON lm.`id` = (SELECT MAX(m2.`id`) FROM `messages` m2 WHERE m2.`conversation_id` = c.`id` AND m2.`is_deleted` = 0)
+        LEFT JOIN (SELECT m2.`conversation_id` AS ConversationId, MAX(m2.`id`) AS LastId FROM `messages` m2 WHERE m2.`is_deleted` = 0 GROUP BY m2.`conversation_id`) lx
+               ON lx.ConversationId = c.`id`
+        LEFT JOIN `messages` lm ON lm.`id` = lx.LastId
         LEFT JOIN `users` lu ON lu.`id` = lm.`sender_id`
         """;
 
