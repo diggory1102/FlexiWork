@@ -139,21 +139,47 @@ Form chi nhánh (Web) có ô **Tìm địa điểm** gợi ý ngay khi gõ. Nomi
 2. **API Keys → Create Key** tên `flexiwork-render` — chỉ hiện một lần.
 3. Render → `flexiwork-api` → **Environment**: thêm `Anthropic__ApiKey`.
 
-## Bước 9 — App di động (Task 3.4)
+## Bước 9 — App di động: build APK Android bằng EAS (Task 3.4, 6.3)
 
-Hiện tại dùng **Expo Go** là đủ (trỏ API về Render bằng `.env.local`):
+**Chạy thử nhanh:** Expo Go là đủ cho phần lớn tính năng — tạo `FW.Frontend/mobile/.env.local` trỏ về Render:
 ```
 EXPO_PUBLIC_API_BASE_URL=https://flexiwork-api.onrender.com/api
 EXPO_PUBLIC_HUB_BASE_URL=https://flexiwork-api.onrender.com/hubs
 ```
-Khi làm chấm công (đọc Wi-Fi BSSID cần bản build riêng):
+**Bản demo cài thẳng lên điện thoại (APK):** đọc Wi-Fi BSSID để chấm công và dùng camera / vị trí đầy đủ cần bản build riêng. Đã kiểm tra sẵn (19/11/2026):
+`expo-doctor` 20/20, `npm ci` sạch không xung đột, `expo export --platform android` đóng gói được (Hermes), `expo-font` đã thêm (Ionicons cần nó ngoài Expo Go).
+URL API của bản build nằm trong `FW.Frontend/mobile/eas.json` (`preview` và `production`) — sửa nếu Render cấp domain khác.
+
+1. Tạo tài khoản miễn phí tại <https://expo.dev>.
+2. Cài công cụ và đăng nhập:
+   ```powershell
+   npm i -g eas-cli
+   eas login
+   ```
+3. Tạo dự án EAS **một lần** (ghi `extra.eas.projectId` vào `app.json` — không phải bí mật, nên commit):
+   ```powershell
+   cd FW.Frontend\mobile
+   eas init
+   ```
+4. Build APK (gói free xếp hàng, thường 15–30 phút; lần đầu EAS hỏi tạo keystore → trả lời **Yes**, để EAS quản lý):
+   ```powershell
+   eas build --profile preview --platform android
+   ```
+5. Khi xong, EAS in ra link tải; mở link trên điện thoại Android (hoặc quét mã QR), tải APK và cài (cho phép “cài từ nguồn không rõ” cho trình duyệt).
+6. **Thử trên máy thật:** Render ngủ sau ~15 phút nên lần đăng nhập đầu có thể mất ~50 giây (UptimeRobot ở Bước 6 giúp tránh). Cấp quyền **Camera**, **Vị trí chính xác** và bật dịch vụ vị trí (Android cần vị trí bật mới đọc được BSSID Wi-Fi). Đi qua: đăng nhập → đổi mật khẩu tạm → đăng ký khuôn mặt → chấm công → tạo đơn → chat có gửi ảnh → thông báo thời gian thực.
+
+Lưu ý: mọi thay đổi mã của app (kể cả JS) đều cần build APK mới — dự án chưa cấu hình EAS Update. Mỗi tháng gói free có số lượt build giới hạn, nên chỉ build khi cần.
+
+---
+
+## Kiểm tra sau triển khai (không cần mật khẩu)
+
 ```powershell
-npm i -g eas-cli
-cd FW.Frontend\mobile
-eas login
-eas build --profile preview --platform android   # tạo file APK cài trực tiếp lên điện thoại
+powershell -File FW.Backend\scripts\smoke-prod.ps1
 ```
-URL API cho bản build nằm trong `FW.Frontend/mobile/eas.json` — sửa nếu Render cấp domain khác.
+Script chỉ ĐỌC (không đăng nhập, không ghi dữ liệu): API còn sống ở chế độ Production, CORS chỉ nhận đúng domain Web, Swagger đã tắt, API và hai hub SignalR đòi đăng nhập, Web mở được cả đường dẫn con. Có thể truyền `-Api` / `-Web` nếu domain khác. Gặp `[LỖI]` thì dòng đó nói biến môi trường nào cần xem.
+
+Sau mỗi lần push có migration mới, kiểm tra thủ công thêm: đăng nhập Web bằng tài khoản Admin, mở trang dùng cột / bảng mới (Khung ca, Xếp lịch…); lỗi 500 gần như luôn do **chưa chạy migration trên TiDB** hoặc câu SQL dùng cú pháp TiDB không hỗ trợ (đọc dòng `MySqlException` trong Render → Logs).
 
 ---
 

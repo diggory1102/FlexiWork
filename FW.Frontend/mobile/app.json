@@ -22,7 +22,10 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "permissions": ["ACCESS_WIFI_STATE", "ACCESS_NETWORK_STATE"],
+      "permissions": [
+        "ACCESS_WIFI_STATE",
+        "ACCESS_NETWORK_STATE"
+      ],
       "predictiveBackGestureEnabled": false
     },
     "web": {
@@ -53,7 +56,8 @@
         {
           "locationWhenInUsePermission": "FlexiWork cần vị trí GPS và thông tin Wi-Fi để xác minh bạn đang ở chi nhánh khi chấm công."
         }
-      ]
+      ],
+      "expo-font"
     ],
     "experiments": {
       "typedRoutes": true
