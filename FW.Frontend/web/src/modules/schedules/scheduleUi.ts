@@ -73,7 +73,7 @@ export function countStaffed(schedules: Schedule[]): Map<string, number> {
 export type StaffingState = 'short' | 'ok' | 'full' | 'over';
 
 /** short: chưa đủ tối thiểu · ok: trong khoảng · full: chạm tối đa · over: vượt tối đa (sau khi hạ định biên). */
-export function staffingState(count: number, s: Pick<Shift, 'minStaff' | 'maxStaff'>): StaffingState {
+export function staffingState(count: number, s: { minStaff: number | null; maxStaff: number | null }): StaffingState {
   if (s.maxStaff != null && count > s.maxStaff) return 'over';
   if (s.maxStaff != null && count === s.maxStaff) return 'full';
   if (s.minStaff != null && count < s.minStaff) return 'short';

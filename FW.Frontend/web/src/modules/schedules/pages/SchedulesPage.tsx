@@ -7,12 +7,12 @@ import { Selector } from '@astryxdesign/core/Selector';
 import { HStack } from '@astryxdesign/core/Stack';
 import { Text } from '@astryxdesign/core/Text';
 import { Token } from '@astryxdesign/core/Token';
-import { CalendarCheck, ChevronLeft, ChevronRight, Copy, Eraser, Zap } from 'lucide-react';
+import { CalendarCheck, ChevronLeft, ChevronRight, Copy, Eraser, Users, Zap } from 'lucide-react';
 import { PageHeader, Toolbar } from '@/components/ui/Layout';
 import { ListCard } from '@/components/ui/ListCard';
 import { EmptyState, ErrorList, Spinner, type ErrorDetail } from '@/components/ui/Feedback';
 import { ConfirmDialog } from '@/components/ui/Modal';
-import { scheduleApi, shiftApi } from '@/services/schedulingApi';
+import { scheduleApi, shiftApi, staffingApi } from '@/services/schedulingApi';
 import { userApi } from '@/services/userApi';
 import { getErrorDetail, getErrorMessage } from '@/services/apiClient';
 import { useAuthStore } from '@/stores/authStore';
@@ -21,9 +21,10 @@ import { toast } from '@/stores/toastStore';
 import { formatDate, todayIso } from '@/lib/format';
 import { addDays, startOfWeek, weekDays } from '@/lib/dates';
 import { RoleGroups } from '@/types/auth';
-import type { Schedule, Shift } from '@/types/scheduling';
+import type { EffectiveStaffing, Schedule, Shift } from '@/types/scheduling';
 import { ScheduleGrid, type GridEmployee } from '../components/ScheduleGrid';
 import { AddShiftModal, QuickScheduleModal, ScheduleDetailModal } from '../components/ScheduleDialogs';
+import { StaffingDialog } from '../components/StaffingDialog';
 import { legend } from '../scheduleUi';
 
 type Confirm = 'publish' | 'copy' | 'clear' | null;
@@ -46,6 +47,8 @@ export function SchedulesPage() {
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [employees, setEmployees] = useState<GridEmployee[]>([]);
   const [shifts, setShifts] = useState<Shift[]>([]);
+  const [staffing, setStaffing] = useState<EffectiveStaffing[]>([]);
+  const [staffingTarget, setStaffingTarget] = useState<{ open: boolean; shiftId?: number; date?: string }>({ open: false });
   const [loading, setLoading] = useState(false);
   const [report, setReport] = useState<ErrorDetail | null>(null);
 
@@ -68,13 +71,15 @@ export function SchedulesPage() {
     if (branchId == null) return;
     setLoading(true);
     try {
-      const [scheduleRes, userRes, shiftRes] = await Promise.all([
+      const [scheduleRes, userRes, shiftRes, staffingRes] = await Promise.all([
         scheduleApi.branch(range),
         userApi.list({ branchId, status: 'active', pageSize: 100 }),
         shiftApi.available(branchId),
+        staffingApi.effective(range),
       ]);
       setSchedules(scheduleRes.data);
       setShifts(shiftRes.data);
+      setStaffing(staffingRes.data);
 
       // Nhân viên đang làm tại chi nhánh + người đã có lịch trong tuần (VD vừa chuyển chi nhánh / nghỉ việc)
       const people = new Map<number, GridEmployee>(userRes.data.items.map((u) => [u.id, u]));
@@ -189,6 +194,7 @@ export function SchedulesPage() {
           <HStack gap={1} wrap="wrap" hAlign="end" vAlign="center">
             <Button label="Sao chép tuần trước" variant="ghost" size="sm" icon={<Icon icon={Copy} />} onClick={() => setConfirm('copy')} isDisabled={!branchId || isPastWeek} />
             <Button label="Xóa nháp" variant="ghost" size="sm" icon={<Icon icon={Eraser} />} onClick={() => setConfirm('clear')} isDisabled={drafts === 0} />
+            <Button label="Định biên ca" variant="ghost" size="sm" icon={<Icon icon={Users} />} onClick={() => setStaffingTarget({ open: true })} isDisabled={!branchId} />
           </HStack>
         </Toolbar>
 
@@ -218,7 +224,7 @@ export function SchedulesPage() {
         ) : employees.length === 0 ? (
           <EmptyState title="Chi nhánh chưa có nhân viên" description="Thêm nhân viên vào chi nhánh ở trang Nhân viên để xếp lịch." />
         ) : (
-          <ScheduleGrid days={days} today={today} employees={employees} schedules={schedules} shifts={shifts} onAdd={(employee, day) => setAddTarget({ employee, day })} onOpen={setDetail} />
+          <ScheduleGrid days={days} today={today} employees={employees} schedules={schedules} shifts={shifts} staffing={staffing} onStaffing={(shift, day) => setStaffingTarget({ open: true, shiftId: shift.id, date: day })} onAdd={(employee, day) => setAddTarget({ employee, day })} onOpen={setDetail} />
         )}
       </ListCard>
 
@@ -239,6 +245,14 @@ export function SchedulesPage() {
         shifts={shifts}
         onClose={() => setQuickOpen(false)}
         onSaved={() => void load()}
+      />
+      <StaffingDialog
+        open={staffingTarget.open}
+        branchId={branchId ?? undefined}
+        shifts={shifts}
+        initial={staffingTarget.open ? { shiftId: staffingTarget.shiftId, date: staffingTarget.date } : null}
+        onClose={() => setStaffingTarget({ open: false })}
+        onChanged={() => void load()}
       />
       <ScheduleDetailModal schedule={detail} today={today} onClose={() => setDetail(null)} onChanged={() => void load()} />
       {confirm && (

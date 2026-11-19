@@ -23,6 +23,7 @@ public class EntitySchemaMappingTests
         { typeof(Role), "roles" },
         { typeof(UserRole), "user_roles" },
         { typeof(Shift), "shifts" },
+        { typeof(ShiftStaffingRule), "shift_staffing_rules" },
         { typeof(Schedule), "schedules" },
         { typeof(FaceProfile), "face_profiles" },
         { typeof(ViolationRule), "violation_rules" },

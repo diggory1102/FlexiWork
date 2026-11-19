@@ -15,6 +15,7 @@ USE flexiwork_db;
 -- Tắt kiểm tra khóa ngoại tạm thời để khởi tạo/reset an toàn
 SET FOREIGN_KEY_CHECKS = 0;
 
+DROP TABLE IF EXISTS shift_staffing_rules;
 DROP TABLE IF EXISTS payslip_items;
 DROP TABLE IF EXISTS payslips;
 DROP TABLE IF EXISTS payroll_periods;
@@ -195,6 +196,24 @@ CREATE TABLE shifts (
     FOREIGN KEY (branch_id) REFERENCES branches(id) ON DELETE RESTRICT,
     INDEX idx_shifts_branch (branch_id)
 ) ENGINE=InnoDB COMMENT='Khai báo khung ca làm việc';
+
+-- 3.2b. Ngoại lệ định biên ca theo chi nhánh: ghi đè số người tối thiểu / tối đa mặc định của ca cho một ngày hoặc một thứ trong tuần
+CREATE TABLE shift_staffing_rules (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    branch_id INT NOT NULL,
+    shift_id INT NOT NULL,
+    scope_key VARCHAR(20) NOT NULL COMMENT 'date:yyyy-MM-dd (một ngày cụ thể) hoặc dow:1..7 (mọi thứ Hai … Chủ nhật hằng tuần)',
+    min_staff INT NULL COMMENT 'Thay cho shifts.min_staff trong phạm vi này; NULL = không yêu cầu',
+    max_staff INT NULL COMMENT 'Thay cho shifts.max_staff trong phạm vi này; NULL = không giới hạn',
+    note VARCHAR(255) NULL COMMENT 'Lý do, VD Tiệc đặt bàn công ty ABC',
+    created_by INT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NULL ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_staffing_rule (branch_id, shift_id, scope_key),
+    CONSTRAINT fk_staffing_rule_branch FOREIGN KEY (branch_id) REFERENCES branches(id) ON DELETE CASCADE,
+    CONSTRAINT fk_staffing_rule_shift FOREIGN KEY (shift_id) REFERENCES shifts(id) ON DELETE CASCADE,
+    CONSTRAINT fk_staffing_rule_user FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB COMMENT='Ngoại lệ định biên ca theo chi nhánh (ngày cụ thể / thứ trong tuần)';
 
 -- 3.3. Quy tắc xử lý vi phạm giờ giấc (Violation Rules) — theo bậc, áp dụng toàn công ty
 CREATE TABLE violation_rules (

@@ -70,7 +70,7 @@ public partial class LeaveRequestServiceTests
         await Assert.ThrowsAsync<BadRequestException>(() => As(s, employee).CancelAsync(request.Id)); // đã duyệt thì không rút
 
         // Xếp thêm ca vào ngày đã duyệt nghỉ → bị chặn
-        var schedules = new ScheduleService(new ScheduleRepository(s), new ShiftRepository(s), new BranchRepository(s), new UserRepository(s),
+        var schedules = new ScheduleService(new ScheduleRepository(s), new ShiftRepository(s), new ShiftStaffingRuleRepository(s), new BranchRepository(s), new UserRepository(s),
             new LeaveRequestRepository(s), new RecordingNotifier(), s, new TestUser(HrId, null, RoleNames.Hr), new FixedClock());
         var afternoon = await NewShiftAsync(s, 13, 17);
         var blocked = await Assert.ThrowsAsync<BadRequestException>(() => schedules.CreateAsync(new CreateSchedulesRequest

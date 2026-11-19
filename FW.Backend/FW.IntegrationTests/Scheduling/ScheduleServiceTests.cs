@@ -49,7 +49,7 @@ public class ScheduleServiceTests
     private static readonly TestUser Hr = new(4, null, RoleNames.Hr);
 
     private static ScheduleService Service(DbSession s, ICurrentUserService user, RecordingNotifier? notes = null) => new(
-        new ScheduleRepository(s), new ShiftRepository(s), new BranchRepository(s), new UserRepository(s), new LeaveRequestRepository(s),
+        new ScheduleRepository(s), new ShiftRepository(s), new ShiftStaffingRuleRepository(s), new BranchRepository(s), new UserRepository(s), new LeaveRequestRepository(s),
         notes ?? new RecordingNotifier(), s, user, new DateTimeProvider());
 
     private static DateOnly Day(int offset) => DateOnly.FromDateTime(DateTime.Today).AddDays(offset);

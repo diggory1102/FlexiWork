@@ -40,7 +40,7 @@ public interface IScheduleService
 /// - Lịch mới là bản nháp: nhân viên chưa thấy, chưa chấm công được; công bố để chốt.
 /// - Chặn trùng ca và chồng giờ (kể cả ca đêm hôm trước kéo sang sáng hôm sau) — xem <see cref="SchedulePlanner"/>.
 /// - Không xếp ca vào ngày nhân viên nghỉ theo đơn đã duyệt (Task 4.2).
-/// - Định biên: ca có số người tối đa (<see cref="Shift.MaxStaff"/>) thì mỗi chi nhánh chỉ xếp tới mức đó cho mỗi ngày. Việc đếm và ghi nằm trong
+/// - Định biên: ca có số người tối đa (<see cref="Shift.MaxStaff"/>, hoặc ngoại lệ theo ngày / thứ của chi nhánh — <see cref="ShiftStaffing"/>) thì mỗi chi nhánh chỉ xếp tới mức đó cho mỗi ngày. Việc đếm và ghi nằm trong
 ///   một transaction có khóa dòng của ca (<see cref="IShiftRepository.LockAsync"/>) để hai người xếp cùng lúc không vượt định biên.
 /// </summary>
 public class ScheduleService : IScheduleService
@@ -53,6 +53,7 @@ public class ScheduleService : IScheduleService
 
     private readonly IScheduleRepository _schedules;
     private readonly IShiftRepository _shifts;
+    private readonly IShiftStaffingRuleRepository _staffingRules;
     private readonly IBranchRepository _branches;
     private readonly IUserRepository _users;
     private readonly ILeaveRequestRepository _leaveRequests;
@@ -64,6 +65,7 @@ public class ScheduleService : IScheduleService
     public ScheduleService(
         IScheduleRepository schedules,
         IShiftRepository shifts,
+        IShiftStaffingRuleRepository staffingRules,
         IBranchRepository branches,
         IUserRepository users,
         ILeaveRequestRepository leaveRequests,
@@ -74,6 +76,7 @@ public class ScheduleService : IScheduleService
     {
         _schedules = schedules;
         _shifts = shifts;
+        _staffingRules = staffingRules;
         _branches = branches;
         _users = users;
         _leaveRequests = leaveRequests;
@@ -351,15 +354,23 @@ public class ScheduleService : IScheduleService
     /// <summary>Khóa các ca có định biên, đọc lại định biên mới nhất rồi đếm người đã xếp để biết ô nào còn chỗ.</summary>
     private async Task<StaffingPlan> PlanStaffingAsync(int branchId, IReadOnlyList<PlannedShift> accepted, CancellationToken cancellationToken)
     {
-        var limited = accepted.Where(p => p.Shift.MaxStaff.HasValue).Select(p => p.Shift.Id).Distinct().ToList();
+        var from = accepted.Min(p => p.Date);
+        var to = accepted.Max(p => p.Date);
+
+        // Định biên hiệu lực của một ô = ngoại lệ đúng ngày > ngoại lệ theo thứ > mặc định của ca; ca nào có thể bị giới hạn thì khóa
+        var rules = (await _staffingRules.GetForRangeAsync(branchId, from, to, cancellationToken)).ToLookup(r => r.ShiftId);
+        var limited = accepted
+            .Where(p => p.Shift.MaxStaff.HasValue || rules[p.Shift.Id].Any(r => r.MaxStaff.HasValue))
+            .Select(p => p.Shift.Id).Distinct().ToList();
         if (limited.Count == 0) return new StaffingPlan(accepted, Array.Empty<StaffingRejection>());
 
         await _shifts.LockAsync(limited, cancellationToken);
         var fresh = (await _shifts.GetByIdsAsync(limited, includeDeleted: true, cancellationToken)).ToDictionary(s => s.Id);
         var items = accepted.Select(p => fresh.TryGetValue(p.Shift.Id, out var shift) ? p with { Shift = shift } : p).ToList();
 
-        var slots = await _schedules.LockStaffedSlotsAsync(branchId, limited, items.Min(p => p.Date), items.Max(p => p.Date), cancellationToken);
-        return StaffingPlanner.Plan(items, slots.Select(slot => (slot.ShiftId, slot.WorkDate)));
+        var slots = await _schedules.LockStaffedSlotsAsync(branchId, limited, from, to, cancellationToken);
+        return StaffingPlanner.Plan(items, slots.Select(slot => (slot.ShiftId, slot.WorkDate)),
+            item => ShiftStaffing.Resolve(item.Shift, rules[item.Shift.Id], item.Date).Max);
     }
 
     private List<Schedule> ToRows(int branchId, IEnumerable<PlannedShift> planned) => planned.Select(p => new Schedule

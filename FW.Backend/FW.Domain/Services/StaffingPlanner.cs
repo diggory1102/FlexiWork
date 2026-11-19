@@ -12,15 +12,19 @@ public record StaffingRejection(PlannedShift Item, int Current, int Max);
 public record StaffingPlan(IReadOnlyList<PlannedShift> Allowed, IReadOnlyList<StaffingRejection> Rejected);
 
 /// <summary>
-/// Kiểm tra số người tối đa của ca (<see cref="Shift.MaxStaff"/>) khi xếp lịch. Xét lần lượt từng ca dự định theo thứ tự gửi lên:
+/// Kiểm tra số người tối đa của ca khi xếp lịch (mặc định <see cref="Shift.MaxStaff"/>; truyền <c>maxOf</c> để dùng định biên hiệu lực
+/// sau khi áp ngoại lệ theo ngày / thứ — xem <see cref="ShiftStaffing.Resolve"/>). Xét lần lượt từng ca dự định theo thứ tự gửi lên:
 /// một ô (ca, ngày) nhận thêm người cho tới khi chạm tối đa, tính cả những người đã xếp trước đó trong cùng yêu cầu.
 /// Ca không đặt tối đa thì không bị giới hạn. Hàm thuần — việc đếm người đã có và khóa dòng làm ở tầng truy cập dữ liệu.
 /// </summary>
 public static class StaffingPlanner
 {
     /// <param name="staffed">Mỗi phần tử là một người đang giữ chỗ trong ô (ShiftId, ngày); ca đã hủy / nghỉ phép không đưa vào.</param>
-    public static StaffingPlan Plan(IEnumerable<PlannedShift> items, IEnumerable<(int ShiftId, DateTime Date)> staffed)
+    /// <param name="maxOf">Số người tối đa áp dụng cho một ca dự định (null = không giới hạn); bỏ trống thì lấy <see cref="Shift.MaxStaff"/>.</param>
+    public static StaffingPlan Plan(IEnumerable<PlannedShift> items, IEnumerable<(int ShiftId, DateTime Date)> staffed,
+        Func<PlannedShift, int?>? maxOf = null)
     {
+        maxOf ??= item => item.Shift.MaxStaff;
         var counts = new Dictionary<(int ShiftId, DateTime Date), int>();
         foreach (var slot in staffed)
         {
@@ -34,7 +38,7 @@ public static class StaffingPlanner
         {
             var key = (item.Shift.Id, item.Date);
             var current = counts.GetValueOrDefault(key);
-            if (item.Shift.MaxStaff is { } max && current >= max)
+            if (maxOf(item) is { } max && current >= max)
             {
                 rejected.Add(new StaffingRejection(item, current, max));
                 continue;

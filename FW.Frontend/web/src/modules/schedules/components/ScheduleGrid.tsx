@@ -9,8 +9,8 @@ import { Plus } from 'lucide-react';
 import { Avatar } from '@/components/ui/Layout';
 import { Badge } from '@/components/ui/Feedback';
 import { formatDayMonth, weekdayLabels } from '@/lib/dates';
-import type { Schedule, Shift } from '@/types/scheduling';
-import { countStaffed, hasStaffing, scheduleColor, scheduleStateLabel, staffingLabel, staffingState, type StaffingState } from '../scheduleUi';
+import type { EffectiveStaffing, Schedule, Shift } from '@/types/scheduling';
+import { countStaffed, scheduleColor, scheduleStateLabel, staffingLabel, staffingState, type StaffingState } from '../scheduleUi';
 
 export interface GridEmployee {
   id: number;
@@ -26,6 +26,10 @@ interface Props {
   schedules: Schedule[];
   /** Các ca của chi nhánh — ca có định biên được tổng hợp thành hàng riêng ở cuối lưới. */
   shifts: Shift[];
+  /** Định biên hiệu lực (đã áp ngoại lệ theo ngày / thứ) của các ô có giới hạn trong tuần. */
+  staffing: EffectiveStaffing[];
+  /** Bấm một ô định biên để đặt ngoại lệ cho ca và ngày đó. */
+  onStaffing: (shift: Shift, day: string) => void;
   onAdd: (employee: GridEmployee, day: string) => void;
   onOpen: (schedule: Schedule) => void;
 }
@@ -33,9 +37,11 @@ interface Props {
 const stateTone: Record<StaffingState, 'amber' | 'green' | 'blue' | 'red'> = { short: 'amber', ok: 'blue', full: 'green', over: 'red' };
 
 /** Lưới tuần: mỗi hàng một nhân viên, mỗi cột một ngày; ô chứa các ca đã xếp và nút thêm ca (ngày chưa qua). */
-export function ScheduleGrid({ days, today, employees, schedules, shifts, onAdd, onOpen }: Props) {
+export function ScheduleGrid({ days, today, employees, schedules, shifts, staffing, onStaffing, onAdd, onOpen }: Props) {
   const staffed = countStaffed(schedules);
-  const limited = shifts.filter(hasStaffing);
+  const limitOf = new Map(staffing.map((e) => [`${e.shiftId}|${e.date}`, e]));
+  const limitedShiftIds = new Set(staffing.map((e) => e.shiftId));
+  const limited = shifts.filter((s) => limitedShiftIds.has(s.id));
   const byCell = new Map<string, Schedule[]>();
   for (const s of schedules) {
     const key = `${s.userId}|${s.workDate}`;
@@ -119,29 +125,40 @@ export function ScheduleGrid({ days, today, employees, schedules, shifts, onAdd,
                     <Text weight="medium" maxLines={1}>
                       Định biên · {shift.shiftCode}
                     </Text>
-                    <Text type="supporting">{staffingLabel(shift)} mỗi ngày</Text>
+                    <Text type="supporting">Mặc định: {staffingLabel(shift)}</Text>
                   </VStack>
                 </TableCell>
                 {days.map((day) => {
                   const count = staffed.get(`${shift.id}|${day}`) ?? 0;
-                  const state = staffingState(count, shift);
+                  const limits = limitOf.get(`${shift.id}|${day}`) ?? { minStaff: null, maxStaff: null, source: 'default' as const, note: null };
+                  const state = staffingState(count, limits);
+                  const exception = limits.source !== 'default';
                   const upcoming = day >= today;
                   // Ngày đã qua không cảnh báo thiếu người nữa (không xếp thêm được)
                   const tone = !upcoming && state === 'short' ? 'blue' : stateTone[state];
                   const detail =
                     state === 'short'
-                      ? `Thiếu ${shift.minStaff! - count} người (cần tối thiểu ${shift.minStaff})`
+                      ? `Thiếu ${limits.minStaff! - count} người (cần tối thiểu ${limits.minStaff})`
                       : state === 'full'
                         ? 'Đã đủ người, không xếp thêm được'
                         : state === 'over'
-                          ? `Vượt tối đa ${shift.maxStaff} người (định biên bị hạ sau khi đã xếp)`
+                          ? `Vượt tối đa ${limits.maxStaff} người (định biên bị hạ sau khi đã xếp)`
                           : 'Trong định biên';
+                  const source = exception ? ` · Ngoại lệ ${limits.source === 'date' ? 'theo ngày' : 'theo thứ'}${limits.note ? `: ${limits.note}` : ''}` : '';
                   return (
                     <TableCell key={day}>
-                      <Tooltip content={`${shift.name}: ${count} người · ${detail}`}>
-                        <span>
-                          <Badge tone={tone}>{shift.maxStaff != null ? `${count}/${shift.maxStaff}` : `${count} người`}</Badge>
-                        </span>
+                      <Tooltip content={`${shift.name}: ${count} người · ${detail}${source}. Bấm để đặt ngoại lệ.`}>
+                        <button
+                          type="button"
+                          className="cursor-pointer text-left"
+                          aria-label={`Định biên ${shift.shiftCode} ngày ${formatDayMonth(day)}: ${count} người`}
+                          onClick={() => onStaffing(shift, day)}
+                        >
+                          <VStack gap={0.5} hAlign="start">
+                            <Badge tone={tone}>{limits.maxStaff != null ? `${count}/${limits.maxStaff}` : `${count} người`}</Badge>
+                            {exception && <Text type="supporting">Ngoại lệ</Text>}
+                          </VStack>
+                        </button>
                       </Tooltip>
                     </TableCell>
                   );

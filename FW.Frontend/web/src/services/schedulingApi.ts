@@ -3,6 +3,7 @@ import type { PaginatedResult } from '@/types/api';
 import type {
   AttendancePolicy,
   AttendancePolicyRequest,
+  EffectiveStaffing,
   Schedule,
   ScheduleBatchResult,
   ScheduleItem,
@@ -11,6 +12,8 @@ import type {
   ShiftDetail,
   ShiftFilter,
   ShiftRequest,
+  StaffingRule,
+  StaffingRuleRequest,
 } from '@/types/scheduling';
 
 export const shiftApi = {
@@ -41,4 +44,14 @@ export const scheduleApi = {
     api.delete<number>(`/schedules/drafts?${new URLSearchParams(cleanParams(range) as Record<string, string>)}`),
   /** Nháp → xóa hẳn; đã công bố & chưa tới giờ → hủy ca. */
   remove: (id: number) => api.delete<null>(`/schedules/${id}`),
+};
+
+/** Ngoại lệ định biên ca theo chi nhánh / ngày / thứ trong tuần. */
+export const staffingApi = {
+  /** Mọi ngoại lệ theo thứ và các ngoại lệ theo ngày từ hôm nay của chi nhánh. */
+  rules: (branchId?: number) => api.get<StaffingRule[]>('/staffing-rules', { branchId }),
+  /** Định biên hiệu lực (đã áp ngoại lệ) của các ca trong khoảng ngày — chỉ các ô có giới hạn. */
+  effective: (range: ScheduleRange) => api.get<EffectiveStaffing[]>('/staffing-rules/effective', range),
+  save: (body: StaffingRuleRequest) => api.put<StaffingRule>('/staffing-rules', body),
+  remove: (id: number) => api.delete<null>(`/staffing-rules/${id}`),
 };

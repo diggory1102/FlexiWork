@@ -66,6 +66,51 @@ export interface ShiftRequest {
   maxStaff: number | null;
 }
 
+// ---------------------------------------------------------------- Ngoại lệ định biên (Task 6.6, bước 2)
+
+export type StaffingScope = 'date' | 'weekday';
+/** Nguồn của định biên hiệu lực: mặc định của ca, ngoại lệ theo thứ, hoặc ngoại lệ đúng ngày. */
+export type StaffingSource = 'default' | 'weekday' | 'date';
+
+/** Khớp StaffingRuleDto ở backend. */
+export interface StaffingRule {
+  id: number;
+  branchId: number;
+  shiftId: number;
+  shiftCode: string;
+  shiftName: string;
+  scope: StaffingScope;
+  /** yyyy-MM-dd khi scope = 'date'. */
+  date: string | null;
+  /** 1 (Thứ Hai) … 7 (Chủ nhật) khi scope = 'weekday'. */
+  dayOfWeek: number | null;
+  minStaff: number | null;
+  maxStaff: number | null;
+  note: string | null;
+  createdAt: string;
+}
+
+export interface StaffingRuleRequest {
+  branchId?: number;
+  shiftId: number;
+  scope: StaffingScope;
+  date?: string;
+  dayOfWeek?: number;
+  minStaff: number | null;
+  maxStaff: number | null;
+  note: string | null;
+}
+
+/** Khớp EffectiveStaffingDto: định biên hiệu lực của một ca trong một ngày (chỉ các ô có giới hạn). */
+export interface EffectiveStaffing {
+  shiftId: number;
+  date: string;
+  minStaff: number | null;
+  maxStaff: number | null;
+  source: StaffingSource;
+  note: string | null;
+}
+
 // ---------------------------------------------------------------- Quy tắc chấm công
 
 export type ViolationType = 'late' | 'early_leave';
