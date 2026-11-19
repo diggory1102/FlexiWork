@@ -3,6 +3,8 @@ import { SplashScreen, Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useAuthHydrated, useAuthStore } from '@/stores/authStore';
 import { useSessionGuard } from '@/hooks/useSessionGuard';
+import { RealtimeProvider } from '@/components/realtime/RealtimeProvider';
+import { InAppBanner } from '@/components/realtime/InAppBanner';
 import { colors } from '@/theme';
 
 // Giữ màn hình khởi động cho tới khi đọc xong phiên đăng nhập từ SecureStore
@@ -52,7 +54,10 @@ export default function RootLayout() {
           <Stack.Screen name="tasks" options={{ title: 'Công việc trong ca' }} />
           <Stack.Screen name="request-new" options={{ title: 'Tạo đơn' }} />
           <Stack.Screen name="request/[id]" options={{ title: 'Chi tiết đơn' }} />
-          <Stack.Screen name="chat" options={{ title: 'Tin nhắn' }} />
+          <Stack.Screen name="chat" options={{ headerShown: false }} />
+          <Stack.Screen name="notifications" options={{ title: 'Thông báo' }} />
+          <Stack.Screen name="timesheet" options={{ title: 'Bảng công của tôi' }} />
+          <Stack.Screen name="payslips" options={{ headerShown: false }} />
           <Stack.Screen name="face-id" options={{ title: 'Khuôn mặt (Face ID)' }} />
           <Stack.Screen name="attendance-history" options={{ title: 'Lịch sử chấm công' }} />
         </Stack.Protected>
@@ -64,6 +69,8 @@ export default function RootLayout() {
           />
         </Stack.Protected>
       </Stack>
+      <RealtimeProvider />
+      <InAppBanner />
     </>
   );
 }

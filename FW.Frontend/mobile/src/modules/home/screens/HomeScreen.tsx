@@ -6,6 +6,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { Avatar } from '@/components/ui/Avatar';
 import { Badge, Card } from '@/components/ui/Feedback';
 import { useAuthStore } from '@/stores/authStore';
+import { useChatStore } from '@/stores/chatStore';
+import { useNotificationStore } from '@/stores/notificationStore';
 import { formatLongDate, greeting } from '@/lib/format';
 import { todayIso } from '@/lib/dates';
 import { scheduleApi } from '@/services/scheduleApi';
@@ -20,6 +22,8 @@ const shortcuts: { icon: IconName; label: string; href: Href; tint: string }[] =
   { icon: 'calendar-outline', label: 'Lịch ca', href: '/schedule', tint: '#2563EB' },
   { icon: 'document-text-outline', label: 'Đơn từ', href: '/requests', tint: '#D97706' },
   { icon: 'checkbox-outline', label: 'Công việc', href: '/tasks', tint: '#16A34A' },
+  { icon: 'time-outline', label: 'Bảng công', href: '/timesheet', tint: '#0891B2' },
+  { icon: 'receipt-outline', label: 'Phiếu lương', href: '/payslips', tint: '#DB2777' },
   { icon: 'chatbubbles-outline', label: 'Tin nhắn', href: '/chat', tint: '#7C3AED' },
 ];
 
@@ -28,6 +32,8 @@ export function HomeScreen() {
   const user = useAuthStore((s) => s.user);
   const now = useClock();
   const { shifts, faceRegistered } = useToday();
+  const unreadNotifications = useNotificationStore((s) => s.unread);
+  const unreadChat = useChatStore((s) => s.totalUnread);
   if (!user) return null;
 
   const time = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
@@ -42,6 +48,10 @@ export function HomeScreen() {
               {user.fullName}
             </Text>
           </View>
+          <Pressable onPress={() => router.push('/notifications')} accessibilityLabel="Thông báo" testID="home-bell" style={styles.bell}>
+            <Ionicons name="notifications-outline" size={24} color={colors.foreground} />
+            <CountBadge count={unreadNotifications} testID="home-bell-badge" />
+          </Pressable>
           <Pressable onPress={() => router.push('/profile')} accessibilityLabel="Hồ sơ cá nhân">
             <Avatar name={user.fullName} url={user.avatarUrl} size={48} />
           </Pressable>
@@ -105,6 +115,7 @@ export function HomeScreen() {
             <Pressable key={s.label} style={({ pressed }) => [styles.tile, pressed && styles.pressed]} onPress={() => router.push(s.href)}>
               <View style={[styles.tileIcon, { backgroundColor: `${s.tint}1A` }]}>
                 <Ionicons name={s.icon} size={22} color={s.tint} />
+                {s.href === '/chat' && <CountBadge count={unreadChat} testID="home-chat-badge" />}
               </View>
               <Text style={styles.tileLabel}>{s.label}</Text>
             </Pressable>
@@ -112,6 +123,16 @@ export function HomeScreen() {
         </View>
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+/** Chấm đỏ số lượng chưa đọc ở góc biểu tượng; ẩn khi bằng 0. */
+function CountBadge({ count, testID }: { count: number; testID: string }) {
+  if (count <= 0) return null;
+  return (
+    <View style={styles.countBadge} testID={testID}>
+      <Text style={styles.countText}>{count > 99 ? '99+' : count}</Text>
+    </View>
   );
 }
 
@@ -202,6 +223,20 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   tileIcon: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  bell: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
+  countBadge: {
+    position: 'absolute',
+    top: -6,
+    right: -8,
+    minWidth: 18,
+    height: 18,
+    paddingHorizontal: 5,
+    borderRadius: 9,
+    backgroundColor: colors.danger,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  countText: { fontSize: 10, fontWeight: '800', color: colors.white },
   tileLabel: { fontSize: 15, fontWeight: '600', color: colors.foreground },
   pressed: { opacity: 0.85 },
 });

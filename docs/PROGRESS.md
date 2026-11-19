@@ -265,9 +265,9 @@ flowchart TD
 > * `[Tùy chọn]`: chỉ thực hiện khi còn thời gian; có thể đưa vào "Hướng phát triển" (Chương 5).
 
 > **Tổng quan Tiến độ Hiện tại:**
-> * **Giai đoạn đang thực hiện:** CẤP BẬC 5 (Cấp 3, 4 đã xong)
-> * **Tiến độ tổng thể:** `37 / 51` Nhiệm vụ hoàn thành (`73%`)
-> * **Hành động tiếp theo:** **Task 5.9** — Mobile App: thông báo, chat, bảng công cá nhân trong tháng, phiếu lương cá nhân (API backend đã đủ; lưu ý tin báo SignalR của thông báo **không kèm `id` / `isRead`** — nạp lại danh sách từ API khi có tin mới, như Web Admin). Việc nhỏ còn lại: kéo ghim trực tiếp trên bản đồ (Leaflet).
+> * **Giai đoạn đang thực hiện:** CẤP BẬC 6 (Cấp 3, 4, 5 đã xong)
+> * **Tiến độ tổng thể:** `38 / 51` Nhiệm vụ hoàn thành (`75%`)
+> * **Hành động tiếp theo:** **Task 6.2** (hiệu chỉnh ngưỡng khớp khuôn mặt) và **6.3** (triển khai cloud) — cần ảnh / thiết bị thật nên làm cùng Task 6.5. Việc nhỏ còn lại: kéo ghim trực tiếp trên bản đồ (Leaflet).
 
 ### Các quyết định cần chốt
 
@@ -465,7 +465,7 @@ flowchart TD
 
 ---
 
-### 📌 CẤP BẬC 5: Realtime, Bảng công, Bảng lương & Báo cáo `[8/9]`
+### 📌 CẤP BẬC 5: Realtime, Bảng công, Bảng lương & Báo cáo `[9/9]`
 > 🎯 **Demo:** Thông báo & chat tức thì giữa Web và Mobile; dashboard quân số realtime; chốt bảng công tháng → tính lương tạm tính → gửi phiếu lương; xuất Excel.
 
 - [x] **Task 5.1:** `NotificationHub` + bảng `notifications`: lưu và đẩy thông báo (kết quả duyệt đơn, lịch mới, check-in, task được giao); API danh sách, đánh dấu đã đọc.
@@ -518,7 +518,11 @@ flowchart TD
   - **Đợt 4 — Chat & Thông báo:** `RealtimeBridge` giữ 2 kết nối SignalR (thông báo, chat) cho người dùng đang đăng nhập, tự nạp lại khi kết nối lại. **Chat** (`/chat`, Quản lý trở lên): danh sách phòng (chat 1-1 + nhóm chi nhánh) kèm số chưa đọc, luồng tin tức thì, gửi chữ (Enter) / ảnh (≤ 5 MB), thu hồi tin của mình, tải tin cũ, chat mới chọn từ danh bạ; huy hiệu tin chưa đọc + toast trên thanh đầu trang. **Thông báo**: chuông có huy hiệu + khung xem nhanh, trang `/notifications` (tất cả / chưa đọc, đọc tất cả), bấm thông báo mở đúng màn hình (chấm công, đơn, lịch, công việc, phiếu lương). Thử bằng **hai trình duyệt thật** (HR ↔ Quản lý): tin tới tức thì không tải lại trang, huy hiệu / toast, ảnh, thu hồi (nội dung bị ẩn ở cả hai phía), thông báo đơn nghỉ từ nhân viên. Phát hiện: tin báo SignalR của thông báo không có `id` / `isRead` nên web nạp lại danh sách từ API; lớp Tailwind `accent` của theme trỏ tới màu *chữ* (xám đen) — dùng `lib/accent.ts` cho màu xanh thương hiệu.
   - **Bổ sung — UC 7.2 Nhóm chat tùy chỉnh (17/11/2026):** *backend:* **migration `012_chat_groups.sql`** (cột `conversations.created_by` = quản trị nhóm; chạy lại an toàn, đã thử trên CSDL tạm), `ChatService` thêm `CreateGroup` / `RenameGroup` / `AddMembers` / `RemoveMember`, API `POST /api/chat/conversations/group`, `PUT /conversations/{id}`, `POST /conversations/{id}/members`, `DELETE /conversations/{id}/members/{userId}`, sự kiện SignalR `ConversationUpdated` (kể cả người vừa bị xóa khỏi nhóm để thiết bị của họ bỏ phòng). Quy tắc: ai cũng tạo được nhóm (tối thiểu 1 thành viên khác, tối đa 100, chỉ nhân sự đang hoạt động, tên 2–100 ký tự, được trùng tên); **người tạo là quản trị nhóm** — đổi tên, thêm, xóa thành viên; thành viên thường chỉ rời nhóm; quản trị rời đi thì người vào nhóm sớm nhất kế nhiệm, hết người thì đóng nhóm; người mới vào không bị tính "chưa đọc" cả lịch sử; nhóm chi nhánh và chat 1-1 vẫn do hệ thống quản lý (từ chối đổi tên / thêm / xóa). *Web:* nút **Tạo nhóm**, hộp chọn thành viên (tìm kiếm, phân trang, giữ lựa chọn khi chuyển trang), ngăn **Thông tin nhóm** (danh sách thành viên, nhãn quản trị, đổi tên, thêm / xóa, rời nhóm), danh sách phòng của mọi thiết bị cập nhật tức thì. Test: +3 integration (`ChatServiceTests`: tạo nhóm + kiểm tra đầu vào, quyền quản trị / nhóm chi nhánh, xóa – rời – kế nhiệm – đóng nhóm) — **376 unit, 123 integration**; thử bằng 3 trình duyệt thật (Quản lý, HR, Admin). Phát hiện kèm: hộp thoại đang đóng vẫn dựng sẵn nội dung nên bộ chọn người gọi API danh bạ thừa — nay chỉ dựng khi mở.
   - Kiểm tra: typecheck + `npm run build` sạch sau mỗi đợt; chưa viết test tự động cho web (kiểm tra bằng Playwright thủ công, ảnh lưu ở scratchpad). Nhóm chat tùy chỉnh (UML 7.2) làm ngay sau đó (bullet bên dưới).
-- [ ] **Task 5.9:** Mobile App: thông báo, chat, bảng công cá nhân trong tháng, phiếu lương cá nhân.
+- [x] **Task 5.9:** Mobile App: thông báo, chat, bảng công cá nhân trong tháng, phiếu lương cá nhân.
+  - *Đã làm (19/11/2026):* **Thông báo & thời gian thực** — `RealtimeProvider` (đặt ở layout gốc) giữ 2 kết nối SignalR (thông báo, chat) khi đã đăng nhập, tự nạp lại khi kết nối lại; tin báo thông báo **không kèm `id` / `isRead`** nên nạp lại số chưa đọc từ API; **banner trong app** (`InAppBanner`, chạm để mở màn hình liên quan, tự ẩn sau 4,5 giây) cho thông báo / tin nhắn mới lúc đang mở app. Trang chủ có **chuông kèm huy hiệu** chưa đọc, ô **Tin nhắn** kèm huy hiệu, thêm lối tắt **Bảng công** và **Phiếu lương**. Màn **Thông báo** (`/notifications`): phân trang cuộn, chạm = đánh dấu đã đọc + mở đúng màn hình (đơn → chi tiết đơn, lịch → Lịch ca, công việc, chấm công → lịch sử, phiếu lương → danh sách phiếu), “Đọc tất cả”.
+  - **Chat** (`/chat`, thay màn giữ chỗ cũ): danh sách phòng (1-1, nhóm chi nhánh, nhóm tự tạo) sắp theo hoạt động, số chưa đọc; **cuộc trò chuyện** nhận tin tức thì, cuộn lên tải tin cũ, gửi chữ / **ảnh**, chạm vào tin của mình để **thu hồi**, dòng phân cách ngày; **nhắn tin mới** (tìm danh bạ theo tên / mã); **tạo nhóm** (đặt tên + chọn nhiều người); **thông tin nhóm** (UC 7.2): quản trị nhóm đổi tên / thêm / xóa thành viên, ai cũng rời được nhóm tự tạo, nhóm chi nhánh chỉ xem. Không cần sửa backend.
+  - **Bảng công của tôi** (`/timesheet`): chuyển tháng, số công thực tế / chuẩn, giờ làm, đi muộn / về sớm, tăng ca, vắng, nghỉ phép, vi phạm, tiền phạt, nhãn “Tạm tính” khi chưa chốt; chi tiết từng ca (giờ vào / ra, trạng thái, phạt) và tăng ca khi đã có bảng công lưu. **Phiếu lương** (`/payslips`): danh sách các kỳ đã chốt và chi tiết (thực nhận, lương cơ bản / đơn giá giờ, công, từng khoản theo nhóm: lương, phụ cấp, tăng ca, điều chỉnh, phạt).
+  - Kiểm tra: `npm run typecheck` sạch; chạy thật trên bản web (khung iPhone, API local + CSDL `flexiwork_test`) bằng Playwright: chuông + huy hiệu, thông báo → mở phiếu lương → “Đọc tất cả”, bảng công tháng 11 / 10 / 9, phiếu lương, chat nhóm chi nhánh (gửi chữ, ảnh, thu hồi), tin quản lý tới tức thì trong phòng và dưới dạng banner ở danh sách, mở phòng từ banner, huy hiệu chưa đọc ở Trang chủ, tạo nhóm → đổi tên → thêm → xóa → rời. Đã sửa khi kiểm tra: rời nhóm không còn mở thêm một danh sách chat nữa; nút ở header không bị cắt mép. Chưa thử trên điện thoại thật (camera chụp ảnh gửi chat, thông báo khi app ở nền — chưa làm đẩy nền, ngoài phạm vi: không dùng Expo Push).
 
 ---
 

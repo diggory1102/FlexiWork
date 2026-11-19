@@ -57,6 +57,41 @@ export function formatTime(value: string | null | undefined): string {
   return value ? value.slice(11, 16) : '—';
 }
 
+/** "1.234.567 ₫" — số tiền VND (làm tròn đồng). */
+export function formatCurrency(value: number): string {
+  return `${Math.round(value).toLocaleString('vi-VN')} ₫`;
+}
+
+/** "08:05 12/11/2026" từ chuỗi ISO giờ Việt Nam. */
+export function formatDateTime(value: string | null | undefined): string {
+  if (!value) return '—';
+  return `${formatTime(value)} ${formatDate(value)}`;
+}
+
+/** Nhãn thời gian ngắn cho danh sách chat / thông báo: giờ nếu hôm nay, "Hôm qua", còn lại dd/MM. Dữ liệu là giờ Việt Nam không kèm múi giờ. */
+export function formatShortTime(value: string | null | undefined, now: Date = new Date()): string {
+  if (!value) return '';
+  const date = value.slice(0, 10);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const today = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+  const y = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+  const yesterday = `${y.getFullYear()}-${pad(y.getMonth() + 1)}-${pad(y.getDate())}`;
+  if (date === today) return formatTime(value);
+  if (date === yesterday) return 'Hôm qua';
+  const [yy, mm, dd] = date.split('-');
+  return yy === String(now.getFullYear()) ? `${dd}/${mm}` : `${dd}/${mm}/${yy}`;
+}
+
+/** Nhãn ngày cho dòng phân cách trong chat: "Hôm nay", "Hôm qua" hoặc dd/MM/yyyy. */
+export function formatDayLabel(value: string, now: Date = new Date()): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const iso = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const day = value.slice(0, 10);
+  if (day === iso(now)) return 'Hôm nay';
+  if (day === iso(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1))) return 'Hôm qua';
+  return formatDate(day);
+}
+
 /** "7,5 giờ" — số giờ làm (tối đa 2 chữ số thập phân, dấu phẩy thập phân). */
 export function formatHours(hours: number): string {
   return `${Number(hours.toFixed(2)).toString().replace('.', ',')} giờ`;
