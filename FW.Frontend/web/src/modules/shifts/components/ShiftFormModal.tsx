@@ -36,6 +36,8 @@ const emptyForm = (branchId: number | null): ShiftRequest => ({
   isNightShift: false,
   lateGraceMinutes: 5,
   earlyLeaveGraceMinutes: 5,
+  minStaff: null,
+  maxStaff: null,
 });
 
 interface Props {
@@ -67,8 +69,8 @@ export function ShiftFormModal({ open, shift, onClose, onSaved }: Props) {
       setForm(emptyForm(isCompanyWide ? null : ownBranchId));
       return;
     }
-    const { shiftCode, name, branchId, startTime, endTime, breakMinutes, workUnits, isNightShift, lateGraceMinutes, earlyLeaveGraceMinutes } = shift;
-    setForm({ shiftCode, name, branchId, startTime, endTime, breakMinutes, workUnits, isNightShift, lateGraceMinutes, earlyLeaveGraceMinutes });
+    const { shiftCode, name, branchId, startTime, endTime, breakMinutes, workUnits, isNightShift, lateGraceMinutes, earlyLeaveGraceMinutes, minStaff, maxStaff } = shift;
+    setForm({ shiftCode, name, branchId, startTime, endTime, breakMinutes, workUnits, isNightShift, lateGraceMinutes, earlyLeaveGraceMinutes, minStaff, maxStaff });
     shiftApi
       .get(shift.id)
       .then(({ data }) => setIsInUse(data.isInUse))
@@ -102,6 +104,9 @@ export function ShiftFormModal({ open, shift, onClose, onSaved }: Props) {
     if (!form.shiftCode.trim() || !form.name.trim()) return setError({ message: 'Vui lòng nhập mã ca và tên ca.', errors: [] });
     if (!preview) return setError({ message: 'Vui lòng nhập giờ bắt đầu và giờ kết thúc (HH:mm).', errors: [] });
     if ('error' in preview) return setError({ message: preview.error!, errors: [] });
+    if (form.minStaff != null && form.maxStaff != null && form.minStaff > form.maxStaff) {
+      return setError({ message: 'Số người tối thiểu không được lớn hơn số người tối đa.', errors: [] });
+    }
 
     setSaving(true);
     setError(null);
@@ -141,7 +146,7 @@ export function ShiftFormModal({ open, shift, onClose, onSaved }: Props) {
             <Notice
               status="warning"
               title="Ca này đã được xếp lịch"
-              description="Chỉ sửa được mã, tên và số phút cho phép đi muộn / về sớm. Giờ làm, giờ nghỉ, hệ số công, ca đêm và phạm vi được giữ nguyên để không làm sai lịch sử chấm công."
+              description="Chỉ sửa được mã, tên, số phút cho phép đi muộn / về sớm và số người tối thiểu / tối đa. Giờ làm, giờ nghỉ, hệ số công, ca đêm và phạm vi được giữ nguyên để không làm sai lịch sử chấm công."
             />
           )}
 
@@ -157,7 +162,9 @@ export function ShiftFormModal({ open, shift, onClose, onSaved }: Props) {
             />
             <TextInput label="Tên ca" isRequired placeholder="VD: Ca sáng" value={form.name} onChange={(v) => set('name', v)} />
             <GridSpan columns="full">
-              {isCompanyWide ? (
+              <Grid columns={{ minWidth: 150, max: 4 }} gap={4}>
+                <GridSpan columns={2}>
+                  {isCompanyWide ? (
                 <Selector
                   label="Phạm vi áp dụng"
                   options={branchOptions}
@@ -170,6 +177,32 @@ export function ShiftFormModal({ open, shift, onClose, onSaved }: Props) {
               ) : (
                 <TextInput label="Phạm vi áp dụng" value={`Ca riêng của chi nhánh ${ownBranchName ?? 'của bạn'}`} onChange={() => {}} isDisabled />
               )}
+                </GridSpan>
+                <NumberInput
+                  label="Số người tối thiểu"
+                  units="người"
+                  labelTooltip="Mỗi ngày, mỗi chi nhánh cần ít nhất bấy nhiêu người cho ca này. Chưa đủ thì lưới xếp lịch chỉ cảnh báo. Bỏ trống = không yêu cầu."
+                  min={1}
+                  max={500}
+                  isIntegerOnly
+                  hasClear
+                  placeholder="Không yêu cầu"
+                  value={form.minStaff}
+                  onChange={(v) => set('minStaff', v ?? null)}
+                />
+                <NumberInput
+                  label="Số người tối đa"
+                  units="người"
+                  labelTooltip="Mỗi ngày, mỗi chi nhánh chỉ xếp tối đa bấy nhiêu người cho ca này; đủ rồi thì không xếp thêm được. Bỏ trống = không giới hạn."
+                  min={1}
+                  max={500}
+                  isIntegerOnly
+                  hasClear
+                  placeholder="Không giới hạn"
+                  value={form.maxStaff}
+                  onChange={(v) => set('maxStaff', v ?? null)}
+                />
+              </Grid>
             </GridSpan>
           </Grid>
 

@@ -266,7 +266,7 @@ flowchart TD
 
 > **Tổng quan Tiến độ Hiện tại:**
 > * **Giai đoạn đang thực hiện:** CẤP BẬC 6 (Cấp 3, 4, 5 đã xong)
-> * **Tiến độ tổng thể:** `38 / 51` Nhiệm vụ hoàn thành (`75%`)
+> * **Tiến độ tổng thể:** `39 / 52` Nhiệm vụ hoàn thành (`75%`)
 > * **Hành động tiếp theo:** **Task 6.2** (hiệu chỉnh ngưỡng khớp khuôn mặt) và **6.3** (triển khai cloud) — cần ảnh / thiết bị thật nên làm cùng Task 6.5. Việc nhỏ còn lại: kéo ghim trực tiếp trên bản đồ (Leaflet).
 
 ### Các quyết định cần chốt
@@ -526,7 +526,7 @@ flowchart TD
 
 ---
 
-### 📌 CẤP BẬC 6: Hoàn thiện, Triển khai & Thực nghiệm `[1/5]`
+### 📌 CẤP BẬC 6: Hoàn thiện, Triển khai & Thực nghiệm `[2/6]`
 > 🎯 **Demo:** Hệ thống chạy trên môi trường cloud; có số liệu thực nghiệm cho Chương 4.
 
 - [x] **Task 6.1:** Xử lý **quên check-out** — Quản lý / HR **chỉnh giờ ra thủ công** (đã chốt 18/11/2026; không dùng tác vụ nền tự đóng ca vì không biết giờ ra thật). *Đã bỏ (17/11/2026) vì không cần:* “tự đánh dấu vắng mặt khi hết ca” (vắng mặt được **suy ra** từ lịch đã công bố + không có lượt chấm công ở bảng công, dashboard và báo cáo) và “khởi tạo quỹ phép đầu năm” (quỹ chưa có dòng thì dùng mức mặc định theo năm). `BackgroundService` vẫn cần cho Task 7.4.
@@ -537,6 +537,12 @@ flowchart TD
   - *Đã chuẩn bị (12/11/2026):* `render.yaml` (API Docker + Key Value), `FW.Frontend/mobile/eas.json`, `docs/DEPLOY.md` (TiDB Cloud → Brevo → Cloudinary → Render → Vercel → EAS); backend: `BrevoEmailService`, `RedisConnectionParser` (URL `redis://`), `BootstrapAdminService` (Admin đầu tiên từ biến môi trường), `flexiwork_seed_production.sql` (chỉ vai trò + loại đơn), ForwardedHeaders sau proxy, cờ `Swagger:Enabled`; Dockerfile không phụ thuộc `global.json`. Kiểm thử chế độ Production cục bộ: tạo Admin tự động, đăng nhập qua Redis, tài khoản mẫu không tồn tại, CORS chỉ nhận domain khai báo, gọi được API Brevo. *Đã triển khai (13/11/2026):* Web <https://flexiwork-tlu.vercel.app> (Vercel, root `FW.Frontend/web`) — API <https://flexiwork-api.onrender.com> (Render Blueprint + Key Value) — CSDL TiDB Cloud Starter (Singapore) — email Brevo, ảnh Cloudinary; Admin đầu tiên tạo qua Bootstrap. Còn lại: AI Service (Task 2.4), EAS Build (Task 3.4).
 - [ ] **Task 6.4:** Dữ liệu demo quy mô 30–80 nhân sự (seed mở rộng: nhiều chi nhánh, lịch 1 tháng, lịch sử chấm công, đơn từ). Gồm vài nhân viên có hành vi "xấu dần" (đi muộn, xin nghỉ tăng) để minh họa cảnh báo nghỉ việc (Task 7.4).
 - [ ] **Task 6.5:** Thực nghiệm trên thiết bị thật: chấm công đúng vị trí, ngoài bán kính, dùng Fake GPS, sai Wi-Fi, người khác chụp hộ; đo tỷ lệ nhận diện và thời gian xử lý; đối soát bảng công — làm số liệu cho Chương 4. Trợ lý AI: bộ ~50 câu hỏi/yêu cầu mẫu — đo tỷ lệ trích xuất đúng ngày/ca/loại đơn, thời gian phản hồi và chi phí mỗi lượt.
+- [x] **Task 6.6:** Định biên ca — số người tối thiểu / tối đa mỗi ca (làm theo yêu cầu 19/11/2026; không nằm trong kế hoạch 51 task ban đầu).
+  - *Quyết định (19/11/2026):* thêm hai trường **Số người tối thiểu / tối đa** ngay cạnh “Phạm vi áp dụng” ở form khung ca (**bước 1**). **Tối đa chặn cứng, tối thiểu chỉ cảnh báo**, để trống = không giới hạn (ca cũ giữ nguyên). Định biên tính **cho từng chi nhánh, từng ngày** (ca dùng chung mà hai chi nhánh cùng xếp thì mỗi chi nhánh có hạn mức riêng). Đếm không tính ca đã hủy và ca nghỉ phép. Hạ tối đa thấp hơn số đã xếp thì **không xóa ai**, chỉ chặn xếp thêm và đánh dấu “vượt”.
+  - *Đã làm:* **migration `014_shift_staffing.sql`** (hai cột `shifts.min_staff / max_staff`, chạy lại an toàn). `StaffingPlanner` (hàm thuần: đếm theo ô ca × ngày, tính cả người cùng yêu cầu). `ScheduleService` kiểm tra trong **cùng transaction với việc ghi**: khóa dòng các ca có định biên (`SELECT … FOR UPDATE` theo thứ tự id để không deadlock) → đọc người đã xếp bằng truy vấn có khóa (đọc dữ liệu mới nhất — cần cho TiDB vì đọc thường dùng ảnh chụp đầu transaction) → ghi. Xếp lịch: có ca đã đủ người thì **hoàn tác cả yêu cầu** và liệt kê (“ca … đã đủ người (2/2)”); sao chép tuần: **bỏ qua** các ô đã đủ và nêu trong kết quả. Đổi ca / làm thay không đổi số người nên không cần kiểm tra thêm.
+  - *Giao diện:* form ca (hai ô số, kiểm tra tối thiểu ≤ tối đa), cột **Số người / ngày** ở bảng khung ca, **hàng “Định biên · mã ca”** cuối lưới xếp lịch (n/tối đa: cam = thiếu người, xanh lá = đủ, đỏ = vượt; ngày đã qua không cảnh báo thiếu).
+  - *Test:* +5 unit (`StaffingPlannerTests`: không giới hạn, tính người có sẵn, theo ca và theo ngày, hạ tối đa, bỏ giờ trong ngày), +6 integration (xếp vượt bị chặn và hoàn tác cả yêu cầu, chỗ trống sau khi xóa nháp, hạn mức riêng từng chi nhánh với ca dùng chung, sao chép tuần bỏ qua ô đầy, khai báo / kiểm tra / sửa định biên kể cả khi ca đã dùng, và **hai Quản lý giành chỗ cuối cùng cùng lúc — hai phiên CSDL, 6 vòng, luôn chỉ một người được xếp**; thử bỏ lệnh khóa thì test này thất bại). Đã thử trên Web bằng Playwright: form, hàng định biên 1/2 → 2/2, người thứ ba bị từ chối.
+  - *Chưa làm (bước 2):* ngoại lệ theo cơ sở / thứ / ngày cụ thể (ví dụ ngày có tiệc đặt bàn cần thêm người) bằng bảng `shift_staffing_rules` ghi đè mặc định của ca. Hiện muốn thêm người cho một ngày thì phải nâng tối đa của cả ca.
 
 ---
 

@@ -187,6 +187,8 @@ CREATE TABLE shifts (
     is_cross_day TINYINT(1) NOT NULL DEFAULT 0 COMMENT '1: Ca kết thúc vào ngày hôm sau (end_time <= start_time)',
     late_grace_minutes INT NOT NULL DEFAULT 5 COMMENT 'Số phút check-in trễ được phép, chưa tính đi muộn',
     early_leave_grace_minutes INT NOT NULL DEFAULT 5 COMMENT 'Số phút check-out sớm được phép, chưa tính về sớm',
+    min_staff INT NULL COMMENT 'Số người tối thiểu mỗi ngày (mỗi chi nhánh); NULL = không yêu cầu',
+    max_staff INT NULL COMMENT 'Số người tối đa mỗi ngày (mỗi chi nhánh); NULL = không giới hạn',
     is_deleted TINYINT(1) NOT NULL DEFAULT 0,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NULL ON UPDATE CURRENT_TIMESTAMP,

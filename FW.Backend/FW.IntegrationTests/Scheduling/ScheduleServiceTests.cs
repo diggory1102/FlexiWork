@@ -54,7 +54,7 @@ public class ScheduleServiceTests
 
     private static DateOnly Day(int offset) => DateOnly.FromDateTime(DateTime.Today).AddDays(offset);
 
-    private static async Task<Shift> NewShiftAsync(DbSession s, int start, int end, int? branchId = Branch1)
+    private static async Task<Shift> NewShiftAsync(DbSession s, int start, int end, int? branchId = Branch1, int? maxStaff = null, int? minStaff = null)
     {
         var shift = new Shift
         {
@@ -63,7 +63,9 @@ public class ScheduleServiceTests
             BranchId = branchId,
             StartTime = TimeSpan.FromHours(start),
             EndTime = TimeSpan.FromHours(end),
-            IsCrossDay = Shift.SpansMidnight(TimeSpan.FromHours(start), TimeSpan.FromHours(end))
+            IsCrossDay = Shift.SpansMidnight(TimeSpan.FromHours(start), TimeSpan.FromHours(end)),
+            MaxStaff = maxStaff,
+            MinStaff = minStaff
         };
         await new ShiftRepository(s).AddAsync(shift);
         return shift;
@@ -247,5 +249,137 @@ public class ScheduleServiceTests
         Assert.Equal(1, (await manager.CreateAsync(Items((EmployeeId, office, Day(281))))).Created);
 
         Assert.Equal(2, await manager.DeleteDraftsAsync(new ScheduleRangeRequest { FromDate = Day(280), ToDate = Day(282) }));
+    }
+
+    // ------------------------------------------------------------------ định biên ca
+
+    private static async Task<User> NewEmployeeAsync(DbSession s, int branchId = Branch1)
+    {
+        var code = $"Q{Guid.NewGuid():N}"[..12].ToUpperInvariant();
+        var user = new User { EmployeeCode = code, Email = $"{code.ToLowerInvariant()}@test.local", FullName = $"NV {code}", PasswordHash = "x", BranchId = branchId };
+        await new UserRepository(s).AddAsync(user);
+        return user;
+    }
+
+    private static async Task<int> CountAsync(ScheduleService service, Shift shift, DateOnly day) =>
+        (await service.GetBranchSchedulesAsync(new ScheduleRangeQuery { FromDate = day, ToDate = day })).Count(x => x.ShiftId == shift.Id);
+
+    [SkippableFact]
+    public async Task A_full_shift_rejects_more_people_and_nothing_from_that_request_is_saved()
+    {
+        Skip.IfNot(_db.IsAvailable, _db.SkipReason);
+        await using var session = _db.CreateSession();
+        var manager = Service(session, Manager1);
+        var shift = await NewShiftAsync(session, 8, 12, maxStaff: 2);
+        var (a, b, c) = (await NewEmployeeAsync(session), await NewEmployeeAsync(session), await NewEmployeeAsync(session));
+        var day = Day(350);
+
+        Assert.Equal(2, (await manager.CreateAsync(Items((a.Id, shift, day), (b.Id, shift, day)))).Created);
+
+        var error = await Assert.ThrowsAsync<BadRequestException>(() => manager.CreateAsync(Items((c.Id, shift, day))));
+        Assert.Contains("đủ người", error.Message);
+        Assert.Contains("(2/2)", Assert.Single(error.Errors!));
+        Assert.Equal(2, await CountAsync(manager, shift, day));
+
+        // Cả yêu cầu bị hoàn tác: hai ca còn chỗ ở ngày khác cũng không được lưu khi một ca trong cùng yêu cầu đã đủ người
+        var other = Day(351);
+        await Assert.ThrowsAsync<BadRequestException>(() => manager.CreateAsync(Items((c.Id, shift, other), (c.Id, shift, day))));
+        Assert.Equal(0, await CountAsync(manager, shift, other));
+    }
+
+    [SkippableFact]
+    public async Task Limits_count_per_day_and_a_removed_draft_frees_its_place()
+    {
+        Skip.IfNot(_db.IsAvailable, _db.SkipReason);
+        await using var session = _db.CreateSession();
+        var manager = Service(session, Manager1);
+        var shift = await NewShiftAsync(session, 8, 12, maxStaff: 1);
+        var (a, b) = (await NewEmployeeAsync(session), await NewEmployeeAsync(session));
+
+        await manager.CreateAsync(Items((a.Id, shift, Day(352))));
+        Assert.Equal(1, (await manager.CreateAsync(Items((b.Id, shift, Day(353))))).Created); // ngày khác: còn chỗ
+        await Assert.ThrowsAsync<BadRequestException>(() => manager.CreateAsync(Items((b.Id, shift, Day(352)))));
+
+        var draft = (await manager.GetBranchSchedulesAsync(new ScheduleRangeQuery { FromDate = Day(352), ToDate = Day(352) })).Single(x => x.ShiftId == shift.Id);
+        Assert.True(await manager.RemoveAsync(draft.Id));
+        Assert.Equal(1, (await manager.CreateAsync(Items((b.Id, shift, Day(352))))).Created); // chỗ vừa trống
+    }
+
+    [SkippableFact]
+    public async Task The_limit_of_a_shared_shift_is_counted_separately_for_each_branch()
+    {
+        Skip.IfNot(_db.IsAvailable, _db.SkipReason);
+        await using var session = _db.CreateSession();
+        var hr = Service(session, Hr);
+        var shared = await NewShiftAsync(session, 8, 12, branchId: null, maxStaff: 1);
+        var (inBranch1, inBranch2) = (await NewEmployeeAsync(session, Branch1), await NewEmployeeAsync(session, 2));
+        var day = Day(354);
+
+        Assert.Equal(1, (await hr.CreateAsync(new CreateSchedulesRequest { BranchId = Branch1, Items = Items((inBranch1.Id, shared, day)).Items })).Created);
+        Assert.Equal(1, (await hr.CreateAsync(new CreateSchedulesRequest { BranchId = 2, Items = Items((inBranch2.Id, shared, day)).Items })).Created);
+
+        var second = await NewEmployeeAsync(session, 2);
+        await Assert.ThrowsAsync<BadRequestException>(() =>
+            hr.CreateAsync(new CreateSchedulesRequest { BranchId = 2, Items = Items((second.Id, shared, day)).Items }));
+    }
+
+    [SkippableFact]
+    public async Task Copying_a_week_skips_the_days_that_are_already_full_and_reports_them()
+    {
+        Skip.IfNot(_db.IsAvailable, _db.SkipReason);
+        await using var session = _db.CreateSession();
+        var manager = Service(session, Manager1);
+        var shift = await NewShiftAsync(session, 8, 12, maxStaff: 1);
+        var (a, b) = (await NewEmployeeAsync(session), await NewEmployeeAsync(session));
+
+        await manager.CreateAsync(Items((a.Id, shift, Day(300)), (a.Id, shift, Day(301))));
+        await manager.CreateAsync(Items((b.Id, shift, Day(307)))); // ô đích của ngày 300 đã có người
+
+        var result = await manager.CopyAsync(new CopySchedulesRequest { SourceFrom = Day(300), Days = 2, TargetFrom = Day(307) });
+
+        Assert.Equal(1, result.Created); // chỉ ngày 301 → 308
+        Assert.Equal(1, result.Skipped);
+        Assert.Contains("đã đủ người", Assert.Single(result.SkippedReasons));
+        Assert.Equal(1, await CountAsync(manager, shift, Day(307)));
+        Assert.Equal(1, await CountAsync(manager, shift, Day(308)));
+    }
+
+    [SkippableFact]
+    public async Task Two_managers_filling_the_last_place_at_the_same_time_never_exceed_the_maximum()
+    {
+        Skip.IfNot(_db.IsAvailable, _db.SkipReason);
+        await using var setup = _db.CreateSession();
+        var shift = await NewShiftAsync(setup, 8, 12, maxStaff: 1);
+        var people = new List<(User A, User B)>();
+        for (var round = 0; round < 6; round++) people.Add((await NewEmployeeAsync(setup), await NewEmployeeAsync(setup)));
+
+        for (var round = 0; round < people.Count; round++)
+        {
+            var day = Day(320 + round);
+            await using var sessionA = _db.CreateSession();
+            await using var sessionB = _db.CreateSession();
+            var (a, b) = people[round];
+
+            // Hai request độc lập (hai phiên CSDL, hai transaction) cùng giành chỗ cuối cùng
+            var attempts = await Task.WhenAll(
+                Attempt(Service(sessionA, Manager1), Items((a.Id, shift, day))),
+                Attempt(Service(sessionB, Manager1), Items((b.Id, shift, day))));
+
+            Assert.Equal(1, attempts.Count(ok => ok));
+            Assert.Equal(1, await CountAsync(Service(setup, Manager1), shift, day));
+        }
+
+        static async Task<bool> Attempt(ScheduleService service, CreateSchedulesRequest request)
+        {
+            try
+            {
+                await service.CreateAsync(request);
+                return true;
+            }
+            catch (BadRequestException)
+            {
+                return false;
+            }
+        }
     }
 }

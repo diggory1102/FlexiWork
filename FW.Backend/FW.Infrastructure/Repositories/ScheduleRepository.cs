@@ -91,6 +91,31 @@ public class ScheduleRepository : BaseRepository<Schedule, long>, IScheduleRepos
             "SELECT EXISTS(SELECT 1 FROM `schedules` WHERE `user_id` = @UserId AND `shift_id` = @ShiftId AND `work_date` = @WorkDate)",
             new { UserId = userId, ShiftId = shiftId, WorkDate = workDate.Date }, cancellationToken);
 
+    public Task<IReadOnlyList<ShiftDaySlot>> LockStaffedSlotsAsync(int branchId, IEnumerable<int> shiftIds, DateTime fromDate, DateTime toDate,
+        CancellationToken cancellationToken = default)
+    {
+        var ids = shiftIds.Distinct().ToArray();
+        if (ids.Length == 0) return Task.FromResult<IReadOnlyList<ShiftDaySlot>>(Array.Empty<ShiftDaySlot>());
+
+        // FOR UPDATE: đọc dữ liệu đã commit mới nhất (kể cả của transaction vừa chờ xong) thay vì ảnh chụp đầu transaction —
+        // nếu không, trên TiDB hai người xếp cùng lúc vẫn cùng thấy số người cũ
+        const string sql = """
+            SELECT `shift_id` AS ShiftId, `work_date` AS WorkDate
+            FROM `schedules`
+            WHERE `branch_id` = @BranchId AND `shift_id` IN @ShiftIds AND `work_date` BETWEEN @FromDate AND @ToDate
+              AND `status` NOT IN @Excluded
+            FOR UPDATE
+            """;
+        return QueryAsync<ShiftDaySlot>(sql, new
+        {
+            BranchId = branchId,
+            ShiftIds = ids,
+            FromDate = fromDate.Date,
+            ToDate = toDate.Date,
+            Excluded = new[] { ScheduleStatus.Cancelled, ScheduleStatus.OnLeave }
+        }, cancellationToken);
+    }
+
     public async Task<int> AddRangeAsync(IReadOnlyCollection<Schedule> schedules, CancellationToken cancellationToken = default)
     {
         var inserted = 0;

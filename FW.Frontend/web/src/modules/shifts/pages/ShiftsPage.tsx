@@ -22,6 +22,7 @@ import { toast } from '@/stores/toastStore';
 import { formatMinutes } from '@/lib/dates';
 import { RoleGroups } from '@/types/auth';
 import type { Shift, ShiftFilter } from '@/types/scheduling';
+import { staffingLabel } from '@/modules/schedules/scheduleUi';
 import { ShiftFormModal } from '../components/ShiftFormModal';
 
 const ALL = 'all';
@@ -105,6 +106,12 @@ export function ShiftsPage() {
           <Text type="supporting">Sớm {s.earlyLeaveGraceMinutes} phút</Text>
         </VStack>
       ),
+    },
+    {
+      key: 'staff',
+      header: 'Số người / ngày',
+      width: 130,
+      render: (s) => <Text type="supporting">{staffingLabel(s)}</Text>,
     },
     {
       key: 'scope',

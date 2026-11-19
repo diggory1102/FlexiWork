@@ -38,6 +38,13 @@ public class ScheduleDetail
     public DateTime? PublishedAt { get; set; }
 }
 
+/// <summary>Một người đang giữ chỗ trong ô (ca, ngày) — dùng để đếm số người đã xếp của ca.</summary>
+public class ShiftDaySlot
+{
+    public int ShiftId { get; set; }
+    public DateTime WorkDate { get; set; }
+}
+
 /// <summary>
 /// Lịch phân ca. Không xóa mềm: <see cref="IGenericRepository{T,TKey}.DeleteAsync"/> xóa hẳn (chỉ dùng cho lịch nháp).
 /// </summary>
@@ -62,6 +69,13 @@ public interface IScheduleRepository : IGenericRepository<Schedule, long>
     /// <summary>Thêm nhiều ca một lần (xếp lịch cả tuần) bằng câu INSERT nhiều dòng; nên gọi trong transaction.</summary>
     /// <returns>Số dòng đã thêm.</returns>
     Task<int> AddRangeAsync(IReadOnlyCollection<Schedule> schedules, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Các ô (ca, ngày) đang có người của chi nhánh trong khoảng ngày — mỗi người một dòng; bỏ ca đã hủy và ca nghỉ phép.
+    /// Đọc có khóa (<c>FOR UPDATE</c>, đọc dữ liệu mới nhất) nên phải gọi trong transaction, sau <see cref="IShiftRepository.LockAsync"/>.
+    /// </summary>
+    Task<IReadOnlyList<ShiftDaySlot>> LockStaffedSlotsAsync(int branchId, IEnumerable<int> shiftIds, DateTime fromDate, DateTime toDate,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Nghỉ theo đơn đã duyệt: các ca chưa chấm công (scheduled, absent) của nhân viên trong khoảng ngày chuyển sang on_leave.

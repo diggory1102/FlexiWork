@@ -10,6 +10,8 @@ namespace FW.Application.Features.Scheduling;
 
 /// <param name="StartTime">Giờ bắt đầu dạng "HH:mm".</param>
 /// <param name="WorkingMinutes">Số phút làm việc thực tế (đã trừ giờ nghỉ).</param>
+/// <param name="MinStaff">Số người tối thiểu mỗi ngày (chưa đủ thì cảnh báo); null = không yêu cầu.</param>
+/// <param name="MaxStaff">Số người tối đa mỗi ngày (đủ thì không xếp thêm được); null = không giới hạn.</param>
 /// <param name="CanEdit">Người đang xem có quyền sửa/xóa ca này không (Quản lý chỉ sửa ca riêng của chi nhánh mình).</param>
 public record ShiftDto(
     int Id,
@@ -25,6 +27,8 @@ public record ShiftDto(
     bool IsCrossDay,
     int LateGraceMinutes,
     int EarlyLeaveGraceMinutes,
+    int? MinStaff,
+    int? MaxStaff,
     bool CanEdit,
     DateTime CreatedAt,
     DateTime? UpdatedAt)
@@ -33,7 +37,7 @@ public record ShiftDto(
         s.Id, s.ShiftCode, s.Name, s.BranchId,
         ShiftTime.Format(s.StartTime), ShiftTime.Format(s.EndTime),
         s.BreakMinutes, s.WorkingMinutes, s.WorkUnits, s.IsNightShift, s.IsCrossDay,
-        s.LateGraceMinutes, s.EarlyLeaveGraceMinutes, canEdit, s.CreatedAt, s.UpdatedAt);
+        s.LateGraceMinutes, s.EarlyLeaveGraceMinutes, s.MinStaff, s.MaxStaff, canEdit, s.CreatedAt, s.UpdatedAt);
 }
 
 /// <summary>Chi tiết ca kèm cờ "đã được xếp lịch" — khi true, giao diện khóa các trường giờ giấc.</summary>
@@ -73,6 +77,14 @@ public class ShiftRequest
 
     [Range(0, 60, ErrorMessage = "Số phút cho phép về sớm từ 0 đến 60.")]
     public int EarlyLeaveGraceMinutes { get; set; } = 5;
+
+    /// <summary>Số người tối thiểu mỗi ngày (mỗi chi nhánh) — chưa đủ thì giao diện cảnh báo. Bỏ trống = không yêu cầu.</summary>
+    [Range(1, 500, ErrorMessage = "Số người tối thiểu từ 1 đến 500.")]
+    public int? MinStaff { get; set; }
+
+    /// <summary>Số người tối đa mỗi ngày (mỗi chi nhánh) — đủ rồi thì không xếp thêm được. Bỏ trống = không giới hạn.</summary>
+    [Range(1, 500, ErrorMessage = "Số người tối đa từ 1 đến 500.")]
+    public int? MaxStaff { get; set; }
 }
 
 /// <summary>Đọc / ghi giờ trong ngày dạng "HH:mm".</summary>

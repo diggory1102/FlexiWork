@@ -30,6 +30,10 @@ export interface Shift {
   isCrossDay: boolean;
   lateGraceMinutes: number;
   earlyLeaveGraceMinutes: number;
+  /** Số người tối thiểu mỗi ngày (mỗi chi nhánh); chưa đủ thì cảnh báo. null = không yêu cầu. */
+  minStaff: number | null;
+  /** Số người tối đa mỗi ngày (mỗi chi nhánh); đủ rồi thì không xếp thêm được. null = không giới hạn. */
+  maxStaff: number | null;
   /** Người đang xem được sửa/xóa ca này không. */
   canEdit: boolean;
   createdAt: string;
@@ -58,6 +62,8 @@ export interface ShiftRequest {
   isNightShift: boolean;
   lateGraceMinutes: number;
   earlyLeaveGraceMinutes: number;
+  minStaff: number | null;
+  maxStaff: number | null;
 }
 
 // ---------------------------------------------------------------- Quy tắc chấm công

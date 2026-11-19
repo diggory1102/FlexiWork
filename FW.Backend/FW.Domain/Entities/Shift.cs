@@ -38,6 +38,12 @@ public class Shift : BaseAuditableEntity
     /// <summary>Số phút được phép check-out sớm mà chưa tính là về sớm.</summary>
     public int EarlyLeaveGraceMinutes { get; set; } = 5;
 
+    /// <summary>Số người tối thiểu mỗi ngày cho ca này (mỗi chi nhánh); chưa đủ thì chỉ cảnh báo. Null = không yêu cầu.</summary>
+    public int? MinStaff { get; set; }
+
+    /// <summary>Số người tối đa mỗi ngày cho ca này (mỗi chi nhánh); đủ rồi thì không xếp thêm được. Null = không giới hạn.</summary>
+    public int? MaxStaff { get; set; }
+
     /// <summary>Ca kết thúc vào ngày hôm sau khi giờ kết thúc không lớn hơn giờ bắt đầu (VD 22:00 → 06:00).</summary>
     public static bool SpansMidnight(TimeSpan startTime, TimeSpan endTime) => endTime <= startTime;
 

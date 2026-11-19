@@ -218,7 +218,7 @@ export function SchedulesPage() {
         ) : employees.length === 0 ? (
           <EmptyState title="Chi nhánh chưa có nhân viên" description="Thêm nhân viên vào chi nhánh ở trang Nhân viên để xếp lịch." />
         ) : (
-          <ScheduleGrid days={days} today={today} employees={employees} schedules={schedules} onAdd={(employee, day) => setAddTarget({ employee, day })} onOpen={setDetail} />
+          <ScheduleGrid days={days} today={today} employees={employees} schedules={schedules} shifts={shifts} onAdd={(employee, day) => setAddTarget({ employee, day })} onOpen={setDetail} />
         )}
       </ListCard>
 

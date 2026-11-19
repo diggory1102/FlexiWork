@@ -67,6 +67,15 @@ public class ShiftRepository : BaseRepository<Shift>, IShiftRepository
         ExecuteScalarAsync<bool>("SELECT EXISTS(SELECT 1 FROM `schedules` WHERE `shift_id` = @ShiftId)",
             new { ShiftId = shiftId }, cancellationToken);
 
+    public async Task LockAsync(IEnumerable<int> shiftIds, CancellationToken cancellationToken = default)
+    {
+        var ids = shiftIds.Distinct().OrderBy(id => id).ToArray();
+        if (ids.Length == 0) return;
+
+        // Chỉ cần giữ khóa tới hết transaction; thứ tự id cố định để hai transaction không khóa chéo nhau
+        await QueryAsync<int>("SELECT `id` FROM `shifts` WHERE `id` IN @Ids ORDER BY `id` FOR UPDATE", new { Ids = ids }, cancellationToken);
+    }
+
     public Task<bool> HasActiveSchedulesFromAsync(int shiftId, DateTime fromDate, CancellationToken cancellationToken = default) =>
         ExecuteScalarAsync<bool>(
             "SELECT EXISTS(SELECT 1 FROM `schedules` WHERE `shift_id` = @ShiftId AND `work_date` >= @FromDate AND `status` <> @Cancelled)",

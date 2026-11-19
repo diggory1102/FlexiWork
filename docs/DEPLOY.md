@@ -184,6 +184,7 @@ cd FW.Backend\FW.Infrastructure\Database\migrations
 | `011_payroll_config.sql` | Cấu hình lương (Task 5.4): `users.base_salary`, `users.hourly_rate`; bảng `allowances`, `user_allowances`, `payroll_periods`, `payslips`, `payslip_items`; 3 phụ cấp mẫu + hệ số OT 1,5 (chỉ thêm khi chưa có). **Chạy lại an toàn**, mỗi câu ALTER một việc. Cuối file in `2`, `5`, `3`, `1`. Bảng kỳ lương / phiếu lương của Task 5.5 cũng tạo ở file này — Task 5.5 không có migration riêng | ☐ |
 | `012_chat_groups.sql` | Nhóm chat tùy chỉnh (UC 7.2): cột `conversations.created_by` (người tạo = quản trị nhóm; NULL với chat 1-1 và nhóm chi nhánh). **Chạy lại an toàn** | ☐ |
 | `013_attendance_checkout_adjust.sql` | Điều chỉnh giờ ra thủ công (Task 6.1): `attendance_logs.checkout_adjusted_by`, `checkout_adjusted_at`, `checkout_adjust_note`. **Chạy lại an toàn** | ☐ |
+| `014_shift_staffing.sql` | Định biên ca (Task 6.6): `shifts.min_staff` (cảnh báo khi thiếu người) và `shifts.max_staff` (chặn khi đủ người); hai cột NULL = không giới hạn nên ca cũ không đổi. **Chạy lại an toàn** | ☐ |
 
 ## Xử lý sự cố
 

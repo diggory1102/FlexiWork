@@ -24,7 +24,8 @@ public interface IShiftService
 /// Khai báo khung ca (UC 1.3 / UC 3.1).
 /// Phân quyền: Admin/HR quản lý mọi ca (dùng chung và ca riêng của bất kỳ chi nhánh nào);
 /// Quản lý chi nhánh xem ca dùng chung + ca của chi nhánh mình và chỉ được thêm/sửa/xóa ca riêng của chi nhánh mình.
-/// Ca đã được xếp lịch thì không đổi được giờ làm, giờ nghỉ, hệ số công, cờ ca đêm, chi nhánh (giữ đúng lịch sử chấm công).
+/// Ca đã được xếp lịch thì không đổi được giờ làm, giờ nghỉ, hệ số công, cờ ca đêm, chi nhánh (giữ đúng lịch sử chấm công);
+/// số người tối thiểu / tối đa thì sửa được bất cứ lúc nào (hạ tối đa thấp hơn số đã xếp không xóa ai, chỉ chặn xếp thêm).
 /// </summary>
 public class ShiftService : IShiftService
 {
@@ -205,6 +206,11 @@ public class ShiftService : IShiftService
         shift.IsNightShift = request.IsNightShift;
         shift.LateGraceMinutes = request.LateGraceMinutes;
         shift.EarlyLeaveGraceMinutes = request.EarlyLeaveGraceMinutes;
+
+        if (request is { MinStaff: { } min, MaxStaff: { } max } && min > max)
+            throw new BadRequestException("Số người tối thiểu không được lớn hơn số người tối đa.");
+        shift.MinStaff = request.MinStaff;
+        shift.MaxStaff = request.MaxStaff;
     }
 
     private static string NormalizeCode(string code) => code.Trim().ToUpperInvariant();

@@ -40,6 +40,8 @@ public interface IScheduleService
 /// - Lịch mới là bản nháp: nhân viên chưa thấy, chưa chấm công được; công bố để chốt.
 /// - Chặn trùng ca và chồng giờ (kể cả ca đêm hôm trước kéo sang sáng hôm sau) — xem <see cref="SchedulePlanner"/>.
 /// - Không xếp ca vào ngày nhân viên nghỉ theo đơn đã duyệt (Task 4.2).
+/// - Định biên: ca có số người tối đa (<see cref="Shift.MaxStaff"/>) thì mỗi chi nhánh chỉ xếp tới mức đó cho mỗi ngày. Việc đếm và ghi nằm trong
+///   một transaction có khóa dòng của ca (<see cref="IShiftRepository.LockAsync"/>) để hai người xếp cùng lúc không vượt định biên.
 /// </summary>
 public class ScheduleService : IScheduleService
 {
@@ -151,7 +153,7 @@ public class ScheduleService : IScheduleService
                 plan.Conflicts.Take(MaxReportedIssues).Select(c => Describe(c, context)).ToList());
         }
 
-        await SaveAsync(branchId, plan.Accepted, cancellationToken);
+        await SaveAsync(branchId, plan.Accepted, context, allOrNothing: true, cancellationToken);
         return new ScheduleBatchResult(plan.Accepted.Count, 0, Array.Empty<string>());
     }
 
@@ -196,8 +198,14 @@ public class ScheduleService : IScheduleService
         var plan = SchedulePlanner.Plan(items, await LoadExistingAsync(items, cancellationToken));
         skipped.AddRange(plan.Conflicts.Select(c => Describe(c, context)));
 
-        if (plan.Accepted.Count > 0) await SaveAsync(branchId, plan.Accepted, cancellationToken);
-        return new ScheduleBatchResult(plan.Accepted.Count, skipped.Count, skipped.Take(MaxReportedIssues).ToList());
+        var created = plan.Accepted.Count;
+        if (plan.Accepted.Count > 0)
+        {
+            var full = await SaveAsync(branchId, plan.Accepted, context, allOrNothing: false, cancellationToken);
+            created -= full.Count;
+            skipped.AddRange(full.Select(r => Describe(r, context)));
+        }
+        return new ScheduleBatchResult(created, skipped.Count, skipped.Take(MaxReportedIssues).ToList());
     }
 
     // ------------------------------------------------------------------
@@ -318,21 +326,52 @@ public class ScheduleService : IScheduleService
             .ToList();
     }
 
-    private async Task SaveAsync(int branchId, IReadOnlyList<PlannedShift> accepted, CancellationToken cancellationToken)
+    /// <summary>
+    /// Lưu các ca đã qua kiểm tra xung đột, đồng thời kiểm tra định biên trong CÙNG transaction (khóa ca → đếm người → ghi).
+    /// <paramref name="allOrNothing"/> = true: có ca đã đủ người thì hoàn tác tất cả và báo lỗi; false: bỏ qua các ca đó và trả về danh sách.
+    /// </summary>
+    private async Task<IReadOnlyList<StaffingRejection>> SaveAsync(int branchId, IReadOnlyList<PlannedShift> accepted, SchedulingContext context,
+        bool allOrNothing, CancellationToken cancellationToken)
     {
-        var rows = accepted.Select(p => new Schedule
+        return await _unitOfWork.ExecuteInTransactionAsync<IReadOnlyList<StaffingRejection>>(async ct =>
         {
-            UserId = p.UserId,
-            ShiftId = p.Shift.Id,
-            BranchId = branchId,
-            WorkDate = p.Date,
-            Status = ScheduleStatus.Scheduled,
-            IsPublished = false,
-            CreatedBy = _currentUser.UserId
-        }).ToList();
+            var staffing = await PlanStaffingAsync(branchId, accepted, ct);
+            if (allOrNothing && staffing.Rejected.Count > 0)
+            {
+                throw new BadRequestException(
+                    $"Không thể xếp lịch: {staffing.Rejected.Count} ca đã đủ người theo định biên.",
+                    staffing.Rejected.Take(MaxReportedIssues).Select(r => Describe(r, context)).ToList());
+            }
 
-        await _unitOfWork.ExecuteInTransactionAsync(ct => _schedules.AddRangeAsync(rows, ct), cancellationToken);
+            if (staffing.Allowed.Count > 0) await _schedules.AddRangeAsync(ToRows(branchId, staffing.Allowed), ct);
+            return staffing.Rejected;
+        }, cancellationToken);
     }
+
+    /// <summary>Khóa các ca có định biên, đọc lại định biên mới nhất rồi đếm người đã xếp để biết ô nào còn chỗ.</summary>
+    private async Task<StaffingPlan> PlanStaffingAsync(int branchId, IReadOnlyList<PlannedShift> accepted, CancellationToken cancellationToken)
+    {
+        var limited = accepted.Where(p => p.Shift.MaxStaff.HasValue).Select(p => p.Shift.Id).Distinct().ToList();
+        if (limited.Count == 0) return new StaffingPlan(accepted, Array.Empty<StaffingRejection>());
+
+        await _shifts.LockAsync(limited, cancellationToken);
+        var fresh = (await _shifts.GetByIdsAsync(limited, includeDeleted: true, cancellationToken)).ToDictionary(s => s.Id);
+        var items = accepted.Select(p => fresh.TryGetValue(p.Shift.Id, out var shift) ? p with { Shift = shift } : p).ToList();
+
+        var slots = await _schedules.LockStaffedSlotsAsync(branchId, limited, items.Min(p => p.Date), items.Max(p => p.Date), cancellationToken);
+        return StaffingPlanner.Plan(items, slots.Select(slot => (slot.ShiftId, slot.WorkDate)));
+    }
+
+    private List<Schedule> ToRows(int branchId, IEnumerable<PlannedShift> planned) => planned.Select(p => new Schedule
+    {
+        UserId = p.UserId,
+        ShiftId = p.Shift.Id,
+        BranchId = branchId,
+        WorkDate = p.Date,
+        Status = ScheduleStatus.Scheduled,
+        IsPublished = false,
+        CreatedBy = _currentUser.UserId
+    }).ToList();
 
     private static string Describe(ScheduleConflict conflict, SchedulingContext context)
     {
@@ -344,6 +383,10 @@ public class ScheduleService : IScheduleService
             ? $"{who}: {item} bị trùng (ca này {source})."
             : $"{who}: {item} chồng giờ với ca {ShiftLabel(conflict.With.Shift)} ngày {conflict.With.Date:dd/MM/yyyy} ({source}).";
     }
+
+    private static string Describe(StaffingRejection rejection, SchedulingContext context) =>
+        $"{context.Label(rejection.Item.UserId)}: {rejection.Item.Date:dd/MM/yyyy} ca {ShiftLabel(rejection.Item.Shift)} đã đủ người " +
+        $"({rejection.Current}/{rejection.Max}).";
 
     private static string ShiftLabel(Shift s) => $"{s.ShiftCode} ({ShiftTime.Format(s.StartTime)}–{ShiftTime.Format(s.EndTime)})";
 

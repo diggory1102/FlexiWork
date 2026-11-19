@@ -129,6 +129,55 @@ public class SchedulingServiceTests
     }
 
     [SkippableFact]
+    public async Task Shift_staffing_limits_are_validated_saved_and_editable_even_when_the_shift_is_in_use()
+    {
+        Skip.IfNot(_db.IsAvailable, _db.SkipReason);
+        await using var session = _db.CreateSession();
+        var service = Shifts(session, Hr);
+
+        var plain = await service.CreateAsync(NewShift(branchId: 1));
+        Assert.Null(plain.MinStaff); // không khai báo = không giới hạn như trước
+        Assert.Null(plain.MaxStaff);
+
+        var request = NewShift(branchId: 1);
+        request.MinStaff = 3;
+        request.MaxStaff = 2;
+        await Assert.ThrowsAsync<BadRequestException>(() => service.CreateAsync(request)); // tối thiểu > tối đa
+
+        request.MinStaff = 2;
+        request.MaxStaff = 4;
+        var shift = await service.CreateAsync(request);
+        Assert.Equal((2, 4), (shift.MinStaff, shift.MaxStaff));
+
+        // Chỉ đặt tối thiểu hoặc chỉ đặt tối đa đều được
+        request.ShiftCode = shift.ShiftCode;
+        request.MinStaff = null;
+        request.MaxStaff = 5;
+        var onlyMax = await service.UpdateAsync(shift.Id, request);
+        Assert.Equal((null, 5), (onlyMax.MinStaff, onlyMax.MaxStaff));
+
+        // Ca đã được xếp lịch vẫn đổi được định biên (khác với giờ giấc)
+        await new ScheduleRepository(session).AddAsync(new Schedule { UserId = 3, ShiftId = shift.Id, BranchId = 1, WorkDate = DateTime.Today.AddDays(1) });
+        Assert.True((await service.GetByIdAsync(shift.Id)).IsInUse);
+        request.MinStaff = 1;
+        request.MaxStaff = 1;
+        var lowered = await service.UpdateAsync(shift.Id, request);
+        Assert.Equal((1, 1), (lowered.MinStaff, lowered.MaxStaff));
+
+        // Giá trị ngoài khoảng cho phép bị chặn ở bước kiểm tra dữ liệu của request
+        Assert.Contains(Validate(new ShiftRequest { MaxStaff = 0 }), r => r.MemberNames.Contains(nameof(ShiftRequest.MaxStaff)));
+        Assert.Contains(Validate(new ShiftRequest { MinStaff = 501 }), r => r.MemberNames.Contains(nameof(ShiftRequest.MinStaff)));
+    }
+
+    private static List<System.ComponentModel.DataAnnotations.ValidationResult> Validate(ShiftRequest request)
+    {
+        var results = new List<System.ComponentModel.DataAnnotations.ValidationResult>();
+        System.ComponentModel.DataAnnotations.Validator.TryValidateObject(
+            request, new System.ComponentModel.DataAnnotations.ValidationContext(request), results, validateAllProperties: true);
+        return results;
+    }
+
+    [SkippableFact]
     public async Task Scheduled_shift_keeps_its_hours_and_cannot_be_deleted_while_upcoming()
     {
         Skip.IfNot(_db.IsAvailable, _db.SkipReason);

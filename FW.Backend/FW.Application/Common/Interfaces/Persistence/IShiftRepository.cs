@@ -34,6 +34,12 @@ public interface IShiftRepository : IGenericRepository<Shift>
     /// <summary>Ca đã được xếp vào lịch nào chưa (đã dùng thì không cho sửa giờ, giờ nghỉ, hệ số công).</summary>
     Task<bool> IsInUseAsync(int shiftId, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Khóa dòng của các ca (<c>SELECT ... FOR UPDATE</c>, theo thứ tự id để tránh deadlock) — phải gọi trong transaction.
+    /// Hai người xếp lịch cùng ca cùng lúc sẽ phải chờ nhau nên không cùng thấy "còn chỗ" rồi cùng ghi vượt định biên.
+    /// </summary>
+    Task LockAsync(IEnumerable<int> shiftIds, CancellationToken cancellationToken = default);
+
     /// <summary>Ca còn lịch (chưa hủy) từ ngày <paramref name="fromDate"/> trở đi không — còn thì không cho xóa.</summary>
     Task<bool> HasActiveSchedulesFromAsync(int shiftId, DateTime fromDate, CancellationToken cancellationToken = default);
 }

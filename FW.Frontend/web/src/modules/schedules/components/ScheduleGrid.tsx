@@ -9,8 +9,8 @@ import { Plus } from 'lucide-react';
 import { Avatar } from '@/components/ui/Layout';
 import { Badge } from '@/components/ui/Feedback';
 import { formatDayMonth, weekdayLabels } from '@/lib/dates';
-import type { Schedule } from '@/types/scheduling';
-import { scheduleColor, scheduleStateLabel } from '../scheduleUi';
+import type { Schedule, Shift } from '@/types/scheduling';
+import { countStaffed, hasStaffing, scheduleColor, scheduleStateLabel, staffingLabel, staffingState, type StaffingState } from '../scheduleUi';
 
 export interface GridEmployee {
   id: number;
@@ -24,12 +24,18 @@ interface Props {
   today: string;
   employees: GridEmployee[];
   schedules: Schedule[];
+  /** Các ca của chi nhánh — ca có định biên được tổng hợp thành hàng riêng ở cuối lưới. */
+  shifts: Shift[];
   onAdd: (employee: GridEmployee, day: string) => void;
   onOpen: (schedule: Schedule) => void;
 }
 
+const stateTone: Record<StaffingState, 'amber' | 'green' | 'blue' | 'red'> = { short: 'amber', ok: 'blue', full: 'green', over: 'red' };
+
 /** Lưới tuần: mỗi hàng một nhân viên, mỗi cột một ngày; ô chứa các ca đã xếp và nút thêm ca (ngày chưa qua). */
-export function ScheduleGrid({ days, today, employees, schedules, onAdd, onOpen }: Props) {
+export function ScheduleGrid({ days, today, employees, schedules, shifts, onAdd, onOpen }: Props) {
+  const staffed = countStaffed(schedules);
+  const limited = shifts.filter(hasStaffing);
   const byCell = new Map<string, Schedule[]>();
   for (const s of schedules) {
     const key = `${s.userId}|${s.workDate}`;
@@ -101,6 +107,42 @@ export function ScheduleGrid({ days, today, employees, schedules, onAdd, onOpen 
                           />
                         )}
                       </VStack>
+                    </TableCell>
+                  );
+                })}
+              </TableRow>
+            ))}
+            {limited.map((shift) => (
+              <TableRow key={`staffing-${shift.id}`}>
+                <TableCell>
+                  <VStack gap={0}>
+                    <Text weight="medium" maxLines={1}>
+                      Định biên · {shift.shiftCode}
+                    </Text>
+                    <Text type="supporting">{staffingLabel(shift)} mỗi ngày</Text>
+                  </VStack>
+                </TableCell>
+                {days.map((day) => {
+                  const count = staffed.get(`${shift.id}|${day}`) ?? 0;
+                  const state = staffingState(count, shift);
+                  const upcoming = day >= today;
+                  // Ngày đã qua không cảnh báo thiếu người nữa (không xếp thêm được)
+                  const tone = !upcoming && state === 'short' ? 'blue' : stateTone[state];
+                  const detail =
+                    state === 'short'
+                      ? `Thiếu ${shift.minStaff! - count} người (cần tối thiểu ${shift.minStaff})`
+                      : state === 'full'
+                        ? 'Đã đủ người, không xếp thêm được'
+                        : state === 'over'
+                          ? `Vượt tối đa ${shift.maxStaff} người (định biên bị hạ sau khi đã xếp)`
+                          : 'Trong định biên';
+                  return (
+                    <TableCell key={day}>
+                      <Tooltip content={`${shift.name}: ${count} người · ${detail}`}>
+                        <span>
+                          <Badge tone={tone}>{shift.maxStaff != null ? `${count}/${shift.maxStaff}` : `${count} người`}</Badge>
+                        </span>
+                      </Tooltip>
                     </TableCell>
                   );
                 })}
