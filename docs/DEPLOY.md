@@ -110,6 +110,8 @@ Từ đây mỗi lần `git push` lên `main`: Vercel tự build Web; Render t�
 
 Render gói free ngủ sau ~15 phút không có truy cập. Một service chạy cả tháng ≈ 744 giờ, vừa trong 750 giờ free — nên **chỉ để duy nhất `flexiwork-api` trên Render** (không tạo thêm web service khác).
 
+> **Quyết định (19/11/2026):** chưa bật bước này ngay — giữ API thức 24/7 dùng gần hết 750 giờ free của tháng. Bật **sát ngày báo cáo** (hoặc chỉ đánh thức Render bằng cách mở `https://flexiwork-api.onrender.com/api/healthcheck` khoảng 5 phút trước buổi demo; lần gọi đầu sau khi ngủ mất ~50 giây), rồi **Pause** sau khi xong.
+
 1. Đăng ký <https://uptimerobot.com> (gói Free).
 2. **New Monitor** → Type **HTTP(s)** → URL `https://flexiwork-api.onrender.com/api/healthcheck` → Interval **5 minutes** → **Create**.
 3. Nếu Render báo sắp hết giờ free trong tháng (Billing → Usage): tạm **Pause** monitor; API vẫn chạy, chỉ quay lại cơ chế ngủ.
