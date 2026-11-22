@@ -74,6 +74,11 @@ public class ShiftTaskProgressRow
     public int Done { get; set; }
     public int MandatoryTotal { get; set; }
     public int MandatoryDone { get; set; }
+
+    /// <summary>Số việc mẫu sẽ giao cho người làm ca này (theo ca, chi nhánh, chức vụ) — để hiện "dự kiến" khi họ chưa check-in.</summary>
+    public int Expected { get; set; }
+
+    public int ExpectedMandatory { get; set; }
 }
 
 public interface IShiftTaskAssignmentRepository : IGenericRepository<ShiftTaskAssignment, long>
@@ -83,6 +88,19 @@ public interface IShiftTaskAssignmentRepository : IGenericRepository<ShiftTaskAs
     /// nên cũng dùng để bổ sung việc mới thêm vào mẫu khi ca đang diễn ra.
     /// </summary>
     Task AssignForScheduleAsync(long scheduleId, int userId, int shiftId, int branchId, int? positionId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Giao một việc mẫu vừa thêm / sửa cho MỌI người đang trong ca (đã check-in, chưa check-out) mà việc áp dụng cho — để việc mới không chỉ
+    /// rơi vào người nào đó vừa mở checklist. Người chưa vào ca sẽ nhận khi check-in. Chạy lại được.
+    /// </summary>
+    /// <returns>Số người vừa được giao thêm việc.</returns>
+    Task<int> AssignTemplateToInProgressAsync(int taskId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Bổ sung các việc còn thiếu cho mọi ca ĐANG diễn ra trong ngày (và chi nhánh): sửa dữ liệu của những việc mẫu thêm trước khi có
+    /// <see cref="AssignTemplateToInProgressAsync"/> và bất kỳ trường hợp lệch nào. Chạy lại được.
+    /// </summary>
+    Task<int> AssignForInProgressAsync(DateTime workDate, int? branchId, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<ShiftTaskAssignmentDetail>> GetDetailsByScheduleIdsAsync(IEnumerable<long> scheduleIds,
         CancellationToken cancellationToken = default);

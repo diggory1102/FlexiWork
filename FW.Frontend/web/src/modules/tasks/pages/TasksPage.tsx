@@ -13,7 +13,7 @@ export function TasksPage() {
     <>
       <PageHeader
         title="Công việc theo ca"
-        description="Checklist được giao tự động khi nhân viên check-in vào ca. Theo dõi tiến độ hoàn thành trong ngày và quản lý danh mục việc của từng ca."
+        description="Mỗi nhân viên làm ca (đúng chi nhánh và chức vụ của việc) đều nhận một bản checklist khi check-in; việc thêm giữa ca được giao ngay cho người đang làm. Theo dõi tiến độ trong ngày và quản lý mẫu việc của từng ca."
       />
       <VStack gap={3}>
         <HStack>

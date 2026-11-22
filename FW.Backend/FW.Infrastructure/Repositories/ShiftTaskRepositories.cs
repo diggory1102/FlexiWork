@@ -92,6 +92,35 @@ public class ShiftTaskAssignmentRepository : BaseRepository<ShiftTaskAssignment,
             cancellationToken);
     }
 
+    public Task<int> AssignTemplateToInProgressAsync(int taskId, CancellationToken cancellationToken = default)
+    {
+        const string sql = """
+            INSERT INTO `shift_task_assignments` (`task_id`, `schedule_id`, `assigned_to`)
+            SELECT t.`id`, s.`id`, s.`user_id`
+            FROM `shift_tasks` t
+            JOIN `schedules` s ON s.`shift_id` = t.`shift_id` AND s.`status` = @InProgress AND (t.`branch_id` IS NULL OR t.`branch_id` = s.`branch_id`)
+            JOIN `users` u ON u.`id` = s.`user_id`
+            WHERE t.`id` = @TaskId AND t.`is_deleted` = 0 AND (t.`position_id` IS NULL OR t.`position_id` = u.`position_id`)
+            ON DUPLICATE KEY UPDATE `task_id` = `shift_task_assignments`.`task_id`
+            """;
+        return ExecuteAsync(sql, new { TaskId = taskId, InProgress = ScheduleStatus.InProgress }, cancellationToken);
+    }
+
+    public Task<int> AssignForInProgressAsync(DateTime workDate, int? branchId, CancellationToken cancellationToken = default)
+    {
+        const string sql = """
+            INSERT INTO `shift_task_assignments` (`task_id`, `schedule_id`, `assigned_to`)
+            SELECT t.`id`, s.`id`, s.`user_id`
+            FROM `schedules` s
+            JOIN `users` u ON u.`id` = s.`user_id`
+            JOIN `shift_tasks` t ON t.`shift_id` = s.`shift_id` AND t.`is_deleted` = 0
+                 AND (t.`branch_id` IS NULL OR t.`branch_id` = s.`branch_id`) AND (t.`position_id` IS NULL OR t.`position_id` = u.`position_id`)
+            WHERE s.`work_date` = @WorkDate AND s.`status` = @InProgress AND (@BranchId IS NULL OR s.`branch_id` = @BranchId)
+            ON DUPLICATE KEY UPDATE `task_id` = `shift_task_assignments`.`task_id`
+            """;
+        return ExecuteAsync(sql, new { WorkDate = workDate.Date, BranchId = branchId, InProgress = ScheduleStatus.InProgress }, cancellationToken);
+    }
+
     public async Task<IReadOnlyList<ShiftTaskAssignmentDetail>> GetDetailsByScheduleIdsAsync(IEnumerable<long> scheduleIds,
         CancellationToken cancellationToken = default)
     {
@@ -126,7 +155,11 @@ public class ShiftTaskAssignmentRepository : BaseRepository<ShiftTaskAssignment,
                    COUNT(a.`id`) AS Total,
                    CAST(COALESCE(SUM(a.`is_completed` = 1), 0) AS SIGNED) AS Done,
                    CAST(COALESCE(SUM(t.`is_mandatory` = 1), 0) AS SIGNED) AS MandatoryTotal,
-                   CAST(COALESCE(SUM(t.`is_mandatory` = 1 AND a.`is_completed` = 1), 0) AS SIGNED) AS MandatoryDone
+                   CAST(COALESCE(SUM(t.`is_mandatory` = 1 AND a.`is_completed` = 1), 0) AS SIGNED) AS MandatoryDone,
+                   (SELECT COUNT(*) FROM `shift_tasks` x WHERE x.`shift_id` = s.`shift_id` AND x.`is_deleted` = 0
+                       AND (x.`branch_id` IS NULL OR x.`branch_id` = s.`branch_id`) AND (x.`position_id` IS NULL OR x.`position_id` = u.`position_id`)) AS Expected,
+                   (SELECT COUNT(*) FROM `shift_tasks` x WHERE x.`shift_id` = s.`shift_id` AND x.`is_deleted` = 0 AND x.`is_mandatory` = 1
+                       AND (x.`branch_id` IS NULL OR x.`branch_id` = s.`branch_id`) AND (x.`position_id` IS NULL OR x.`position_id` = u.`position_id`)) AS ExpectedMandatory
             FROM `schedules` s
             JOIN `users` u ON u.`id` = s.`user_id`
             JOIN `branches` b ON b.`id` = s.`branch_id`
@@ -135,7 +168,7 @@ public class ShiftTaskAssignmentRepository : BaseRepository<ShiftTaskAssignment,
             LEFT JOIN `shift_tasks` t ON t.`id` = a.`task_id`
             WHERE s.`work_date` = @WorkDate AND s.`is_published` = 1 AND s.`status` NOT IN @Excluded
               AND (@BranchId IS NULL OR s.`branch_id` = @BranchId)
-            GROUP BY s.`id`, s.`user_id`, u.`employee_code`, u.`full_name`, u.`avatar_url`, s.`branch_id`, b.`name`, s.`work_date`,
+            GROUP BY s.`id`, s.`user_id`, u.`employee_code`, u.`full_name`, u.`avatar_url`, u.`position_id`, s.`shift_id`, s.`branch_id`, b.`name`, s.`work_date`,
                      sh.`name`, sh.`start_time`, sh.`end_time`, s.`status`
             ORDER BY b.`name`, sh.`start_time`, u.`full_name`
             """;

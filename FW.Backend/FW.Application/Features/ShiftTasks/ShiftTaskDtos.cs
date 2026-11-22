@@ -89,12 +89,12 @@ public class CompleteTaskForm
 public record ScheduleProgressDto(
     long ScheduleId, int UserId, string EmployeeCode, string FullName, string? AvatarUrl, int BranchId, string BranchName,
     string ShiftName, string StartTime, string EndTime, string ScheduleStatus, int Total, int Done, int MandatoryTotal, int MandatoryDone,
-    int? Percent)
+    int? Percent, int Expected, int ExpectedMandatory)
 {
     public static ScheduleProgressDto From(ShiftTaskProgressRow r) => new(
         r.ScheduleId, r.UserId, r.EmployeeCode, r.FullName, r.AvatarUrl, r.BranchId, r.BranchName, r.ShiftName,
         r.StartTime.ToString(@"hh\:mm"), r.EndTime.ToString(@"hh\:mm"), r.ScheduleStatus, r.Total, r.Done, r.MandatoryTotal, r.MandatoryDone,
-        ShiftTaskRules.Percent(r.Done, r.Total));
+        ShiftTaskRules.Percent(r.Done, r.Total), r.Expected, r.ExpectedMandatory);
 }
 
 /// <summary>Tiến độ checklist toàn chi nhánh (hoặc toàn doanh nghiệp) trong ngày (UC 6.4).</summary>

@@ -274,4 +274,86 @@ public class ShiftTaskServiceTests
         var hrView = await Service(s, Hr).GetProgressAsync(new TaskProgressFilter { BranchId = Branch1 });
         Assert.Contains(hrView.Schedules, r => r.ScheduleId == aSchedule.Id);
     }
+
+    // ------------------------------------------------------------------ giao việc cho người đang trong ca
+
+    [SkippableFact]
+    public async Task A_new_template_goes_to_everyone_already_in_the_shift_and_is_expected_by_those_not_yet_checked_in()
+    {
+        Skip.IfNot(_db.IsAvailable, _db.SkipReason);
+        await using var s = _db.CreateSession();
+        var shift = await NewShiftAsync(s, Branch1, 13, 17);
+        var cashier1 = await NewEmployeeAsync(s);
+        var cashier2 = await NewEmployeeAsync(s);
+        var waiting = await NewEmployeeAsync(s);                              // chưa check-in
+        var storeManager = await NewEmployeeAsync(s, positionId: StoreManager); // chức vụ khác
+        var schedules = new Dictionary<int, Schedule>();
+        foreach (var u in new[] { cashier1, cashier2, waiting, storeManager }) schedules[u.Id] = await NewScheduleAsync(s, u, shift);
+        foreach (var u in new[] { cashier1, cashier2, storeManager }) await CheckInAsync(s, schedules[u.Id], u);
+
+        // Thêm việc cho ca chiều, chỉ chức vụ Thu ngân — nobody opens any checklist afterwards
+        await Service(s, Manager1).CreateTemplateAsync(Template(shift, "Việc mới của thu ngân", branchId: Branch1, positionId: Cashier));
+
+        var progress = await Service(s, Manager1).GetProgressAsync(new TaskProgressFilter());
+        int Total(User u) => progress.Schedules.Single(r => r.ScheduleId == schedules[u.Id].Id).Total;
+        Assert.Equal(1, Total(cashier1)); // cả hai thu ngân đang trong ca đều có việc ngay
+        Assert.Equal(1, Total(cashier2));
+        Assert.Equal(0, Total(storeManager)); // chức vụ khác không nhận
+
+        var wait = progress.Schedules.Single(r => r.ScheduleId == schedules[waiting.Id].Id);
+        Assert.Equal((0, 1, 1), (wait.Total, wait.Expected, wait.ExpectedMandatory)); // chưa vào ca: dự kiến 1 việc, chưa giao
+        Assert.Equal(0, progress.Schedules.Single(r => r.ScheduleId == schedules[storeManager.Id].Id).Expected);
+
+        // Vào ca rồi thì nhận đúng việc đó, không bị giao trùng
+        await CheckInAsync(s, schedules[waiting.Id], waiting);
+        Assert.Equal(1, Assert.Single(await As(s, waiting).GetMyTasksAsync(null)).Tasks.Count);
+    }
+
+    [SkippableFact]
+    public async Task Progress_repairs_missing_tasks_of_people_already_in_the_shift()
+    {
+        Skip.IfNot(_db.IsAvailable, _db.SkipReason);
+        await using var s = _db.CreateSession();
+        var shift = await NewShiftAsync(s, Branch1, 13, 17);
+        var a = await NewEmployeeAsync(s);
+        var b = await NewEmployeeAsync(s);
+        var aSchedule = await NewScheduleAsync(s, a, shift);
+        var bSchedule = await NewScheduleAsync(s, b, shift);
+        await CheckInAsync(s, aSchedule, a);
+        await CheckInAsync(s, bSchedule, b);
+
+        // Việc mẫu thêm trực tiếp vào CSDL (như dữ liệu cũ, trước khi có giao ngay): chưa ai có việc này
+        await new ShiftTaskRepository(s).AddAsync(new ShiftTask { ShiftId = shift.Id, BranchId = Branch1, Title = "Việc thêm từ trước", Phase = TaskPhase.During, IsMandatory = true });
+
+        var first = await Service(s, Manager1).GetProgressAsync(new TaskProgressFilter());
+        Assert.Equal(1, first.Schedules.Single(r => r.ScheduleId == aSchedule.Id).Total);
+        Assert.Equal(1, first.Schedules.Single(r => r.ScheduleId == bSchedule.Id).Total);
+
+        // Xem lại (bấm "Làm mới") không giao trùng
+        var second = await Service(s, Manager1).GetProgressAsync(new TaskProgressFilter());
+        Assert.Equal(1, second.Schedules.Single(r => r.ScheduleId == aSchedule.Id).Total);
+    }
+
+    [SkippableFact]
+    public async Task Widening_the_position_of_a_template_gives_it_to_the_people_now_covered()
+    {
+        Skip.IfNot(_db.IsAvailable, _db.SkipReason);
+        await using var s = _db.CreateSession();
+        var shift = await NewShiftAsync(s, Branch1, 13, 17);
+        var cashier = await NewEmployeeAsync(s);
+        var manager = await NewEmployeeAsync(s, positionId: StoreManager);
+        var cashierSchedule = await NewScheduleAsync(s, cashier, shift);
+        var managerSchedule = await NewScheduleAsync(s, manager, shift);
+        await CheckInAsync(s, cashierSchedule, cashier);
+        await CheckInAsync(s, managerSchedule, manager);
+
+        var template = await Service(s, Manager1).CreateTemplateAsync(Template(shift, "Chỉ thu ngân", branchId: Branch1, positionId: Cashier));
+        var before = await Service(s, Manager1).GetProgressAsync(new TaskProgressFilter());
+        Assert.Equal(0, before.Schedules.Single(r => r.ScheduleId == managerSchedule.Id).Total);
+
+        await Service(s, Manager1).UpdateTemplateAsync(template.Id, Template(shift, "Cho mọi chức vụ", branchId: Branch1, positionId: null));
+        var after = await Service(s, Manager1).GetProgressAsync(new TaskProgressFilter());
+        Assert.Equal(1, after.Schedules.Single(r => r.ScheduleId == managerSchedule.Id).Total);
+        Assert.Equal(1, after.Schedules.Single(r => r.ScheduleId == cashierSchedule.Id).Total);
+    }
 }

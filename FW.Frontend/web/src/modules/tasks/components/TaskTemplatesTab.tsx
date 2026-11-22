@@ -99,7 +99,7 @@ export function TaskTemplatesTab() {
         <VStack gap={1} hAlign="start">
           {t.branchId == null ? <Badge tone="green">Mọi chi nhánh</Badge> : <Badge tone="gray">{t.branchName}</Badge>}
           <Text type="supporting" size="sm">
-            {t.positionTitle ?? 'Mọi chức vụ'}
+            Giao cho: {t.positionTitle ? `nhân viên chức vụ ${t.positionTitle}` : 'mọi nhân viên làm ca'}
           </Text>
         </VStack>
       ),

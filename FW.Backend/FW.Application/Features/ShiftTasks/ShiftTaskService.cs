@@ -41,7 +41,8 @@ public interface IShiftTaskService
 /// Checklist công việc theo ca (Task 4.3). Quyền mẫu checklist theo ma trận phân quyền: Admin thêm / sửa / xóa mọi việc,
 /// Quản lý thêm / sửa / xóa việc riêng của chi nhánh mình (kể cả trên ca dùng chung), HR chỉ xem. Việc được giao tự động khi
 /// nhân viên check-in (<see cref="IShiftTaskAssignmentRepository.AssignForScheduleAsync"/>, gọi trong AttendanceService);
-/// việc mới thêm vào mẫu khi ca đang diễn ra được bổ sung khi nhân viên mở checklist.
+/// việc mới thêm / sửa vào mẫu được giao ngay cho mọi người đang trong ca (và bổ sung lại mỗi khi xem tiến độ hoặc mở checklist); người chưa vào ca
+/// nhận khi check-in và được hiện là "việc dự kiến".
 /// </summary>
 public class ShiftTaskService : IShiftTaskService
 {
@@ -128,6 +129,7 @@ public class ShiftTaskService : IShiftTaskService
         var task = new ShiftTask { ShiftId = shift.Id, BranchId = branchId };
         await ApplyAsync(task, request, cancellationToken);
         await _tasks.AddAsync(task, cancellationToken);
+        await _assignments.AssignTemplateToInProgressAsync(task.Id, cancellationToken); // người đang trong ca nhận ngay, không chờ ai mở checklist
         return await GetTemplateDtoAsync(task.Id, cancellationToken);
     }
 
@@ -137,6 +139,7 @@ public class ShiftTaskService : IShiftTaskService
         var task = await GetEditableAsync(id, cancellationToken);
         await ApplyAsync(task, request, cancellationToken);
         await _tasks.UpdateAsync(task, cancellationToken);
+        await _assignments.AssignTemplateToInProgressAsync(id, cancellationToken); // đổi chức vụ sang rộng hơn thì người đang trong ca nhận thêm
         return await GetTemplateDtoAsync(id, cancellationToken);
     }
 
@@ -283,6 +286,8 @@ public class ShiftTaskService : IShiftTaskService
         if (branchId.HasValue) _currentUser.EnsureCanAccessBranch(branchId);
         var day = (filter.Date ?? _clock.Today).ToDateTime(TimeOnly.MinValue);
 
+        // Ca đang diễn ra phải có đủ việc: bổ sung những việc mẫu thêm trước đây mà chưa ai mở checklist (sửa cả dữ liệu cũ)
+        await _assignments.AssignForInProgressAsync(day, branchId, cancellationToken);
         var rows = await _assignments.GetProgressAsync(day, branchId, cancellationToken);
         var total = rows.Sum(r => r.Total);
         var done = rows.Sum(r => r.Done);

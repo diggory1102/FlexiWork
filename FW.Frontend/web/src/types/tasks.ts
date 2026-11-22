@@ -54,6 +54,9 @@ export interface ScheduleProgress {
   mandatoryTotal: number;
   mandatoryDone: number;
   percent: number | null;
+  /** Số việc mẫu sẽ giao cho người làm ca này — hiện "dự kiến" khi họ chưa check-in. */
+  expected: number;
+  expectedMandatory: number;
 }
 
 export interface TaskProgress {

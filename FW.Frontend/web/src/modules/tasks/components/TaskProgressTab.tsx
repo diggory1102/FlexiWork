@@ -114,7 +114,16 @@ export function TaskProgressTab() {
       width: 260,
       render: (r) =>
         r.total === 0 ? (
-          <Text type="supporting">{r.scheduleStatus === 'scheduled' ? 'Chưa vào ca' : 'Chưa có việc'}</Text>
+          r.expected > 0 && r.scheduleStatus === 'scheduled' ? (
+            <VStack gap={0.5}>
+              <Text>Dự kiến {r.expected} việc</Text>
+              <Text type="supporting" size="sm">
+                Sẽ nhận khi vào ca
+              </Text>
+            </VStack>
+          ) : (
+            <Text type="supporting">{r.expected === 0 ? 'Ca này chưa có việc nào áp dụng' : 'Chưa có việc'}</Text>
+          )
         ) : (
           <ProgressBar
             label={`Tiến độ của ${r.fullName}`}
@@ -132,7 +141,7 @@ export function TaskProgressTab() {
       width: 150,
       render: (r) => {
         const pending = r.mandatoryTotal - r.mandatoryDone;
-        if (r.mandatoryTotal === 0) return <Text type="supporting">—</Text>;
+        if (r.mandatoryTotal === 0) return <Text type="supporting">{r.total === 0 && r.expectedMandatory > 0 ? `${r.expectedMandatory} việc (dự kiến)` : '—'}</Text>;
         return pending > 0 ? <Badge tone="amber">Còn {pending} việc</Badge> : <Badge tone="green">Đã xong</Badge>;
       },
     },
@@ -160,7 +169,7 @@ export function TaskProgressTab() {
             value={data ? String(data.mandatoryPending) : '—'}
             tone={data && data.mandatoryPending > 0 ? 'amber' : undefined}
           />
-          <Summary label="Ca chưa check-in" value={data ? String(data.notStarted) : '—'} hint="Chưa được giao việc" />
+          <Summary label="Ca chưa check-in" value={data ? String(data.notStarted) : '—'} hint="Nhận việc khi vào ca (xem cột Dự kiến)" />
         </Grid>
 
         <ListCard>

@@ -113,7 +113,7 @@ export function TaskTemplateFormModal({ open, task, defaultShiftId, onClose, onS
       size="md"
       purpose="form"
       title={task ? 'Sửa việc trong checklist' : 'Thêm việc vào checklist'}
-      description="Việc được giao tự động cho nhân viên khi họ check-in vào ca."
+      description="Nhân viên đang trong ca nhận việc ngay khi bạn lưu; nhân viên chưa vào ca sẽ nhận khi check-in. Mỗi người làm ca (đúng chi nhánh và chức vụ bên dưới) đều có một bản việc này."
       footer={
         <>
           <Button label="Hủy" variant="secondary" onClick={onClose} />
@@ -171,7 +171,7 @@ export function TaskTemplateFormModal({ open, task, defaultShiftId, onClose, onS
             )}
             <Selector
               label="Chức vụ"
-              labelTooltip="Chỉ giao cho nhân viên giữ chức vụ này; để 'Mọi chức vụ' thì giao cho tất cả nhân viên của ca."
+              labelTooltip="Chỉ giao cho nhân viên giữ chức vụ này; để 'Mọi chức vụ' thì giao cho TẤT CẢ nhân viên làm ca đó (mỗi người một bản việc)."
               options={[{ value: ANY, label: 'Mọi chức vụ' }, ...positions.map((p) => ({ value: String(p.id), label: p.title }))]}
               value={form.positionId == null ? ANY : String(form.positionId)}
               onChange={(v) => set('positionId', !v || v === ANY ? null : Number(v))}
