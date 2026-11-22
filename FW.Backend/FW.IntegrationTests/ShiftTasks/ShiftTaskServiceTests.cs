@@ -116,10 +116,10 @@ public class ShiftTaskServiceTests
     }
 
     private static ShiftTaskTemplateRequest Template(Shift shift, string title, int? branchId = null, int? positionId = null,
-        string phase = TaskPhase.During, bool photo = false, bool mandatory = true, int sort = 0) => new()
+        string phase = TaskPhase.During, bool photo = false, bool mandatory = true, int sort = 0, string mode = TaskAssignMode.Each) => new()
     {
         ShiftId = shift.Id, BranchId = branchId, PositionId = positionId, Title = title, Phase = phase, RequiresPhoto = photo,
-        IsMandatory = mandatory, SortOrder = sort
+        IsMandatory = mandatory, SortOrder = sort, AssignMode = mode
     };
 
     /// <summary>Giả lập check-in: ca chuyển sang đang làm và giao checklist (như AttendanceService).</summary>
@@ -355,5 +355,220 @@ public class ShiftTaskServiceTests
         var after = await Service(s, Manager1).GetProgressAsync(new TaskProgressFilter());
         Assert.Equal(1, after.Schedules.Single(r => r.ScheduleId == managerSchedule.Id).Total);
         Assert.Equal(1, after.Schedules.Single(r => r.ScheduleId == cashierSchedule.Id).Total);
+    }
+
+    // ------------------------------------------------------------------ việc làm chung (một người xong là cả ca xong)
+
+    private static async Task<(User A, User B, long AId, long BId, string Title)> TwoOnSharedTaskAsync(DbSession s, bool photo = false)
+    {
+        var shift = await NewShiftAsync(s, Branch1, 13, 17);
+        var a = await NewEmployeeAsync(s);
+        var b = await NewEmployeeAsync(s);
+        var sa = await NewScheduleAsync(s, a, shift);
+        var sb = await NewScheduleAsync(s, b, shift);
+        var title = $"Mở cửa {Guid.NewGuid():N}"[..16];
+        await Service(s, Manager1).CreateTemplateAsync(Template(shift, title, branchId: Branch1, photo: photo, mode: TaskAssignMode.Shared));
+        await CheckInAsync(s, sa, a);
+        await CheckInAsync(s, sb, b);
+        var aItem = Assert.Single((await As(s, a).GetMyTasksAsync(null)).Single().Tasks);
+        var bItem = Assert.Single((await As(s, b).GetMyTasksAsync(null)).Single().Tasks);
+        return (a, b, aItem.AssignmentId!.Value, bItem.AssignmentId!.Value, title);
+    }
+
+    private static async Task<TaskItemDto> OnlyItemAsync(DbSession s, User user, string? title = null)
+    {
+        var tasks = (await As(s, user).GetMyTasksAsync(null)).Single().Tasks;
+        return title is null ? Assert.Single(tasks) : tasks.Single(t => t.Title == title);
+    }
+
+    [SkippableFact]
+    public async Task Shared_task_completed_by_one_person_is_done_for_the_whole_shift()
+    {
+        Skip.IfNot(_db.IsAvailable, _db.SkipReason);
+        await using var s = _db.CreateSession();
+        var (a, b, aId, _, title) = await TwoOnSharedTaskAsync(s);
+
+        var afterA = await As(s, a).CompleteAsync(aId, new CompleteTaskForm(), null);
+        Assert.Equal((1, 1), (afterA.Total, afterA.Done));
+
+        // B không phải bấm: thấy việc đã xong, kèm tên người làm
+        var bView = (await As(s, b).GetMyTasksAsync(null)).Single();
+        var item = Assert.Single(bView.Tasks);
+        Assert.True(item.IsCompleted);
+        Assert.Equal(TaskAssignMode.Shared, item.AssignMode);
+        Assert.Equal(a.Id, item.CompletedByUserId);
+        Assert.Equal(a.FullName, item.CompletedByName);
+        Assert.Equal(100, bView.Percent);
+
+        // Quản lý thấy cả hai đều 1/1 và biết ai đã làm
+        var progress = await Service(s, Manager1).GetProgressAsync(new TaskProgressFilter());
+        foreach (var u in new[] { a, b })
+        {
+            var row = progress.Schedules.Single(r => r.UserId == u.Id);
+            Assert.Equal((1, 1), (row.Total, row.Done));
+        }
+        var shared = Assert.Single(progress.SharedTasks, t => t.Title == title);
+        Assert.True(shared.IsDone);
+        Assert.Equal(a.FullName, shared.CompletedByName);
+    }
+
+    [SkippableFact]
+    public async Task Shared_task_shows_nobody_yet_until_someone_does_it_and_a_second_attempt_is_refused()
+    {
+        Skip.IfNot(_db.IsAvailable, _db.SkipReason);
+        await using var s = _db.CreateSession();
+        var (a, b, aId, bId, title) = await TwoOnSharedTaskAsync(s);
+
+        var before = Assert.Single((await Service(s, Manager1).GetProgressAsync(new TaskProgressFilter())).SharedTasks, t => t.Title == title);
+        Assert.False(before.IsDone);
+        Assert.Null(before.CompletedByName);
+
+        await As(s, a).CompleteAsync(aId, new CompleteTaskForm(), null);
+        var refused = await Assert.ThrowsAsync<BadRequestException>(() => As(s, b).CompleteAsync(bId, new CompleteTaskForm(), null));
+        Assert.Contains(a.FullName, refused.Message);
+    }
+
+    [SkippableFact]
+    public async Task Only_the_one_who_did_it_or_a_manager_can_undo_a_shared_task_and_it_reopens_for_everyone()
+    {
+        Skip.IfNot(_db.IsAvailable, _db.SkipReason);
+        await using var s = _db.CreateSession();
+        var storage = new MemoryStorage();
+        var (a, b, aId, bId, _) = await TwoOnSharedTaskAsync(s, photo: true);
+
+        await As(s, a, storage).CompleteAsync(aId, new CompleteTaskForm(), Photo());
+        Assert.NotNull((await OnlyItemAsync(s, b)).ProofImageUrl); // cả ca thấy ảnh minh chứng của người đã làm
+
+        await Assert.ThrowsAsync<ForbiddenException>(() => As(s, b, storage).UncompleteAsync(bId));
+
+        var reopened = await As(s, a, storage).UncompleteAsync(aId);
+        Assert.Equal(0, reopened.Done);
+        Assert.Single(storage.Deleted);
+        Assert.False((await OnlyItemAsync(s, b)).IsCompleted);
+        Assert.Null((await OnlyItemAsync(s, b)).ProofImageUrl);
+    }
+
+    [SkippableFact]
+    public async Task A_manager_can_undo_a_shared_task_done_by_someone_else()
+    {
+        Skip.IfNot(_db.IsAvailable, _db.SkipReason);
+        await using var s = _db.CreateSession();
+        var (a, b, aId, bId, _) = await TwoOnSharedTaskAsync(s);
+
+        await As(s, a).CompleteAsync(aId, new CompleteTaskForm(), null);
+        await Service(s, Manager1).UncompleteAsync(bId); // Quản lý chi nhánh bỏ tích qua bản việc của B → cả nhóm mở lại
+        Assert.False((await OnlyItemAsync(s, a)).IsCompleted);
+        Assert.False((await OnlyItemAsync(s, b)).IsCompleted);
+
+        // Quản lý chi nhánh khác không có quyền
+        await As(s, a).CompleteAsync(aId, new CompleteTaskForm(), null);
+        await Assert.ThrowsAsync<ForbiddenException>(() => Service(s, new TestUser(ManagerId, Branch2, RoleNames.Manager)).UncompleteAsync(bId));
+    }
+
+    [SkippableFact]
+    public async Task Late_check_in_sees_a_shared_task_already_done_and_is_not_asked_to_redo_it()
+    {
+        Skip.IfNot(_db.IsAvailable, _db.SkipReason);
+        await using var s = _db.CreateSession();
+        var shift = await NewShiftAsync(s, Branch1, 13, 17);
+        var a = await NewEmployeeAsync(s);
+        var late = await NewEmployeeAsync(s);
+        var sa = await NewScheduleAsync(s, a, shift);
+        var sl = await NewScheduleAsync(s, late, shift);
+        await Service(s, Manager1).CreateTemplateAsync(Template(shift, "Lau sàn", branchId: Branch1, mode: TaskAssignMode.Shared));
+        await CheckInAsync(s, sa, a);
+        await As(s, a).CompleteAsync((await OnlyItemAsync(s, a)).AssignmentId!.Value, new CompleteTaskForm(), null);
+
+        await CheckInAsync(s, sl, late); // vào ca sau khi việc đã xong
+
+        var view = (await As(s, late).GetMyTasksAsync(null)).Single();
+        var item = Assert.Single(view.Tasks);
+        Assert.True(item.IsCompleted);
+        Assert.Equal(a.FullName, item.CompletedByName);
+        Assert.Equal(100, view.Percent);
+    }
+
+    [SkippableFact]
+    public async Task Each_mode_is_unchanged_and_shared_results_do_not_leak_to_other_branches()
+    {
+        Skip.IfNot(_db.IsAvailable, _db.SkipReason);
+        await using var s = _db.CreateSession();
+        var shift = await NewShiftAsync(s, null, 13, 17);
+        var a = await NewEmployeeAsync(s);
+        var b = await NewEmployeeAsync(s);
+        var otherBranch = await NewEmployeeAsync(s, branchId: Branch2);
+        var sa = await NewScheduleAsync(s, a, shift);
+        var sb = await NewScheduleAsync(s, b, shift);
+        var so = await NewScheduleAsync(s, otherBranch, shift, branchId: Branch2);
+        await Service(s, Admin).CreateTemplateAsync(Template(shift, "Riêng từng người", mode: TaskAssignMode.Each, sort: 1));
+        await Service(s, Admin).CreateTemplateAsync(Template(shift, "Làm chung", mode: TaskAssignMode.Shared, sort: 2));
+        await CheckInAsync(s, sa, a);
+        await CheckInAsync(s, sb, b);
+        await CheckInAsync(s, so, otherBranch);
+
+        await As(s, a).CompleteAsync((await OnlyItemAsync(s, a, "Riêng từng người")).AssignmentId!.Value, new CompleteTaskForm(), null);
+        await As(s, a).CompleteAsync((await OnlyItemAsync(s, a, "Làm chung")).AssignmentId!.Value, new CompleteTaskForm(), null);
+
+        Assert.False((await OnlyItemAsync(s, b, "Riêng từng người")).IsCompleted); // việc riêng: B vẫn phải tự làm
+        Assert.True((await OnlyItemAsync(s, b, "Làm chung")).IsCompleted);          // việc chung: B được tính
+        Assert.False((await OnlyItemAsync(s, otherBranch, "Làm chung")).IsCompleted); // chi nhánh khác có việc chung của riêng họ
+    }
+
+    [SkippableFact]
+    public async Task Two_people_completing_the_same_shared_task_at_once_leaves_exactly_one_winner()
+    {
+        Skip.IfNot(_db.IsAvailable, _db.SkipReason);
+        await using var setup = _db.CreateSession();
+        for (var round = 0; round < 5; round++)
+        {
+            var (a, b, aId, bId, _) = await TwoOnSharedTaskAsync(setup);
+            await using var sessionA = _db.CreateSession();
+            await using var sessionB = _db.CreateSession();
+            var results = await Task.WhenAll(Attempt(As(sessionA, a), aId), Attempt(As(sessionB, b), bId));
+
+            Assert.Equal(1, results.Count(ok => ok));
+            var viewA = await OnlyItemAsync(setup, a);
+            var viewB = await OnlyItemAsync(setup, b);
+            Assert.True(viewA.IsCompleted && viewB.IsCompleted);
+            Assert.Equal(viewA.CompletedByUserId, viewB.CompletedByUserId); // cả hai cùng thấy một người thắng
+        }
+
+        static async Task<bool> Attempt(ShiftTaskService service, long id)
+        {
+            try
+            {
+                await service.CompleteAsync(id, new CompleteTaskForm(), null);
+                return true;
+            }
+            catch (BadRequestException)
+            {
+                return false;
+            }
+        }
+    }
+
+    [SkippableFact]
+    public async Task Template_rejects_an_unknown_assign_mode_and_switching_to_shared_applies_existing_results()
+    {
+        Skip.IfNot(_db.IsAvailable, _db.SkipReason);
+        await using var s = _db.CreateSession();
+        var shift = await NewShiftAsync(s, Branch1, 13, 17);
+        await Assert.ThrowsAsync<BadRequestException>(() => Service(s, Manager1).CreateTemplateAsync(Template(shift, "Sai", branchId: Branch1, mode: "bogus")));
+
+        var a = await NewEmployeeAsync(s);
+        var b = await NewEmployeeAsync(s);
+        var sa = await NewScheduleAsync(s, a, shift);
+        var sb = await NewScheduleAsync(s, b, shift);
+        var template = await Service(s, Manager1).CreateTemplateAsync(Template(shift, "Đổi cách giao", branchId: Branch1));
+        Assert.Equal(TaskAssignMode.Each, template.AssignMode);
+        await CheckInAsync(s, sa, a);
+        await CheckInAsync(s, sb, b);
+
+        await As(s, a).CompleteAsync((await OnlyItemAsync(s, a)).AssignmentId!.Value, new CompleteTaskForm(), null);
+        Assert.False((await OnlyItemAsync(s, b)).IsCompleted); // đang là "mỗi người một bản"
+
+        var changed = await Service(s, Manager1).UpdateTemplateAsync(template.Id, Template(shift, "Đổi cách giao", branchId: Branch1, mode: TaskAssignMode.Shared));
+        Assert.Equal(TaskAssignMode.Shared, changed.AssignMode);
+        Assert.True((await OnlyItemAsync(s, b)).IsCompleted); // kết quả của A được áp cho cả nhóm
     }
 }

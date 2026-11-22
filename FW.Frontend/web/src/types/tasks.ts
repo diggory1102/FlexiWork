@@ -2,6 +2,9 @@
 
 export type TaskPhase = 'start' | 'during' | 'end';
 
+/** each = mỗi người một bản việc; shared = làm chung, một người xong là cả ca xong. */
+export type TaskAssignMode = 'each' | 'shared';
+
 export interface TaskTemplate {
   id: number;
   shiftId: number;
@@ -17,6 +20,7 @@ export interface TaskTemplate {
   sortOrder: number;
   isMandatory: boolean;
   requiresPhoto: boolean;
+  assignMode: TaskAssignMode;
   canEdit: boolean;
 }
 
@@ -30,6 +34,7 @@ export interface TaskTemplateRequest {
   sortOrder: number;
   isMandatory: boolean;
   requiresPhoto: boolean;
+  assignMode: TaskAssignMode;
 }
 
 export interface TaskTemplateFilter {
@@ -59,6 +64,23 @@ export interface ScheduleProgress {
   expectedMandatory: number;
 }
 
+/** Một việc làm chung của một ca: ai đã làm hoặc chưa ai nhận. */
+export interface SharedTask {
+  taskId: number;
+  title: string;
+  phase: TaskPhase;
+  isMandatory: boolean;
+  branchId: number;
+  branchName: string;
+  shiftName: string;
+  startTime: string;
+  endTime: string;
+  participants: number;
+  isDone: boolean;
+  completedByName: string | null;
+  completedAt: string | null;
+}
+
 export interface TaskProgress {
   date: string;
   branchId: number | null;
@@ -68,6 +90,7 @@ export interface TaskProgress {
   mandatoryPending: number;
   notStarted: number;
   schedules: ScheduleProgress[];
+  sharedTasks: SharedTask[];
 }
 
 export interface TaskItem {
@@ -83,6 +106,10 @@ export interface TaskItem {
   completedAt: string | null;
   proofImageUrl: string | null;
   note: string | null;
+  assignMode: TaskAssignMode;
+  /** Người đã hoàn thành (việc làm chung có thể là đồng nghiệp). */
+  completedByUserId: number | null;
+  completedByName: string | null;
 }
 
 export interface ScheduleTasks {

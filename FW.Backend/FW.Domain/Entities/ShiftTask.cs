@@ -26,6 +26,11 @@ public class ShiftTask : BaseAuditableEntity
 
     /// <summary>Phải chụp ảnh hiện trường khi tích hoàn thành.</summary>
     public bool RequiresPhoto { get; set; }
+
+    /// <summary>Giá trị thuộc <see cref="TaskAssignMode"/>: mỗi người một bản hoặc làm chung (một người xong là cả ca xong).</summary>
+    public string AssignMode { get; set; } = TaskAssignMode.Each;
+
+    public bool IsShared => AssignMode == TaskAssignMode.Shared;
 }
 
 /// <summary>Một đầu việc được giao cho nhân viên trong một ca cụ thể (bảng shift_task_assignments).</summary>
@@ -36,6 +41,10 @@ public class ShiftTaskAssignment : BaseEntity<long>, IAuditableEntity
     public int AssignedTo { get; set; }
     public bool IsCompleted { get; set; }
     public DateTime? CompletedAt { get; set; }
+
+    /// <summary>Người đã bấm hoàn thành. Việc làm chung: những người còn lại cũng mang giá trị này (thấy "đã được X làm"). Null ở dữ liệu cũ.</summary>
+    public int? CompletedBy { get; set; }
+
     public string? ProofImageUrl { get; set; }
     public string? ProofImagePublicId { get; set; }
     public string? Note { get; set; }

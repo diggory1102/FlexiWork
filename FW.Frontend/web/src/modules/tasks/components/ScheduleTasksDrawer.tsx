@@ -5,16 +5,21 @@ import { ProgressBar } from '@astryxdesign/core/ProgressBar';
 import { HStack, VStack } from '@astryxdesign/core/Stack';
 import { Heading, Text } from '@astryxdesign/core/Text';
 import { Thumbnail } from '@astryxdesign/core/Thumbnail';
+import { Button } from '@astryxdesign/core/Button';
 import { CheckCircle2, Circle } from 'lucide-react';
 import { DetailDrawer } from '@/components/ui/DetailDrawer';
 import { Avatar } from '@/components/ui/Layout';
 import { Badge, FormError, Spinner } from '@/components/ui/Feedback';
+import { ConfirmDialog } from '@/components/ui/Modal';
+import { useDeleteDialog } from '@/hooks/useDeleteDialog';
+import { useAuthStore } from '@/stores/authStore';
+import { Roles } from '@/types/auth';
 import { taskApi } from '@/services/taskApi';
 import { getErrorMessage } from '@/services/apiClient';
 import { formatDate } from '@/lib/format';
 import { scheduleStatusLabels } from '@/modules/schedules/scheduleUi';
 import type { ScheduleStatus } from '@/types/scheduling';
-import type { ScheduleProgress, ScheduleTasks, TaskPhase } from '@/types/tasks';
+import type { ScheduleProgress, ScheduleTasks, TaskItem, TaskPhase } from '@/types/tasks';
 import { phaseLabels, progressVariant } from '../taskUi';
 
 const phases: TaskPhase[] = ['start', 'during', 'end'];
@@ -25,13 +30,25 @@ interface Props {
   date: string;
   open: boolean;
   onClose: () => void;
+  /** Gọi sau khi Quản lý bỏ tích một việc (để tải lại bảng tiến độ). */
+  onChanged?: () => void;
 }
 
 /** Ngăn chi tiết checklist của một ca (UC 6.4): từng việc đã làm hay chưa, giờ xong, ghi chú và ảnh hiện trường. */
-export function ScheduleTasksDrawer({ row, date, open, onClose }: Props) {
+export function ScheduleTasksDrawer({ row, date, open, onClose, onChanged }: Props) {
   const [data, setData] = useState<ScheduleTasks | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [photo, setPhoto] = useState<{ src: string; alt: string } | null>(null);
+
+  const canUndo = useAuthStore((s) => s.hasAnyRole([Roles.Admin, Roles.Manager]));
+  const [reloadKey, setReloadKey] = useState(0);
+  const undo = useDeleteDialog(
+    (item: TaskItem) => taskApi.uncomplete(item.assignmentId!),
+    () => {
+      setReloadKey((k) => k + 1);
+      onChanged?.();
+    },
+  );
 
   const scheduleId = row?.scheduleId;
   useEffect(() => {
@@ -46,7 +63,7 @@ export function ScheduleTasksDrawer({ row, date, open, onClose }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [open, scheduleId]);
+  }, [open, scheduleId, reloadKey]);
 
   const mandatoryPending = data ? data.tasks.filter((t) => t.isMandatory && !t.isCompleted).length : 0;
 
@@ -132,8 +149,10 @@ export function ScheduleTasksDrawer({ row, date, open, onClose }: Props) {
                                     <HStack gap={1.5} wrap="wrap" vAlign="center">
                                       {t.isMandatory && <Badge tone="amber">Bắt buộc</Badge>}
                                       {t.requiresPhoto && <Badge tone="blue">Cần ảnh</Badge>}
+                                      {t.assignMode === 'shared' && <Badge tone="purple">Làm chung</Badge>}
                                       {t.isCompleted && t.completedAt && (
                                         <Text size="sm" color="secondary">
+                                          {t.assignMode === 'shared' && t.completedByName ? `${t.completedByName} đã làm · ` : ''}
                                           Xong lúc {t.completedAt.slice(11, 16)}
                                         </Text>
                                       )}
@@ -154,6 +173,9 @@ export function ScheduleTasksDrawer({ row, date, open, onClose }: Props) {
                                     style={{ width: 64, height: 64 }}
                                   />
                                 )}
+                                {canUndo && t.isCompleted && t.assignmentId != null && row?.scheduleStatus === 'in_progress' && (
+                                  <Button label="Bỏ tích" size="sm" variant="ghost" onClick={() => undo.ask(t)} />
+                                )}
                               </HStack>
                             ))}
                           </VStack>
@@ -164,6 +186,17 @@ export function ScheduleTasksDrawer({ row, date, open, onClose }: Props) {
                 </VStack>
               )}
       </DetailDrawer>
+      <ConfirmDialog
+        {...undo.dialog}
+        title="Bỏ tích việc này"
+        message={
+          <>
+            Bỏ tích <b>{undo.target?.title}</b>?{' '}
+            {undo.target?.assignMode === 'shared' ? 'Việc làm chung sẽ mở lại cho cả ca và ảnh minh chứng (nếu có) bị xóa.' : 'Việc sẽ trở về chưa hoàn thành.'}
+          </>
+        }
+        confirmText="Bỏ tích"
+      />
       {photo && <Lightbox isOpen onOpenChange={(isOpen) => !isOpen && setPhoto(null)} media={photo} hasZoom />}
     </>
   );

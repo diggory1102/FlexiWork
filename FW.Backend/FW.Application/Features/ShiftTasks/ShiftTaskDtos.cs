@@ -9,11 +9,11 @@ namespace FW.Application.Features.ShiftTasks;
 /// <param name="CanEdit">Người đang xem sửa / xóa được việc này (Quản lý chỉ sửa việc riêng của chi nhánh mình).</param>
 public record ShiftTaskTemplateDto(
     int Id, int ShiftId, string ShiftCode, string ShiftName, int? BranchId, string? BranchName, int? PositionId, string? PositionTitle,
-    string Title, string? Description, string Phase, int SortOrder, bool IsMandatory, bool RequiresPhoto, bool CanEdit)
+    string Title, string? Description, string Phase, int SortOrder, bool IsMandatory, bool RequiresPhoto, string AssignMode, bool CanEdit)
 {
     public static ShiftTaskTemplateDto From(ShiftTaskDetail t, bool canEdit) => new(
         t.Id, t.ShiftId, t.ShiftCode, t.ShiftName, t.BranchId, t.BranchName, t.PositionId, t.PositionTitle,
-        t.Title, t.Description, t.Phase, t.SortOrder, t.IsMandatory, t.RequiresPhoto, canEdit);
+        t.Title, t.Description, t.Phase, t.SortOrder, t.IsMandatory, t.RequiresPhoto, t.AssignMode, canEdit);
 }
 
 /// <summary>
@@ -45,6 +45,9 @@ public class ShiftTaskTemplateRequest
 
     public bool IsMandatory { get; set; } = true;
     public bool RequiresPhoto { get; set; }
+
+    /// <summary>each = mỗi người một bản (mặc định); shared = làm chung, một người xong là cả ca xong.</summary>
+    public string AssignMode { get; set; } = Domain.Enums.TaskAssignMode.Each;
 }
 
 public class ShiftTaskTemplateFilter
@@ -58,16 +61,18 @@ public class ShiftTaskTemplateFilter
 // ---------------------------------------------------------------- Checklist trong ca
 
 /// <param name="AssignmentId">Null = việc dự kiến (ca chưa check-in, chưa giao).</param>
+/// <param name="AssignMode">each = việc riêng của người xem; shared = làm chung cả ca.</param>
+/// <param name="CompletedByUserId">Người đã hoàn thành (việc làm chung có thể là đồng nghiệp); null nếu chưa xong.</param>
 public record TaskItemDto(
     long? AssignmentId, int TaskId, string Title, string? Description, string Phase, int SortOrder, bool IsMandatory, bool RequiresPhoto,
-    bool IsCompleted, DateTime? CompletedAt, string? ProofImageUrl, string? Note)
+    bool IsCompleted, DateTime? CompletedAt, string? ProofImageUrl, string? Note, string AssignMode, int? CompletedByUserId, string? CompletedByName)
 {
     public static TaskItemDto From(ShiftTaskAssignmentDetail a) => new(
         a.Id, a.TaskId, a.Title, a.Description, a.Phase, a.SortOrder, a.IsMandatory, a.RequiresPhoto,
-        a.IsCompleted, a.CompletedAt, a.ProofImageUrl, a.Note);
+        a.IsCompleted, a.CompletedAt, a.ProofImageUrl, a.Note, a.AssignMode, a.EffectiveCompletedBy, a.CompletedByName);
 
     public static TaskItemDto Preview(Domain.Entities.ShiftTask t) => new(
-        null, t.Id, t.Title, t.Description, t.Phase, t.SortOrder, t.IsMandatory, t.RequiresPhoto, false, null, null, null);
+        null, t.Id, t.Title, t.Description, t.Phase, t.SortOrder, t.IsMandatory, t.RequiresPhoto, false, null, null, null, t.AssignMode, null, null);
 }
 
 /// <summary>Checklist của một ca.</summary>
@@ -97,12 +102,23 @@ public record ScheduleProgressDto(
         ShiftTaskRules.Percent(r.Done, r.Total), r.Expected, r.ExpectedMandatory);
 }
 
+/// <summary>Một việc làm chung của một ca: ai đã làm hoặc chưa ai nhận.</summary>
+public record SharedTaskDto(
+    int TaskId, string Title, string Phase, bool IsMandatory, int BranchId, string BranchName, string ShiftName, string StartTime, string EndTime,
+    int Participants, bool IsDone, string? CompletedByName, DateTime? CompletedAt)
+{
+    public static SharedTaskDto From(SharedTaskProgressRow r) => new(
+        r.TaskId, r.Title, r.Phase, r.IsMandatory, r.BranchId, r.BranchName, r.ShiftName, r.StartTime.ToString(@"hh\:mm"), r.EndTime.ToString(@"hh\:mm"),
+        r.Participants, r.IsDone, r.IsDone ? r.CompletedByName : null, r.IsDone ? r.CompletedAt : null);
+}
+
 /// <summary>Tiến độ checklist toàn chi nhánh (hoặc toàn doanh nghiệp) trong ngày (UC 6.4).</summary>
 /// <param name="MandatoryPending">Số việc bắt buộc chưa xong (của các ca đã giao việc).</param>
 /// <param name="NotStarted">Số ca chưa check-in (chưa giao việc).</param>
+/// <param name="SharedTasks">Các việc làm chung trong ngày (ai làm, chưa ai nhận).</param>
 public record TaskProgressDto(
     DateTime Date, int? BranchId, int TotalTasks, int DoneTasks, int? Percent, int MandatoryPending, int NotStarted,
-    IReadOnlyList<ScheduleProgressDto> Schedules);
+    IReadOnlyList<ScheduleProgressDto> Schedules, IReadOnlyList<SharedTaskDto> SharedTasks);
 
 public class TaskProgressFilter
 {

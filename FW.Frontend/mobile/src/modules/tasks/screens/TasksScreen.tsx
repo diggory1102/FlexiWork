@@ -70,13 +70,13 @@ export function TasksScreen() {
           <Text style={styles.muted}>Checklist công việc hiện theo ca làm trong ngày.</Text>
         </Card>
       ) : (
-        vm.shifts.map((s) => <ShiftChecklist key={s.scheduleId} shift={s} onChanged={vm.replace} />)
+        vm.shifts.map((s) => <ShiftChecklist key={s.scheduleId} shift={s} onChanged={vm.replace} onStale={() => void vm.reload()} />)
       )}
     </ScrollView>
   );
 }
 
-function ShiftChecklist({ shift, onChanged }: { shift: ScheduleTasks; onChanged: (s: ScheduleTasks) => void }) {
+function ShiftChecklist({ shift, onChanged, onStale }: { shift: ScheduleTasks; onChanged: (s: ScheduleTasks) => void; onStale: () => void }) {
   const [openId, setOpenId] = useState<number | null>(null);
   const percent = shift.percent ?? 0;
 
@@ -123,7 +123,9 @@ function ShiftChecklist({ shift, onChanged }: { shift: ScheduleTasks; onChanged:
                 <TaskRow
                   key={t.assignmentId ?? `p${t.taskId}`}
                   task={t}
-                  editable={shift.canUpdate && t.assignmentId != null}
+                  // Việc làm chung do đồng nghiệp đã hoàn thành: chỉ người đó (hoặc Quản lý) bỏ tích được
+                  editable={shift.canUpdate && t.assignmentId != null && (t.completedByUserId == null || t.completedByUserId === shift.userId)}
+                  onStale={onStale}
                   open={openId === t.assignmentId && t.assignmentId != null}
                   onToggle={() => setOpenId((cur) => (cur === t.assignmentId ? null : t.assignmentId))}
                   onChanged={(s) => {
@@ -140,12 +142,13 @@ function ShiftChecklist({ shift, onChanged }: { shift: ScheduleTasks; onChanged:
   );
 }
 
-function TaskRow({ task, editable, open, onToggle, onChanged }: {
+function TaskRow({ task, editable, open, onToggle, onChanged, onStale }: {
   task: TaskItem;
   editable: boolean;
   open: boolean;
   onToggle: () => void;
   onChanged: (s: ScheduleTasks) => void;
+  onStale: () => void;
 }) {
   const [note, setNote] = useState('');
   const [photo, setPhoto] = useState<PickedImage | null>(null);
@@ -162,6 +165,7 @@ function TaskRow({ task, editable, open, onToggle, onChanged }: {
       notify(message);
     } catch (err) {
       notify(getErrorMessage(err), 'Không thực hiện được');
+      if (task.assignMode === 'shared') onStale(); // có thể đồng nghiệp vừa làm xong — tải lại để thấy người làm
     } finally {
       setBusy(false);
     }
@@ -199,7 +203,12 @@ function TaskRow({ task, editable, open, onToggle, onChanged }: {
           <View style={styles.tags}>
             {task.isMandatory && <Badge label="Bắt buộc" tone="warning" />}
             {task.requiresPhoto && <Badge label="Cần ảnh" tone="info" />}
-            {task.isCompleted && task.completedAt && <Text style={styles.doneAt}>Xong lúc {formatTime(task.completedAt)}</Text>}
+            {task.assignMode === 'shared' && <Badge label="Làm chung" tone="info" />}
+            {task.isCompleted && task.completedAt && (
+              <Text style={styles.doneAt}>
+                {task.assignMode === 'shared' && task.completedByName ? `${task.completedByName} đã làm · ` : ''}Xong lúc {formatTime(task.completedAt)}
+              </Text>
+            )}
           </View>
           {task.note ? <Text style={styles.note}>“{task.note}”</Text> : null}
         </View>

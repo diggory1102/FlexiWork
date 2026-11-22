@@ -17,8 +17,9 @@ import { useAuthStore } from '@/stores/authStore';
 import { useLookupStore } from '@/stores/lookupStore';
 import { Roles } from '@/types/auth';
 import type { Shift } from '@/types/scheduling';
-import type { TaskPhase, TaskTemplate, TaskTemplateRequest } from '@/types/tasks';
-import { phaseOptions } from '../taskUi';
+import type { TaskAssignMode, TaskPhase, TaskTemplate, TaskTemplateRequest } from '@/types/tasks';
+import { Text } from '@astryxdesign/core/Text';
+import { assignModeHints, assignModeOptions, phaseOptions } from '../taskUi';
 
 const ANY = 'any';
 
@@ -32,6 +33,7 @@ const empty = (branchId: number | null, shiftId?: number): TaskTemplateRequest =
   sortOrder: 0,
   isMandatory: true,
   requiresPhoto: false,
+  assignMode: 'each',
 });
 
 interface Props {
@@ -71,6 +73,7 @@ export function TaskTemplateFormModal({ open, task, defaultShiftId, onClose, onS
             sortOrder: task.sortOrder,
             isMandatory: task.isMandatory,
             requiresPhoto: task.requiresPhoto,
+            assignMode: task.assignMode,
           }
         : empty(isAdmin ? null : ownBranchId, defaultShiftId),
     );
@@ -113,7 +116,7 @@ export function TaskTemplateFormModal({ open, task, defaultShiftId, onClose, onS
       size="md"
       purpose="form"
       title={task ? 'Sửa việc trong checklist' : 'Thêm việc vào checklist'}
-      description="Nhân viên đang trong ca nhận việc ngay khi bạn lưu; nhân viên chưa vào ca sẽ nhận khi check-in. Mỗi người làm ca (đúng chi nhánh và chức vụ bên dưới) đều có một bản việc này."
+      description="Nhân viên đang trong ca nhận việc ngay khi bạn lưu; nhân viên chưa vào ca sẽ nhận khi check-in. Chọn cách giao bên dưới để quyết định ai phải bấm hoàn thành."
       footer={
         <>
           <Button label="Hủy" variant="secondary" onClick={onClose} />
@@ -176,6 +179,19 @@ export function TaskTemplateFormModal({ open, task, defaultShiftId, onClose, onS
               value={form.positionId == null ? ANY : String(form.positionId)}
               onChange={(v) => set('positionId', !v || v === ANY ? null : Number(v))}
             />
+            <GridSpan columns="full">
+              <VStack gap={1}>
+                <Selector
+                  label="Cách giao"
+                  options={assignModeOptions}
+                  value={form.assignMode}
+                  onChange={(v) => v && set('assignMode', v as TaskAssignMode)}
+                />
+                <Text type="supporting" size="sm" data-testid="assign-mode-hint">
+                  {assignModeHints[form.assignMode]}
+                </Text>
+              </VStack>
+            </GridSpan>
             <Selector label="Giai đoạn" options={phaseOptions} value={form.phase} onChange={(v) => v && set('phase', v as TaskPhase)} />
             <NumberInput
               label="Thứ tự"

@@ -10,4 +10,7 @@ export const taskApi = {
   /** Tiến độ checklist các ca trong ngày (yyyy-MM-dd; mặc định hôm nay). */
   progress: (date?: string, branchId?: number | '') => api.get<TaskProgress>('/shift-tasks/progress', { date, branchId }),
   scheduleTasks: (scheduleId: number) => api.get<ScheduleTasks>(`/shift-tasks/schedules/${scheduleId}`),
+
+  /** Quản lý bỏ tích một việc (việc làm chung thì mở lại cho cả ca). */
+  uncomplete: (assignmentId: number) => api.post<ScheduleTasks>(`/shift-tasks/assignments/${assignmentId}/uncomplete`),
 };

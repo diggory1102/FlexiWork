@@ -43,15 +43,24 @@ public class ShiftTaskAssignmentDetail : ShiftTaskAssignment
     public bool IsMandatory { get; set; }
     public bool RequiresPhoto { get; set; }
 
+    public string AssignMode { get; set; } = Domain.Enums.TaskAssignMode.Each;
+
     public int ScheduleUserId { get; set; }
     public int ScheduleBranchId { get; set; }
+    public DateTime ScheduleWorkDate { get; set; }
     public string ScheduleStatus { get; set; } = string.Empty;
+
+    /// <summary>Tên người đã hoàn thành (việc làm chung có thể là người khác với người đang xem).</summary>
+    public string? CompletedByName { get; set; }
+
+    /// <summary>Người hoàn thành; dữ liệu cũ chưa ghi thì là chính người được giao.</summary>
+    public int? EffectiveCompletedBy => IsCompleted ? CompletedBy ?? AssignedTo : null;
 
     /// <summary>Phần nội dung việc (dùng cho quy tắc sắp xếp / kiểm tra).</summary>
     public ShiftTask Task => new()
     {
         Id = TaskId, ShiftId = ShiftId, Title = Title, Description = Description, Phase = Phase, SortOrder = SortOrder,
-        IsMandatory = IsMandatory, RequiresPhoto = RequiresPhoto
+        IsMandatory = IsMandatory, RequiresPhoto = RequiresPhoto, AssignMode = AssignMode
     };
 }
 
@@ -79,6 +88,27 @@ public class ShiftTaskProgressRow
     public int Expected { get; set; }
 
     public int ExpectedMandatory { get; set; }
+}
+
+/// <summary>Một việc làm chung trong ngày của một chi nhánh / ca: ai đã làm, hay chưa ai nhận.</summary>
+public class SharedTaskProgressRow
+{
+    public int TaskId { get; set; }
+    public string Title { get; set; } = string.Empty;
+    public string Phase { get; set; } = string.Empty;
+    public bool IsMandatory { get; set; }
+    public int BranchId { get; set; }
+    public string BranchName { get; set; } = string.Empty;
+    public string ShiftName { get; set; } = string.Empty;
+    public TimeSpan StartTime { get; set; }
+    public TimeSpan EndTime { get; set; }
+
+    /// <summary>Số người đang được giao việc này trong ca.</summary>
+    public int Participants { get; set; }
+
+    public bool IsDone { get; set; }
+    public string? CompletedByName { get; set; }
+    public DateTime? CompletedAt { get; set; }
 }
 
 public interface IShiftTaskAssignmentRepository : IGenericRepository<ShiftTaskAssignment, long>
@@ -112,4 +142,21 @@ public interface IShiftTaskAssignmentRepository : IGenericRepository<ShiftTaskAs
 
     /// <summary>Tiến độ các ca đã công bố (chưa hủy, không nghỉ) trong ngày; branchId null = mọi chi nhánh.</summary>
     Task<IReadOnlyList<ShiftTaskProgressRow>> GetProgressAsync(DateTime workDate, int? branchId, CancellationToken cancellationToken = default);
+
+    /// <summary>Các việc làm chung trong ngày (đã có người được giao), theo chi nhánh / ca — để Quản lý thấy ai đã làm và việc nào chưa ai nhận.</summary>
+    Task<IReadOnlyList<SharedTaskProgressRow>> GetSharedProgressAsync(DateTime workDate, int? branchId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Ghi hoàn thành một việc, an toàn khi nhiều người bấm cùng lúc: khóa các bản việc cùng nhóm rồi ghi trong một transaction.
+    /// Việc làm chung: cả nhóm (cùng việc mẫu, chi nhánh, ngày) được đánh dấu xong bởi người này. Chỉ người đến trước thắng.
+    /// </summary>
+    /// <returns>false nếu việc đã được hoàn thành trước đó (người khác vừa bấm, hoặc chính bản này đã xong).</returns>
+    Task<bool> TryCompleteAsync(ShiftTaskAssignmentDetail assignment, DateTime completedAt, string? proofImageUrl, string? proofImagePublicId,
+        string? note, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Bỏ tích. Việc làm chung: bỏ cho cả nhóm đã được đánh dấu xong bởi cùng người hoàn thành.
+    /// </summary>
+    /// <returns>Mã các ảnh minh chứng đã bị gỡ (để xóa trên dịch vụ lưu ảnh).</returns>
+    Task<IReadOnlyList<string>> UncompleteAsync(ShiftTaskAssignmentDetail assignment, CancellationToken cancellationToken = default);
 }

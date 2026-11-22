@@ -22,8 +22,8 @@ import { todayIso } from '@/lib/format';
 import { scheduleStatusLabels } from '@/modules/schedules/scheduleUi';
 import { RoleGroups } from '@/types/auth';
 import type { ScheduleStatus } from '@/types/scheduling';
-import type { ScheduleProgress, TaskProgress } from '@/types/tasks';
-import { progressVariant } from '../taskUi';
+import type { ScheduleProgress, SharedTask, TaskProgress } from '@/types/tasks';
+import { phaseLabels, progressVariant } from '../taskUi';
 import { ScheduleTasksDrawer } from './ScheduleTasksDrawer';
 
 function Summary({ label, value, hint, tone }: { label: string; value: string; hint?: string; tone?: 'amber' }) {
@@ -46,6 +46,80 @@ function Summary({ label, value, hint, tone }: { label: string; value: string; h
         )}
       </VStack>
     </Card>
+  );
+}
+
+/** Việc làm chung trong ngày: ai đã làm, hoặc chưa ai nhận (để Quản lý nhắc). */
+function SharedTasksCard({ tasks, showBranch }: { tasks: SharedTask[]; showBranch: boolean }) {
+  const columns: Column<SharedTask>[] = [
+    {
+      key: 'title',
+      header: 'Việc làm chung',
+      render: (t) => (
+        <VStack gap={0.5}>
+          <Text weight="medium">{t.title}</Text>
+          <HStack gap={1.5} vAlign="center">
+            <Text type="supporting" size="sm">
+              {phaseLabels[t.phase]}
+            </Text>
+            {t.isMandatory && <Badge tone="amber">Bắt buộc</Badge>}
+          </HStack>
+        </VStack>
+      ),
+    },
+    {
+      key: 'shift',
+      header: 'Ca',
+      width: 200,
+      render: (t) => (
+        <VStack gap={0.5}>
+          <Text>{t.shiftName}</Text>
+          <Text type="supporting" size="sm">
+            {t.startTime}–{t.endTime}
+            {showBranch ? ` · ${t.branchName}` : ''}
+          </Text>
+        </VStack>
+      ),
+    },
+    {
+      key: 'who',
+      header: 'Ai làm',
+      width: 260,
+      render: (t) =>
+        t.isDone ? (
+          <VStack gap={0.5}>
+            <Text weight="medium">{t.completedByName ?? 'Đã có người làm'}</Text>
+            <Text type="supporting" size="sm">
+              Xong lúc {t.completedAt?.slice(11, 16) ?? '—'}
+            </Text>
+          </VStack>
+        ) : (
+          <VStack gap={0.5}>
+            <Text type="supporting">Chưa có người nhận</Text>
+            <Text type="supporting" size="sm">
+              {t.participants} người đang trong ca
+            </Text>
+          </VStack>
+        ),
+    },
+    {
+      key: 'status',
+      header: 'Trạng thái',
+      width: 150,
+      render: (t) =>
+        t.isDone ? <Badge tone="green">Đã xong</Badge> : <Badge tone="amber">Chưa ai làm</Badge>,
+    },
+  ];
+  return (
+    <ListCard>
+      <VStack gap={0.5} padding={4}>
+        <Text weight="semibold">Việc làm chung hôm nay</Text>
+        <Text type="supporting" size="sm">
+          Một người làm là cả ca xong — bảng này cho biết ai đã làm và việc nào chưa ai nhận.
+        </Text>
+      </VStack>
+      <DataTable columns={columns} rows={tasks} rowKey={(t) => `${t.taskId}-${t.branchId}-${t.shiftName}`} />
+    </ListCard>
   );
 }
 
@@ -172,6 +246,8 @@ export function TaskProgressTab() {
           <Summary label="Ca chưa check-in" value={data ? String(data.notStarted) : '—'} hint="Nhận việc khi vào ca (xem cột Dự kiến)" />
         </Grid>
 
+        {data && data.sharedTasks.length > 0 && <SharedTasksCard tasks={data.sharedTasks} showBranch={isCompanyWide} />}
+
         <ListCard>
           <Toolbar>
             <DateInput label="Ngày" isLabelHidden width={190} format="date" value={date} onChange={(v) => setDate(v ?? todayIso())} />
@@ -191,7 +267,7 @@ export function TaskProgressTab() {
         </ListCard>
       </VStack>
 
-      <ScheduleTasksDrawer row={selected} date={date} open={drawerOpen} onClose={() => setDrawerOpen(false)} />
+      <ScheduleTasksDrawer row={selected} date={date} open={drawerOpen} onClose={() => setDrawerOpen(false)} onChanged={() => void load()} />
     </>
   );
 }

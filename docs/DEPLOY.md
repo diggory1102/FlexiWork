@@ -214,6 +214,7 @@ cd FW.Backend\FW.Infrastructure\Database\migrations
 | `013_attendance_checkout_adjust.sql` | Điều chỉnh giờ ra thủ công (Task 6.1): `attendance_logs.checkout_adjusted_by`, `checkout_adjusted_at`, `checkout_adjust_note`. **Chạy lại an toàn** | ☐ |
 | `014_shift_staffing.sql` | Định biên ca (Task 6.6): `shifts.min_staff` (cảnh báo khi thiếu người) và `shifts.max_staff` (chặn khi đủ người); hai cột NULL = không giới hạn nên ca cũ không đổi. **Chạy lại an toàn** | ☐ |
 | `015_shift_staffing_rules.sql` | Ngoại lệ định biên ca (Task 6.6, bước 2): bảng `shift_staffing_rules` (ghi đè số người tối thiểu / tối đa của ca cho một ngày hoặc một thứ trong tuần, theo chi nhánh). Không có dòng nào thì mọi ca giữ định biên mặc định. **Chạy lại an toàn** | ☐ |
+| `016_shift_task_assign_mode.sql` | Cách giao việc trong ca (Task 4.3, bổ sung): `shift_tasks.assign_mode` (`each` mỗi người một bản — mặc định, như trước; `shared` làm chung, một người xong là cả ca xong) và `shift_task_assignments.completed_by` (người đã bấm hoàn thành). Việc cũ giữ `each` nên không đổi hành vi. **Chạy lại an toàn** | ☐ |
 
 ## Xử lý sự cố
 

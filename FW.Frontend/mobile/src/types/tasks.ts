@@ -2,6 +2,9 @@
 
 export type TaskPhase = 'start' | 'during' | 'end';
 
+/** each = mỗi người một bản việc; shared = làm chung, một người xong là cả ca xong. */
+export type TaskAssignMode = 'each' | 'shared';
+
 export interface TaskItem {
   /** null = việc dự kiến (ca chưa check-in). */
   assignmentId: number | null;
@@ -16,6 +19,10 @@ export interface TaskItem {
   completedAt: string | null;
   proofImageUrl: string | null;
   note: string | null;
+  assignMode: TaskAssignMode;
+  /** Người đã hoàn thành (việc làm chung có thể là đồng nghiệp). */
+  completedByUserId: number | null;
+  completedByName: string | null;
 }
 
 export interface ScheduleTasks {

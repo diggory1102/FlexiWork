@@ -21,7 +21,7 @@ import { toast } from '@/stores/toastStore';
 import { Roles, RoleGroups } from '@/types/auth';
 import type { Shift } from '@/types/scheduling';
 import type { TaskTemplate } from '@/types/tasks';
-import { phaseLabels, phaseTone } from '../taskUi';
+import { assignModeLabels, phaseLabels, phaseTone } from '../taskUi';
 import { TaskTemplateFormModal } from './TaskTemplateFormModal';
 
 /**
@@ -101,17 +101,23 @@ export function TaskTemplatesTab() {
           <Text type="supporting" size="sm">
             Giao cho: {t.positionTitle ? `nhân viên chức vụ ${t.positionTitle}` : 'mọi nhân viên làm ca'}
           </Text>
+          {t.assignMode === 'shared' && (
+            <Text type="supporting" size="sm">
+              Một người xong là cả ca xong
+            </Text>
+          )}
         </VStack>
       ),
     },
     {
       key: 'rules',
       header: 'Yêu cầu',
-      width: 170,
+      width: 210,
       render: (t) => (
         <HStack gap={1} wrap="wrap" vAlign="center">
           {t.isMandatory ? <Badge tone="amber">Bắt buộc</Badge> : <Badge tone="gray">Tùy chọn</Badge>}
           {t.requiresPhoto && <Badge tone="blue">Cần ảnh</Badge>}
+          <Badge tone={t.assignMode === 'shared' ? 'purple' : 'gray'}>{assignModeLabels[t.assignMode]}</Badge>
         </HStack>
       ),
     },

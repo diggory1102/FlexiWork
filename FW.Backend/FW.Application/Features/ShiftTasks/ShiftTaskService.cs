@@ -180,6 +180,7 @@ public class ShiftTaskService : IShiftTaskService
         var title = request.Title.Trim();
         if (title.Length == 0) throw new BadRequestException("Vui lòng nhập tên việc.");
         if (!TaskPhase.IsValid(request.Phase)) throw new BadRequestException("Giai đoạn không hợp lệ (start, during, end).");
+        if (!TaskAssignMode.IsValid(request.AssignMode)) throw new BadRequestException("Cách giao việc không hợp lệ (each, shared).");
         if (request.PositionId is { } positionId && !await _positions.ExistsAsync(positionId, cancellationToken))
         {
             throw new BadRequestException("Chức vụ không tồn tại.");
@@ -192,6 +193,7 @@ public class ShiftTaskService : IShiftTaskService
         task.SortOrder = request.SortOrder;
         task.IsMandatory = request.IsMandatory;
         task.RequiresPhoto = request.RequiresPhoto;
+        task.AssignMode = request.AssignMode;
     }
 
     private async Task<ShiftTaskTemplateDto> GetTemplateDtoAsync(int id, CancellationToken cancellationToken)
@@ -234,7 +236,12 @@ public class ShiftTaskService : IShiftTaskService
         CancellationToken cancellationToken = default)
     {
         var assignment = await GetOwnAssignmentAsync(assignmentId, cancellationToken);
-        if (assignment.IsCompleted) throw new BadRequestException("Việc này đã hoàn thành — bỏ tích trước nếu muốn làm lại.");
+        if (assignment.IsCompleted)
+        {
+            throw new BadRequestException(assignment.AssignMode == TaskAssignMode.Shared && assignment.EffectiveCompletedBy != CurrentUserId
+                ? $"{assignment.CompletedByName ?? "Đồng nghiệp"} đã hoàn thành việc này rồi."
+                : "Việc này đã hoàn thành — bỏ tích trước nếu muốn làm lại.");
+        }
         Ensure(ShiftTaskRules.ValidateCompletion(assignment.Task, photo is not null));
         if (photo is not null) ValidateImage(photo);
 
@@ -244,36 +251,51 @@ public class ShiftTaskService : IShiftTaskService
         FileUploadResult? uploaded = null;
         if (photo is not null) uploaded = await _storage.UploadImageAsync(photo.Content, photo.FileName, StorageFolder, cancellationToken);
 
-        assignment.IsCompleted = true;
-        assignment.CompletedAt = _clock.Now;
-        assignment.ProofImageUrl = uploaded?.Url;
-        assignment.ProofImagePublicId = uploaded?.PublicId;
-        assignment.Note = note;
+        bool won;
         try
         {
-            await _assignments.UpdateAsync(ToEntity(assignment), cancellationToken);
+            won = await _assignments.TryCompleteAsync(assignment, _clock.Now, uploaded?.Url, uploaded?.PublicId, note, cancellationToken);
         }
         catch
         {
             if (uploaded is not null) await TryDeleteImageAsync(uploaded.PublicId);
             throw;
         }
+        if (!won)
+        {
+            // Người khác vừa hoàn thành việc làm chung (hoặc chính bản này vừa xong) — bỏ ảnh vừa tải lên
+            if (uploaded is not null) await TryDeleteImageAsync(uploaded.PublicId);
+            throw new BadRequestException(assignment.AssignMode == TaskAssignMode.Shared
+                ? "Đồng nghiệp vừa hoàn thành việc này rồi — không cần làm nữa."
+                : "Việc này đã hoàn thành.");
+        }
         return await GetScheduleTasksAsync(assignment.ScheduleId, cancellationToken);
     }
 
     public async Task<ScheduleTasksDto> UncompleteAsync(long assignmentId, CancellationToken cancellationToken = default)
     {
-        var assignment = await GetOwnAssignmentAsync(assignmentId, cancellationToken);
+        var assignment = await GetAssignmentAsync(assignmentId, cancellationToken);
         if (!assignment.IsCompleted) throw new BadRequestException("Việc này chưa hoàn thành.");
 
-        var oldImage = assignment.ProofImagePublicId;
-        assignment.IsCompleted = false;
-        assignment.CompletedAt = null;
-        assignment.ProofImageUrl = null;
-        assignment.ProofImagePublicId = null;
-        assignment.Note = null;
-        await _assignments.UpdateAsync(ToEntity(assignment), cancellationToken);
-        if (oldImage is not null) await TryDeleteImageAsync(oldImage);
+        // Người làm ca được bỏ tích việc của mình; việc làm chung thì chỉ người đã hoàn thành (hoặc Quản lý chi nhánh) bỏ được
+        var isManager = _currentUser.IsInRole(RoleNames.Admin) || (_currentUser.IsBranchManager() && _currentUser.CanAccessBranch(assignment.ScheduleBranchId));
+        if (!isManager)
+        {
+            if (assignment.AssignedTo != CurrentUserId || assignment.ScheduleUserId != CurrentUserId)
+            {
+                throw new ForbiddenException("Việc này không được giao cho bạn.");
+            }
+            if (assignment.EffectiveCompletedBy != CurrentUserId)
+            {
+                throw new ForbiddenException($"Việc này do {assignment.CompletedByName ?? "đồng nghiệp"} hoàn thành — chỉ người đó hoặc Quản lý bỏ tích được.");
+            }
+        }
+        Ensure(ShiftTaskRules.ValidateCanUpdate(new Schedule { Status = assignment.ScheduleStatus }));
+
+        foreach (var publicId in await _assignments.UncompleteAsync(assignment, cancellationToken))
+        {
+            await TryDeleteImageAsync(publicId);
+        }
         return await GetScheduleTasksAsync(assignment.ScheduleId, cancellationToken);
     }
 
@@ -289,12 +311,14 @@ public class ShiftTaskService : IShiftTaskService
         // Ca đang diễn ra phải có đủ việc: bổ sung những việc mẫu thêm trước đây mà chưa ai mở checklist (sửa cả dữ liệu cũ)
         await _assignments.AssignForInProgressAsync(day, branchId, cancellationToken);
         var rows = await _assignments.GetProgressAsync(day, branchId, cancellationToken);
+        var shared = await _assignments.GetSharedProgressAsync(day, branchId, cancellationToken);
         var total = rows.Sum(r => r.Total);
         var done = rows.Sum(r => r.Done);
         return new TaskProgressDto(day, branchId, total, done, ShiftTaskRules.Percent(done, total),
             rows.Sum(r => r.MandatoryTotal - r.MandatoryDone),
             rows.Count(r => r.ScheduleStatus == ScheduleStatus.Scheduled),
-            rows.Select(ScheduleProgressDto.From).ToList());
+            rows.Select(ScheduleProgressDto.From).ToList(),
+            shared.Select(SharedTaskDto.From).ToList());
     }
 
     // ------------------------------------------------------------------ Tiện ích
@@ -342,9 +366,12 @@ public class ShiftTaskService : IShiftTaskService
             total, done, ShiftTaskRules.Percent(done, total), tasks);
     }
 
+    private async Task<ShiftTaskAssignmentDetail> GetAssignmentAsync(long id, CancellationToken cancellationToken) =>
+        await _assignments.GetDetailByIdAsync(id, cancellationToken) ?? throw new NotFoundException("Việc được giao", id);
+
     private async Task<ShiftTaskAssignmentDetail> GetOwnAssignmentAsync(long id, CancellationToken cancellationToken)
     {
-        var assignment = await _assignments.GetDetailByIdAsync(id, cancellationToken) ?? throw new NotFoundException("Việc được giao", id);
+        var assignment = await GetAssignmentAsync(id, cancellationToken);
         if (assignment.AssignedTo != CurrentUserId || assignment.ScheduleUserId != CurrentUserId)
         {
             throw new ForbiddenException("Việc này không được giao cho bạn.");
@@ -352,12 +379,6 @@ public class ShiftTaskService : IShiftTaskService
         Ensure(ShiftTaskRules.ValidateCanUpdate(new Schedule { Status = assignment.ScheduleStatus }));
         return assignment;
     }
-
-    private static ShiftTaskAssignment ToEntity(ShiftTaskAssignmentDetail a) => new()
-    {
-        Id = a.Id, TaskId = a.TaskId, ScheduleId = a.ScheduleId, AssignedTo = a.AssignedTo, IsCompleted = a.IsCompleted,
-        CompletedAt = a.CompletedAt, ProofImageUrl = a.ProofImageUrl, ProofImagePublicId = a.ProofImagePublicId, Note = a.Note
-    };
 
     private static void ValidateImage(TaskPhoto file)
     {
