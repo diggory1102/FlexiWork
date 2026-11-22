@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Công cụ nạp dữ liệu DEMO 30–80 nhân sự (Task 6.4). Không nằm trong FW.Backend.sln / ảnh Docker. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\FW.Infrastructure\FW.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>
