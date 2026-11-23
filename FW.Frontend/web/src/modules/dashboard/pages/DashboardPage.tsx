@@ -37,6 +37,7 @@ import { PageHeader } from '@/components/ui/Layout';
 import { StatCard } from '@/components/ui/StatCard';
 import { BranchSelector, useBranchFilter } from '@/components/ui/BranchFilter';
 import { Notice } from '@/components/ui/Feedback';
+import { AttritionWidget } from '@/modules/assistant/components/AttritionWidget';
 import { Spinner } from '@/components/ui/Feedback';
 import { ChartCard, ChartTooltip, axisProps, chartColors, legendProps } from '@/components/charts/ChartCard';
 import { reportApi } from '@/services/reportApi';
@@ -198,6 +199,8 @@ export function DashboardPage() {
                 <Icon icon={ClipboardList} size="lg" color="accent" />
               </HStack>
             </Card>
+
+            <AttritionWidget branchId={apiBranchId} />
           </VStack>
 
           <VStack gap={4}>

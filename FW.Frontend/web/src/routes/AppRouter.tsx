@@ -23,6 +23,8 @@ import { TimesheetsPage } from '@/modules/timesheets/pages/TimesheetsPage';
 import { PayrollPage } from '@/modules/payroll/pages/PayrollPage';
 import { PayrollConfigPage } from '@/modules/payroll/pages/PayrollConfigPage';
 import { ChatPage } from '@/modules/chat/pages/ChatPage';
+import { AssistantPage } from '@/modules/assistant/pages/AssistantPage';
+import { AttritionPage } from '@/modules/assistant/pages/AttritionPage';
 import { NotificationsPage } from '@/modules/notifications/pages/NotificationsPage';
 import { ReportsPage } from '@/modules/reports/pages/ReportsPage';
 import { NotFoundPage } from '@/components/common/NotFoundPage';
@@ -72,6 +74,8 @@ const router = createBrowserRouter([
                   { path: '/timesheets', element: <TimesheetsPage /> },
                   { path: '/tasks', element: <TasksPage /> },
                   { path: '/chat', element: <ChatPage /> },
+                  { path: '/assistant', element: <AssistantPage /> },
+                  { path: '/attrition', element: <AttritionPage /> },
                   { path: '/reports', element: <ReportsPage /> },
                 ],
               },

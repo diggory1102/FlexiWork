@@ -10,6 +10,7 @@ import {
   MessagesSquare,
   Wallet,
   Settings,
+  Sparkles,
   Users,
 } from 'lucide-react';
 import { RoleGroups, type Role } from '@/types/auth';
@@ -46,6 +47,7 @@ export const menu: MenuItem[] = [
       { label: 'Nhân viên', to: '/employees' },
       { label: 'Phòng ban', to: '/departments' },
       { label: 'Chức vụ & đơn giá', to: '/positions' },
+      { label: 'Cần quan tâm', to: '/attrition' },
     ],
   },
   { label: 'Chi nhánh & Wi-Fi', to: '/branches', icon: Building2, roles: RoleGroups.Managers },
@@ -78,6 +80,7 @@ export const menu: MenuItem[] = [
   },
   { label: 'Công việc theo ca', to: '/tasks', icon: ClipboardCheck, roles: RoleGroups.Managers },
   { label: 'Truyền thông nội bộ', to: '/chat', icon: MessagesSquare, roles: RoleGroups.Managers },
+  { label: 'Trợ lý AI', to: '/assistant', icon: Sparkles, roles: RoleGroups.Managers },
   { label: 'Báo cáo', to: '/reports', icon: BarChart3, roles: RoleGroups.Managers },
   { label: 'Cài đặt', to: '/settings', icon: Settings, roles: RoleGroups.AdminOrHr },
 ];
