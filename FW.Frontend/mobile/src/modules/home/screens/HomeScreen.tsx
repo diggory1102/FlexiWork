@@ -25,6 +25,7 @@ const shortcuts: { icon: IconName; label: string; href: Href; tint: string }[] =
   { icon: 'time-outline', label: 'Bảng công', href: '/timesheet', tint: '#0891B2' },
   { icon: 'receipt-outline', label: 'Phiếu lương', href: '/payslips', tint: '#DB2777' },
   { icon: 'chatbubbles-outline', label: 'Tin nhắn', href: '/chat', tint: '#7C3AED' },
+  { icon: 'sparkles-outline', label: 'Trợ lý AI', href: '/assistant', tint: '#0EA5E9' },
 ];
 
 /** Trang chủ nhân viên: lời chào, đồng hồ, ca hôm nay, nút chấm công nhanh và lối tắt. */

@@ -55,6 +55,7 @@ export default function RootLayout() {
           <Stack.Screen name="request-new" options={{ title: 'Tạo đơn' }} />
           <Stack.Screen name="request/[id]" options={{ title: 'Chi tiết đơn' }} />
           <Stack.Screen name="chat" options={{ headerShown: false }} />
+          <Stack.Screen name="assistant" options={{ headerShown: false }} />
           <Stack.Screen name="notifications" options={{ title: 'Thông báo' }} />
           <Stack.Screen name="timesheet" options={{ title: 'Bảng công của tôi' }} />
           <Stack.Screen name="payslips" options={{ headerShown: false }} />
