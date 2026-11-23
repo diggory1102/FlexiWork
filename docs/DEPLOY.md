@@ -11,9 +11,9 @@
 | Nhận diện khuôn mặt (Face ID) | **Chạy ngay trong Backend** (ONNX Runtime + mô hình InsightFace buffalo_sc) | Không cần dịch vụ riêng — mô hình tự tải khi build Docker |
 | Giữ Backend luôn thức | **UptimeRobot** | Free — kiểm tra 5 phút/lần |
 | Tìm tọa độ chi nhánh | **Nominatim** (nút "Tìm theo địa chỉ") + **Geoapify** (ô "Tìm địa điểm" gợi ý khi gõ) | Free — Nominatim không cần đăng ký; Geoapify 3.000 yêu cầu/ngày, cần API key |
-| Trợ lý AI (chatbot) | **Claude API** (Anthropic) | Trả theo lượng dùng (nạp trước ~5–10 USD) — làm ở Cấp 7 |
+| Trợ lý AI (chatbot) | **Ollama + Qwen2.5 7B chạy trên máy cá nhân**, nối ra Render qua **Cloudflare Tunnel** | Miễn phí — Render free không đủ RAM chạy mô hình nên mô hình ở máy bạn (Bước 8) |
 
-> **Phân bổ chức năng AI (đã chốt 15/11/2026):** Hugging Face Spaces không còn chạy được Docker miễn phí (cần gói PRO) → nhận diện khuôn mặt chạy **trong backend** bằng ONNX Runtime (đo với giới hạn của Render free 0,1 CPU / 512 MB: ~0,6–0,85 giây mỗi lần, backend dùng ~151 MB RAM). Chatbot do backend gọi Claude API. Chấm điểm nguy cơ nghỉ việc là tác vụ nền của backend. Render chỉ chạy **một** web service (750 giờ free/tháng ≈ đủ cho 1 service chạy 24/7).
+> **Phân bổ chức năng AI (đã chốt 15/11/2026):** Hugging Face Spaces không còn chạy được Docker miễn phí (cần gói PRO) → nhận diện khuôn mặt chạy **trong backend** bằng ONNX Runtime (đo với giới hạn của Render free 0,1 CPU / 512 MB: ~0,6–0,85 giây mỗi lần, backend dùng ~151 MB RAM). Chatbot do backend gọi Ollama (Qwen) chạy trên máy cá nhân. Chấm điểm nguy cơ nghỉ việc là tác vụ nền của backend. Render chỉ chạy **một** web service (750 giờ free/tháng ≈ đủ cho 1 service chạy 24/7).
 
 > **Nguyên tắc bảo mật:** repo GitHub đang để công khai → mọi mật khẩu, khóa API chỉ được dán vào trang quản trị của từng dịch vụ, **không** ghi vào file trong repo.
 
@@ -135,11 +135,32 @@ Form chi nhánh (Web) có ô **Tìm địa điểm** gợi ý ngay khi gõ. Nomi
 
 > Key chỉ nằm ở backend (không gửi xuống trình duyệt); HttpClient gọi Geoapify đã tắt log để key không lọt vào log Render. Gợi ý được cache 7 ngày, web chỉ gọi khi người dùng ngừng gõ 0,5 giây và từ 3 ký tự — một lần thêm chi nhánh tốn khoảng 3–10 yêu cầu. Gói Free yêu cầu ghi nguồn: form đã hiện "Powered by Geoapify · © OpenStreetMap contributors".
 
-## Bước 8 — Claude API cho Trợ lý AI (Cấp 7)
+## Bước 8 — Trợ lý AI: Ollama (Qwen) trên máy bạn + Cloudflare Tunnel (Cấp 7)
 
-1. Đăng ký <https://console.anthropic.com> → **Billing**: nạp trước 5–10 USD, đặt **spend limit** theo tháng (tránh bị trừ quá tay).
-2. **API Keys → Create Key** tên `flexiwork-render` — chỉ hiện một lần.
-3. Render → `flexiwork-api` → **Environment**: thêm `Anthropic__ApiKey`.
+> Render free chỉ có 512 MB RAM nên không chạy nổi mô hình ngôn ngữ. Mô hình chạy trên **máy của bạn** (đã chốt: RTX 3060 12 GB, `qwen2.5:7b`), backend trên Render gọi vào qua một đường hầm có khóa. **Máy bạn phải bật và Ollama phải chạy** khi người dùng dùng trợ lý (lúc bảo vệ chỉ cần bật trước giờ demo). Backend vẫn chạy bình thường khi máy tắt — chỉ riêng trợ lý báo "tạm thời không khả dụng".
+
+1. Cài Ollama (<https://ollama.com>), rồi `ollama pull qwen2.5:7b`. Đặt biến môi trường Windows `OLLAMA_KEEP_ALIVE=30m` để mô hình không bị nhả khỏi VRAM sau vài phút (nạp lạnh mất **1–2 phút**; trước giờ demo hãy hỏi thử một câu để “làm nóng”).
+2. **Khóa API ở trước Ollama** (Ollama không có xác thực; đường hầm là công khai nên bắt buộc có khóa). Dùng Caddy (<https://caddyserver.com>), file `Caddyfile`:
+
+   ```
+   :11435 {
+       @unauth not header Authorization "Bearer {env.OLLAMA_PROXY_KEY}"
+       respond @unauth 401
+       reverse_proxy localhost:11434 {
+           flush_interval -1
+       }
+   }
+   ```
+
+   Đặt `OLLAMA_PROXY_KEY` là một chuỗi ngẫu nhiên dài (vd tạo bằng `openssl rand -hex 24`) rồi chạy `caddy run`. `flush_interval -1` để dòng chữ trả về từng đoạn, không bị gom đệm.
+3. Mở đường hầm tới cổng của Caddy (**không** trỏ thẳng vào 11434): cài `cloudflared`, chạy `cloudflared tunnel --url http://localhost:11435` — lệnh in ra địa chỉ `https://xxxx.trycloudflare.com`. Địa chỉ dạng này **đổi mỗi lần chạy lại**; muốn cố định thì tạo *named tunnel* với một tên miền của bạn (Cloudflare Zero Trust → Tunnels).
+4. Render → `flexiwork-api` → **Environment**: thêm
+   * `Ollama__BaseUrl` = địa chỉ đường hầm (không có dấu `/` ở cuối),
+   * `Ollama__ApiKey` = đúng giá trị `OLLAMA_PROXY_KEY` ở trên.
+   Các giá trị khác (`Ollama__Model`, `Ollama__TimeoutSeconds`, `Assistant__*`, `Attrition__*`) đã có mặc định trong `appsettings.json`.
+5. Thử: đăng nhập app, mở Trợ lý, hỏi “Em còn mấy ngày phép?”. Câu đầu có thể chậm nếu mô hình chưa được nạp.
+
+> Backend gửi một dòng chú thích `: ping` mỗi 15 giây trong lúc chờ mô hình để Cloudflare (ngắt kết nối im lặng sau ~100 giây) không cắt luồng. Giới hạn: 60 câu/người/ngày (`Assistant__MaxMessagesPerUserPerDay`). Chưa kiểm thử đường hầm với Render thật — kiểm thử ở máy local (API ↔ Ollama trực tiếp) đã đạt.
 
 ## Bước 9 — App di động: build APK Android bằng EAS (Task 3.4, 6.3)
 
@@ -216,6 +237,7 @@ cd FW.Backend\FW.Infrastructure\Database\migrations
 | `015_shift_staffing_rules.sql` | Ngoại lệ định biên ca (Task 6.6, bước 2): bảng `shift_staffing_rules` (ghi đè số người tối thiểu / tối đa của ca cho một ngày hoặc một thứ trong tuần, theo chi nhánh). Không có dòng nào thì mọi ca giữ định biên mặc định. **Chạy lại an toàn** | ☐ |
 | `016_shift_task_assign_mode.sql` | Cách giao việc trong ca (Task 4.3, bổ sung): `shift_tasks.assign_mode` (`each` mỗi người một bản — mặc định, như trước; `shared` làm chung, một người xong là cả ca xong) và `shift_task_assignments.completed_by` (người đã bấm hoàn thành). Việc cũ giữ `each` nên không đổi hành vi. **Chạy lại an toàn** | ☐ |
 | `017_attendance_attempts.sql` | Nhật ký mọi lượt bấm chấm công, kể cả bị từ chối (Task 6.5): bảng mới `attendance_attempts` (lớp chặn, khoảng cách GPS, điểm khuôn mặt, trạng thái Wi-Fi, thời gian xử lý). Chỉ tạo bảng mới, không đụng bảng cũ; chưa chạy thì chấm công vẫn bình thường nhưng không có số liệu thí nghiệm. **Chạy lại an toàn** | ☐ |
+| `018_ai_assistant_attrition.sql` | Trợ lý AI + cảnh báo nghỉ việc (Cấp 7): 4 bảng mới `assistant_conversations`, `assistant_messages` (hội thoại), `assistant_drafts` (bản nháp đơn chờ xác nhận), `attrition_risk_snapshots` (điểm nguy cơ theo tuần). Chỉ tạo bảng mới, không đụng bảng cũ; chưa chạy thì mọi chức năng khác vẫn bình thường nhưng trợ lý và cảnh báo sẽ báo lỗi. **Chạy lại an toàn** | ☐ |
 
 ## Xử lý sự cố
 

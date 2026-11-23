@@ -48,6 +48,11 @@ services:
         sync: false
       - key: Cloudinary__ApiSecret
         sync: false
+      # Trợ lý AI: Ollama (Qwen) chạy trên máy cá nhân, nối qua Cloudflare Tunnel + proxy có khóa (docs/DEPLOY.md, Bước 8)
+      - key: Ollama__BaseUrl
+        sync: false
+      - key: Ollama__ApiKey
+        sync: false
       # Quản trị viên đầu tiên — backend tự tạo khi khởi động nếu CSDL chưa có Admin
       - key: Bootstrap__AdminEmail
         sync: false

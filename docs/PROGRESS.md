@@ -68,7 +68,7 @@
 * **Chốt & phát hành phiếu lương (UC 8.4):** Chốt kỳ lương, gửi phiếu lương điện tử qua email, nhân viên xem trên Mobile, xuất Excel cho kế toán.
 
 ### 2.8. Phân hệ Trợ lý AI & Phân tích (Mobile App & Web Admin) — UML Phân hệ 10
-* **Trợ lý nhân sự (UC 10.1–10.2):** Chatbot dùng LLM (Claude API) + Function Calling: nhân viên hỏi công, phép, lịch ca bằng ngôn ngữ tự nhiên; nói "xin nghỉ ca sáng thứ 5 vì bận thi" → trợ lý trích xuất ngày/ca/lý do và tạo **bản nháp** đơn, nhân viên bấm xác nhận mới gửi. Mọi công cụ chạy với quyền của người hỏi.
+* **Trợ lý nhân sự (UC 10.1–10.2):** Chatbot dùng LLM (Qwen2.5 chạy bằng Ollama) + Function Calling: nhân viên hỏi công, phép, lịch ca bằng ngôn ngữ tự nhiên; nói "xin nghỉ ca sáng thứ 5 vì bận thi" → trợ lý trích xuất ngày/ca/lý do và tạo **bản nháp** đơn, nhân viên bấm xác nhận mới gửi. Mọi công cụ chạy với quyền của người hỏi.
 * **Cảnh báo nguy cơ nghỉ việc (UC 10.3–10.4):** Tác vụ nền hằng tuần chấm điểm 0–100 từ biến động hành vi chấm công/đơn từ so với chính nhân viên đó, kèm lý do; Quản lý/HR xem danh sách "nhân sự cần quan tâm". Phương pháp chấm điểm có giải thích (không huấn luyện mô hình vì không có dữ liệu thật về người đã nghỉ).
 
 ---
@@ -561,15 +561,23 @@ flowchart TD
 
 ---
 
-### 📌 CẤP BẬC 7: Trợ lý AI & Phân tích `[0/5]`
+### 📌 CẤP BẬC 7: Trợ lý AI & Phân tích `[3/5]`
 > 🎯 **Demo:** Nhân viên nhắn "Cho em xin nghỉ ca sáng thứ 5 tuần này vì bận thi" → trợ lý tạo bản nháp đơn đúng ngày/ca → nhân viên xác nhận → Quản lý nhận đơn chờ duyệt. Dashboard của Quản lý hiện "Nhân sự cần quan tâm" kèm lý do.
-> ⚠️ **Phụ thuộc:** làm sau Cấp 4–5 (cần đơn từ, quỹ phép, bảng công để trợ lý tra cứu và dữ liệu chấm công tích lũy để chấm điểm). Cấu hình: `docs/DEPLOY.md` Bước 8.
+> ⚠️ **Phụ thuộc:** làm sau Cấp 4–5 (cần đơn từ, quỹ phép, bảng công để trợ lý tra cứu và dữ liệu chấm công tích lũy để chấm điểm). Cấu hình: `docs/DEPLOY.md` Bước 8 (Ollama trên máy cá nhân + Cloudflare Tunnel). **Quyết định (24/11/2026):** dùng module dựng sẵn `FW.AI` làm gốc, chỉ dùng **Ollama + Qwen2.5 7B** (không dùng Claude API); bản nháp gồm nghỉ / đổi ca / **OT / giải trình**; trả lời **streaming thật (SSE)**; làm toàn bộ backend (7.1, 7.2, 7.4) trước rồi mới tới giao diện (7.3, 7.5).
 
-- [ ] **Task 7.1:** Module `Assistant` (backend): gọi Claude API bằng SDK chính thức cho C# với Function Calling; công cụ tra cứu tái sử dụng service sẵn có (lịch ca, bảng công, quỹ phép, trạng thái đơn, loại đơn) và **chạy với quyền của người hỏi**; lưu hội thoại (`assistant_conversations`, `assistant_messages`); giới hạn số lượt/người/ngày để kiểm soát chi phí; xử lý lỗi/từ chối của mô hình.
-- [ ] **Task 7.2:** Tạo đơn qua hội thoại (UC 10.2): công cụ tạo **bản nháp** đơn nghỉ / đổi ca / OT (ngày tương đối như "thứ 5 tuần này" quy đổi theo giờ Việt Nam) → thẻ xác nhận → gửi qua API đơn từ (Task 4.1). Bộ kiểm thử ~50 câu mẫu.
-- [ ] **Task 7.3:** Mobile App + Web Admin: màn hình chat với trợ lý (hiển thị câu trả lời dần dần), thẻ xác nhận đơn, lịch sử hội thoại.
-- [ ] **Task 7.4:** Chấm điểm nguy cơ nghỉ việc (UC 10.3): tác vụ nền hằng tuần so 2 tuần gần nhất với nền 8 tuần trước của chính nhân viên (phút đi muộn, số đơn nghỉ, vắng mặt, xin đổi ca) → điểm 0–100 + lý do, lưu `attrition_risk_snapshots`; trọng số / ngưỡng cấu hình được (kèm unit test).
-- [ ] **Task 7.5:** Web Admin (UC 10.4): widget "Nhân sự cần quan tâm" trên Dashboard, trang chi tiết xu hướng theo tuần.
+- [x] **Task 7.1:** Module `Assistant` (backend): gọi **Ollama (Qwen2.5 7B)** qua HTTP với Function Calling; 10 công cụ (lịch ca, bảng công, quỹ phép, trạng thái đơn, loại đơn, 4 loại bản nháp, đơn chờ duyệt & nhân sự cần quan tâm cho Quản lý/HR) **chạy với quyền của người hỏi**; lưu hội thoại (`assistant_conversations`, `assistant_messages`); giới hạn 60 câu/người/ngày, 5 vòng gọi công cụ/câu; lỗi mô hình → 503 tiếng Việt.
+  - API: `POST /api/assistant/chat` (trọn gói) và `POST /api/assistant/chat/stream` (**SSE**: `conversation`, `tool`, `delta`, `reset`, `done`, `error`; `done.reply` là bản chính thức, `delta` chỉ để hiện dần; có dòng `: ping` mỗi 15 giây để Cloudflare không cắt luồng khi mô hình nạp lạnh), `GET conversations`, `GET conversations/{id}/messages`.
+  - Kiểm chứng bằng mã thay vì tin mô hình 7B: ngày tương đối (“mai”, “thứ 5 tuần này”) và ca (sáng/chiều) được **neo theo lời người dùng**; tên đồng nghiệp bịa bị chặn; nếu mô hình nói “đã tạo bản nháp” mà chưa gọi công cụ nào thì nhắc gọi lại một lần, vẫn bịa thì trả câu an toàn.
+  - Kiểm thử: 217 unit test + 7 integration test (CSDL thật) đạt; chạy thật với Ollama qua API local: hỏi phép, lịch ca, tạo đơn nghỉ + OT, xác nhận (bấm lần 2 không tạo trùng), từ chối câu ngoài phạm vi.
+  - ⚠ Mô hình nạp lạnh mất ~2 phút (câu đầu tiên đo được 126 giây) → đặt `OLLAMA_KEEP_ALIVE` và hỏi thử trước giờ demo. Migration `018` phải chạy trên TiDB trước khi đẩy code (`docs/DEPLOY.md`).
+- [x] **Task 7.2:** Tạo đơn qua hội thoại (UC 10.2): 4 công cụ tạo **bản nháp** — nghỉ phép / đổi ca / **làm thêm giờ (OT)** / **giải trình** (ngày tương đối quy đổi theo giờ Việt Nam) → thẻ xác nhận → `POST /api/assistant/drafts/{id}/confirm` (multipart, kèm file minh chứng nếu loại đơn yêu cầu) gửi đi qua **`LeaveRequestService.CreateAsync`** nên giữ nguyên kiểm tra hợp lệ, trừ quỹ phép và thông báo như đơn tạo tay. Bản nháp hết hạn sau 30 phút; xác nhận là thao tác nguyên tử, bấm lặp lại trả đơn đã tạo. `GET drafts/{id}`, `POST drafts/{id}/cancel`.
+  - Khác module gốc: hệ thống của ta **chỉ có đơn nghỉ theo NGÀY** (không nửa ngày) → “nghỉ ca sáng” tạo đơn cả ngày kèm cảnh báo “CẢ NGÀY … dùng đơn đổi ca nếu chỉ nhường một ca”. Giải trình chỉ nhận lượt chấm công trong 7 ngày gần đây; OT cho phép qua nửa đêm.
+  - Bộ đánh giá ~58 câu mẫu (`FW.UnitTests/Assistant/AssistantEvalTests.cs`, nhãn `Category=Eval`, chỉ chạy khi đặt `FW_EVAL_OLLAMA_URL`): `$env:FW_EVAL_OLLAMA_URL='http://localhost:11434'; $env:FW_EVAL_OUT='eval.md'; dotnet test FW.UnitTests --filter Category=Eval`. **Kết quả đo (24/11/2026, qwen2.5:7b trên RTX 3060, 60 câu × 2 lượt): đạt 115/120 = 95,8%**; trung bình 3,8 giây/câu, p95 9,9 giây; 100% ở các nhóm tạo đơn OT, giải trình, đổi ca, hỏi lại khi thiếu thông tin, từ chối hợp lệ, ngoài phạm vi, an toàn, Quản lý/HR. Lượt trượt còn lại (5): thỉnh thoảng không gọi công cụ tra lịch cho câu “Thứ 5 tuần này em làm mấy giờ?” (2), “nghỉ ca sáng thứ 5 và thứ 6” chỉ ra đơn một ngày (2), đọc nhầm “còn 11 ngày” thành tổng quỹ 12 ngày (1). Lần đo đầu (1 lượt) đạt 90%; các lượt trượt khi mô hình **tự bịa lý do / ngày** đã được chặn bằng mã nên lần sau hết.
+- [ ] **Task 7.3:** Mobile App + Web Admin: màn hình chat với trợ lý (hiển thị câu trả lời dần dần qua SSE), thẻ xác nhận đơn (kèm chọn ảnh minh chứng khi loại đơn yêu cầu), lịch sử hội thoại. *Backend đã sẵn sàng (Task 7.1–7.2).*
+- [x] **Task 7.4:** Chấm điểm nguy cơ nghỉ việc (UC 10.3): `BackgroundService` chạy **thứ Hai 02:00 giờ VN** (và `POST /api/attrition/run` cho Admin/HR) so 2 tuần gần nhất với nền 8 tuần trước của chính nhân viên qua 7 tín hiệu (tần suất đi muộn, số phút đi muộn, về sớm, vắng mặt, xin nghỉ, xin đổi ca, đăng ký ca) → điểm 0–100 + lý do, lưu `attrition_risk_snapshots` (một dòng/người/tuần, chạy lại thì ghi đè); trọng số / ngưỡng (Trung bình 25, Cao 50) cấu hình ở `Attrition:*` (kèm unit test). Nhân viên chưa đủ dữ liệu thì không chấm.
+  - **Vắng mặt được suy ra** (ca đã kết thúc + không có lượt chấm công + không nghỉ phép) bằng đúng quy tắc của bảng công, không đọc từ `schedules.status`; giải trình đã duyệt được miễn đi muộn / về sớm. Tín hiệu “thay đổi tình trạng sẵn sàng” (UC 3.5) bị bỏ vì hệ thống không có dữ liệu này — tự động bỏ qua, trọng số dồn cho các tín hiệu còn lại.
+  - API (chỉ Quản lý/HR; Quản lý chỉ thấy chi nhánh mình): `GET /api/attrition/alerts`, `summary`, `employees/{id}/trend`, `employees/{id}/narrative` (đoạn diễn giải do Ollama viết, luôn nhấn mạnh đây là tín hiệu tham khảo).
+- [ ] **Task 7.5:** Web Admin (UC 10.4): widget "Nhân sự cần quan tâm" trên Dashboard, trang chi tiết xu hướng theo tuần, nút “Diễn giải”. *Backend đã sẵn sàng (Task 7.4).*
 
 ---
 
@@ -580,7 +588,7 @@ flowchart TD
   - Bổ sung công nghệ đang dùng: Mobile (Expo, expo-camera/location, NetInfo, SecureStore), xUnit, ClosedXML, Recharts.
   - Mục Frontend: **React 18 → React 19**; **Tailwind CSS v4** (cascade layers, cấu hình bằng CSS); thêm **hệ thống thiết kế Astryx** (Meta): component có trợ năng (accessibility), design token qua CSS variables (Dynamic Theming), chế độ sáng/tối, đa ngôn ngữ; giải thích vì sao chọn design system thay vì tự viết component.
   - Mục 1.4.2: thêm phân hệ Bảng lương rút gọn và **Trợ lý AI & Phân tích** cho khớp `docs/UML.md`.
-  - Chương 2: lý thuyết LLM & Function Calling (Claude API), phương pháp chấm điểm rủi ro có giải thích; triển khai: Render (API), Vercel (Web), TiDB Cloud (CSDL), nhận diện khuôn mặt bằng **ONNX Runtime trong backend**, Brevo, Cloudinary.
+  - Chương 2: lý thuyết LLM & Function Calling (mô hình mở Qwen2.5 chạy bằng Ollama), phương pháp chấm điểm rủi ro có giải thích; triển khai: Render (API), Vercel (Web), TiDB Cloud (CSDL), nhận diện khuôn mặt bằng **ONNX Runtime trong backend**, Brevo, Cloudinary.
 - [ ] **Task K.2:** Chương 3 — **làm một lần sau khi hoàn thiện sản phẩm** (đã chốt 14/11/2026) để biểu đồ khớp code thật:
   - Quy trình TO-BE; danh sách tác nhân; biểu đồ UC tổng quát + UC phân rã 11 phân hệ theo `docs/UML.md` (đã bổ sung Phân hệ 0, Phân hệ 10 và các UC ★ — 54 UC); BFD.
   - Đặc tả UC dạng bảng ngắn cho mọi UC; đặc tả đầy đủ + **biểu đồ hoạt động** + **biểu đồ tuần tự** cho ~12–15 UC cốt lõi (đăng nhập, quên mật khẩu OTP, đổi mật khẩu, mời nhân viên, cấu hình geofence, xếp & công bố lịch, đăng ký Face ID, **chấm công 3 lớp**, duyệt chấm công chờ xác nhận, lập & duyệt đơn, tổng hợp bảng công, tính & chốt lương).
@@ -598,7 +606,7 @@ flowchart TD
 | Task 7.6 + UML UC 3.5 — Đăng ký nguyện vọng ca | Tùy chọn. Chấm điểm nguy cơ nghỉ việc (UC 10.3) đã đủ tín hiệu: đi muộn, xin nghỉ, vắng mặt, xin đổi ca. UML còn **54 UC** |
 | Xuất PDF (QuestPDF) | Tùy chọn. Excel (.xlsx) đã đáp ứng nhu cầu kế toán / nhân sự và sửa được; PDF không thêm chức năng |
 | Chống giả mạo khuôn mặt (liveness), Task 6.2 | Tùy chọn. Đã có chấm công 3 lớp (GPS + Wi-Fi + khuôn mặt) và phát hiện trùng thiết bị; liveness cần mô hình / dữ liệu riêng |
-| LLM viết tóm tắt cho Quản lý, Task 7.5 | Tùy chọn. Widget “Nhân sự cần quan tâm” kèm lý do dạng quy tắc đã dễ hiểu; tránh thêm chi phí Claude API |
+| LLM viết tóm tắt cho Quản lý, Task 7.5 | Tùy chọn. Widget “Nhân sự cần quan tâm” kèm lý do dạng quy tắc đã dễ hiểu; tránh thêm tải cho mô hình (đã làm ở dạng nút “Diễn giải” gọi theo yêu cầu, xem Task 7.4) |
 | Task 6.1 — tự đánh dấu vắng mặt, khởi tạo quỹ phép đầu năm | Không cần: vắng mặt được suy ra lúc đọc từ lịch + chấm công; quỹ phép dùng mức mặc định khi chưa có dòng. Giữ lại phần xử lý quên check-out |
 | `FW.AiService` (microservice Python / FastAPI) và cấu hình `FaceRecognition:Engine` | Thừa: nhận diện khuôn mặt đã chạy trong backend bằng ONNX Runtime (cosine 0,9998 so với InsightFace gốc), Render chỉ chạy một dịch vụ. Xóa thư mục, client HTTP, `AiServiceSettings`, mục `ai-service` trong `docker-compose.yml` và cấu hình liên quan (18/11/2026) |
 | Tệp `ComingSoonPage.tsx` (web) | Không còn trang nào dùng sau khi mọi màn hình đã làm xong |
