@@ -1,17 +1,21 @@
 using FW.Application.Common.Interfaces;
 using FW.Application.Common.Interfaces.Persistence;
 using FW.Application.Common.Settings;
+using FW.Application.Features.Assistant;
+using FW.Application.Features.Attrition;
 using FW.Application.Features.Exports;
 using FW.Infrastructure.Database;
 using FW.Infrastructure.Repositories;
 using FW.Infrastructure.Security;
 using FW.Infrastructure.Services;
 using FW.Infrastructure.Services.Caching;
+using FW.Infrastructure.Services.Background;
 using FW.Infrastructure.Services.Email;
 using FW.Infrastructure.Services.Export;
 using FW.Infrastructure.Services.FaceRecognition;
 using FW.Infrastructure.Services.FaceRecognition.Onnx;
 using FW.Infrastructure.Services.Geocoding;
+using FW.Infrastructure.Services.Llm;
 using FW.Infrastructure.Services.Storage;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -156,6 +160,28 @@ public static class DependencyInjection
         services.AddScoped<IReportRepository, ReportRepository>();
         services.AddSingleton<IExcelExporter, ExcelExporter>();
         services.AddScoped<IShiftTaskAssignmentRepository, ShiftTaskAssignmentRepository>();
+
+        // 9. Trợ lý nhân sự AI (Ollama + Qwen) và cảnh báo nguy cơ nghỉ việc (migration 018)
+        services.AddScoped<IAssistantStore, AssistantStore>();
+        services.AddScoped<IDraftStore, DraftStore>();
+        services.AddScoped<IAttritionSnapshotStore, AttritionSnapshotStore>();
+        services.AddScoped<IAttritionDataSource, AttritionDataSource>();
+
+        services.Configure<AssistantOptions>(configuration.GetSection(AssistantOptions.SectionName));
+        services.Configure<AttritionOptions>(configuration.GetSection(AttritionOptions.SectionName));
+        services.Configure<OllamaOptions>(configuration.GetSection(OllamaOptions.SectionName));
+        services.AddHttpClient<ILlmChatClient, OllamaChatClient>((sp, client) =>
+        {
+            var settings = sp.GetRequiredService<IOptions<OllamaOptions>>().Value;
+            client.BaseAddress = new Uri(settings.BaseUrl.TrimEnd('/') + "/");
+            // Thời gian chờ tổng do OllamaChatClient tự kiểm soát (cần dài hơn cho streaming)
+            client.Timeout = Timeout.InfiniteTimeSpan;
+            if (!string.IsNullOrWhiteSpace(settings.ApiKey))
+            {
+                client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", settings.ApiKey);
+            }
+        }).RemoveAllLoggers(); // khóa API nằm trong header, địa chỉ tunnel là bí mật: không để HttpClient ghi log
+        services.AddHostedService<AttritionWeeklyJob>();
 
         return services;
     }

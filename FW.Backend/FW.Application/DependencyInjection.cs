@@ -1,4 +1,6 @@
+using FW.Application.Features.Assistant;
 using FW.Application.Features.Attendance;
+using FW.Application.Features.Attrition;
 using FW.Application.Features.Auth;
 using FW.Application.Features.Chat;
 using FW.Application.Features.FaceId;
@@ -64,6 +66,38 @@ public static class DependencyInjection
 
         services.AddScoped<IBootstrapAdminService, BootstrapAdminService>();
 
+        AddAssistant(services);
+
         return services;
+    }
+
+    /// <summary>Trợ lý nhân sự AI (Task 7.1 – 7.2) và cảnh báo nguy cơ nghỉ việc (Task 7.4).</summary>
+    private static void AddAssistant(IServiceCollection services)
+    {
+        // Giá trị cấu hình (mục "Assistant", "Attrition") được nạp ở AddInfrastructure; ở đây chỉ bảo đảm có giá trị mặc định
+        services.AddOptions<AssistantOptions>();
+        services.AddOptions<AttritionOptions>();
+
+        services.AddScoped<IHrDataService, HrDataService>();
+        services.AddScoped<ILeaveRequestSubmitter, LeaveRequestSubmitter>();
+
+        // Công cụ của trợ lý — mỗi công cụ tự khai báo vai trò được dùng (AllowedRoles)
+        services.AddScoped<IAssistantTool, GetMyScheduleTool>();
+        services.AddScoped<IAssistantTool, GetMyTimesheetTool>();
+        services.AddScoped<IAssistantTool, GetMyLeaveBalanceTool>();
+        services.AddScoped<IAssistantTool, GetMyRequestsTool>();
+        services.AddScoped<IAssistantTool, DraftLeaveRequestTool>();
+        services.AddScoped<IAssistantTool, DraftShiftSwapTool>();
+        services.AddScoped<IAssistantTool, DraftOvertimeRequestTool>();
+        services.AddScoped<IAssistantTool, DraftExplanationRequestTool>();
+        services.AddScoped<IAssistantTool, GetPendingRequestsTool>();
+        services.AddScoped<IAssistantTool, GetAttritionAlertsTool>();
+
+        services.AddScoped<DraftService>();
+        services.AddScoped<AssistantService>();
+
+        services.AddScoped<AttritionScoringService>();
+        services.AddScoped<AttritionQueryService>();
+        services.AddScoped<AttritionNarrator>();
     }
 }
