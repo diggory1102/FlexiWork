@@ -351,7 +351,10 @@ public class AssistantDateGroundingTests
 
         Assert.Single(reply.Drafts);
         Assert.Equal(3, w.Llm.Calls.Count);
-        Assert.Contains(w.Llm.Calls[1].Messages, m => m.Role == "user" && m.Content.Contains("CHƯA có bản nháp"));
+        // Lần thử lại dùng ngữ cảnh gọn: không còn câu trả lời sai của mô hình, chỉ có hệ thống + câu người dùng kèm lời nhắc gọi công cụ
+        var retry = w.Llm.Calls[1].Messages;
+        Assert.DoesNotContain(retry, m => m.Role == "assistant");
+        Assert.Contains(retry, m => m.Role == "user" && m.Content.Contains("xin nghỉ mai vì việc nhà") && m.Content.Contains("draft_*"));
     }
 
     [Fact]

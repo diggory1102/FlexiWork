@@ -30,6 +30,7 @@ public static class SystemPromptBuilder
                       "rồi gọi draft_leave_request, draft_shift_swap_request, draft_overtime_request hoặc draft_explanation_request. " +
                       "Ngày \"hôm nay / ngày mai / ngày kia / hôm qua\" thì truyền relative_day; ngày dạng \"thứ 5 tuần này\" thì truyền weekday + week; đừng tự tính ngày. Thiếu ngày, giờ hoặc lý do thì hỏi lại ngắn gọn, không tự bịa lý do. " +
                       "Người dùng đã nói ngày / giờ / lý do rồi thì gọi công cụ NGAY, đừng hỏi lại những thứ đã có. " +
+                      "Xin nghỉ mà không nói rõ ca nào thì mặc định nghỉ CẢ NGÀY (bỏ trống shift_part), KHÔNG hỏi \"cả ngày hay một phần ca\"; chưa nói loại nghỉ thì để trống leave_type_id. " +
                       "Đổi ca bắt buộc có TÊN đồng nghiệp do người dùng nói; chưa nói tên thì hỏi \"bạn muốn đổi ca với ai?\", tuyệt đối không tự đặt tên. " +
                       "Lưu ý: đơn nghỉ của hệ thống tính theo NGÀY (không có nửa ngày); nếu người dùng chỉ muốn nhường một ca thì gợi ý đơn đổi ca.");
         sb.AppendLine("3. Các công cụ draft_* chỉ tạo BẢN NHÁP. Sau khi tạo, tóm tắt bản nháp (ngày, ca, số ngày, lý do), nhắc các cảnh báo nếu có và bảo người dùng bấm nút \"Xác nhận\" để gửi. TUYỆT ĐỐI không nói đã gửi / đã nộp đơn.");

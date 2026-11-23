@@ -188,9 +188,9 @@ public static class DateGrounding
         "Người dùng chưa nói ngày nào. Đừng tự chọn ngày: hãy hỏi người dùng muốn ngày nào.";
 
     /// <summary>Chặn bản nháp khi cả cuộc trò chuyện gần đây chưa hề có ngày nào (ngày do mô hình tự chọn) hoặc lý do do mô hình tự bịa.</summary>
-    public static void RequireUserSaidDateAndReason(string? reason, string? userText, DateOnly today)
+    public static void RequireUserSaidDateAndReason(string? reason, string? userText, DateOnly today, string? dateText = null)
     {
-        if (DateMentionExtractor.Extract(userText, today).Count == 0)
+        if (DateMentionExtractor.Extract(dateText ?? userText, today).Count == 0)
             throw new ToolArgumentException(DateNotSaidMessage);
         if (!string.IsNullOrWhiteSpace(reason) && !ReasonWasMentioned(reason, userText))
             throw new ToolArgumentException(ReasonNotSaidMessage);

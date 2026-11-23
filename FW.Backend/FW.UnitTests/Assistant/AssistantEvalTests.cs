@@ -83,7 +83,12 @@ public class AssistantEvalTests
         var sw = Stopwatch.StartNew();
         try
         {
-            var reply = await assistant.ChatAsync(new ChatRequest(null, c.Prompt));
+            long? conversationId = null;
+            foreach (var before in c.Before ?? Array.Empty<string>())
+                conversationId = (await assistant.ChatAsync(new ChatRequest(conversationId, before))).ConversationId;
+            recorder.Reset();
+            sw.Restart();
+            var reply = await assistant.ChatAsync(new ChatRequest(conversationId, c.Prompt));
             sw.Stop();
             var drafts = new List<AssistantDraft>();
             foreach (var d in reply.Drafts) drafts.Add((await w.Drafts.GetAsync(d.Id))!);
@@ -174,7 +179,8 @@ internal sealed record EvalOutcome(ChatReply Reply, IReadOnlyList<LlmToolCall> C
 /// <summary>Trả null nếu đạt; ngược lại trả lý do trượt.</summary>
 internal delegate string? EvalCheck(EvalOutcome o);
 
-internal sealed record EvalCase(string Category, string Prompt, Func<TestUser> User, bool NeedsScoring, EvalCheck Check);
+/// <summary><paramref name="Before"/>: các câu hỏi đã hỏi trước trong CÙNG hội thoại (câu cuối mới được chấm).</summary>
+internal sealed record EvalCase(string Category, string Prompt, Func<TestUser> User, bool NeedsScoring, EvalCheck Check, string[]? Before = null);
 
 internal static class EvalCases
 {
@@ -249,6 +255,7 @@ internal static class EvalCases
 
         var list = new List<EvalCase>();
         void Add(string cat, string prompt, EvalCheck check) => list.Add(new EvalCase(cat, prompt, () => TestUser.Employee(), false, check));
+        void AddAfter(string[] before, string prompt, EvalCheck check) => list.Add(new EvalCase("Nhiều lượt", prompt, () => TestUser.Employee(), false, check, before));
         void AddManager(string prompt, EvalCheck check) => list.Add(new EvalCase("Quản lý/HR", prompt, () => TestUser.Manager(), true, check));
         void AddHr(string prompt, EvalCheck check) => list.Add(new EvalCase("Quản lý/HR", prompt, () => TestUser.Hr(), true, check));
 
@@ -352,6 +359,20 @@ internal static class EvalCases
         Add(Gt, "Em muốn giải trình việc đi muộn ca sáng hôm qua, lý do là xe hỏng giữa đường",
             All(Unsent(), Draft("giải trình log 9001", d => d.Card.Kind == "explanation" && d.Submission.AttendanceLogId == 9001)));
         Add(Gt, "Hôm qua em đi muộn, giải trình giúp em", All(NoDraft(), AsksBack(), NoFalseDraftClaim()));
+
+        // ---- Nhiều lượt: câu xin đơn đến SAU các câu hỏi khác trong cùng hội thoại (mô hình nhỏ dễ "bắt chước" câu trả lời chữ trước đó)
+        const string Nhieu = "Nhiều lượt";
+        var leaveTomorrow = All(UsesTool("draft_leave_request"), Unsent(), Draft("19/11, 1 ngày", d => d.Submission.StartDate == D(11, 19) && d.Submission.DurationDays == 1m));
+        AddAfter(new[] { "Em còn mấy ngày phép?" }, "Cho em xin nghỉ ngày mai vì có việc gia đình", leaveTomorrow);
+        AddAfter(new[] { "Hôm nay em làm ca nào?" }, "Cho em xin nghỉ ngày mai vì có việc gia đình", leaveTomorrow);
+        AddAfter(new[] { "Xin chào" }, "Cho em xin nghỉ ngày mai vì có việc gia đình", leaveTomorrow);
+        AddAfter(new[] { "Em còn mấy ngày phép?", "Mai em có ca không?" }, "Cho em xin nghỉ ngày kia vì đi khám bệnh",
+            All(UsesTool("draft_leave_request"), Unsent(), Draft("20/11, 1 ngày", d => d.Submission.StartDate == D(11, 20))));
+        AddAfter(new[] { "Em còn mấy ngày phép?" }, "Đăng ký giúp em OT tối mai từ 18h đến 21h để kiểm kho",
+            All(UsesTool("draft_overtime_request"), Unsent(), Draft("OT 19/11 18:00–21:00", d =>
+                d.Submission.StartAt == new DateTime(2026, 11, 19, 18, 0, 0) && d.Submission.EndAt == new DateTime(2026, 11, 19, 21, 0, 0))));
+        AddAfter(new[] { "Cho em xin nghỉ ngày mai vì có việc gia đình" }, "Cho em đổi sang xin nghỉ ngày kia, lý do giữ nguyên",
+            All(UsesTool("draft_leave_request"), Draft("20/11", d => d.Submission.StartDate == D(11, 20))));
 
         // ---- Ngoài phạm vi
         const string Ngoai = "Ngoài phạm vi";

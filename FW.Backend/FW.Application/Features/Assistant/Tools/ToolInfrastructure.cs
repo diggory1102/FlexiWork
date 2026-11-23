@@ -18,7 +18,16 @@ public sealed record ToolContext(
     long? ConversationId,
     DateOnly Today,
     /// <summary>Các tin gần nhất của NGƯỜI DÙNG (mới nhất cuối) — để đối chiếu ngày mô hình điền với ngày người dùng nói.</summary>
-    string UserText = "");
+    string UserText = "",
+    /// <summary>Tin NHẮN HIỆN TẠI của người dùng (không kèm các câu trước).</summary>
+    string CurrentText = "")
+{
+    /// <summary>
+    /// Văn bản dùng để neo ngày: ưu tiên câu hiện tại nếu trong đó có nêu ngày (tránh chấp nhận nhầm ngày của các câu hỏi trước,
+    /// vd trước đó hỏi "mai em có ca không?" rồi nay xin nghỉ "ngày kia"); câu hiện tại không có ngày thì dùng cả các câu gần đây.
+    /// </summary>
+    public string DateText => DateMentionExtractor.Extract(CurrentText, Today).Count > 0 ? CurrentText : UserText;
+}
 
 public sealed record ToolResult(JsonNode Data, AssistantDraft? Draft = null);
 

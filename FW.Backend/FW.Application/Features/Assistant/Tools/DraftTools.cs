@@ -77,10 +77,10 @@ public sealed class DraftLeaveRequestTool : IAssistantTool
         var end = ToolArgs.Date(args, "end_date") ?? start;
         var (part, partNote) = ShiftPartGrounding.Apply(ToolArgs.Part(args, "shift_part"), ctx.UserText);
         var reason = ToolArgs.Str(args, "reason") ?? string.Empty;
-        DateGrounding.RequireUserSaidDateAndReason(reason, ctx.UserText, ctx.Today);
+        DateGrounding.RequireUserSaidDateAndReason(reason, ctx.UserText, ctx.Today, ctx.DateText);
 
         // Neo ngày theo lời người dùng: mô hình nhỏ hay điền sai ngày ISO
-        var grounded = DateGrounding.Apply(start, end, ctx.UserText, ctx.Today);
+        var grounded = DateGrounding.Apply(start, end, ctx.DateText, ctx.Today);
 
         var result = await _drafts.BuildLeaveDraftAsync(
             ctx.UserId, new LeaveDraftRequest(typeId, grounded.Start, grounded.End, part, reason), ctx.ConversationId, ct);
@@ -124,13 +124,13 @@ public sealed class DraftShiftSwapTool : IAssistantTool
     public async Task<ToolResult> ExecuteAsync(ToolContext ctx, JsonObject args, CancellationToken ct)
     {
         var date = ToolArgs.DateOrWeekday(args, "date", ctx.Today)
-                   ?? DateGrounding.OnlyMentionedDate(ctx.UserText, ctx.Today)
+                   ?? DateGrounding.OnlyMentionedDate(ctx.DateText, ctx.Today)
                    ?? throw new ToolArgumentException("Thiếu ngày của ca muốn đổi: truyền date, relative_day hoặc weekday (+ week).");
         var colleague = ToolArgs.Str(args, "colleague_name") ?? string.Empty;
         if (!DateGrounding.NameWasMentioned(colleague, ctx.UserText))
             throw new ToolArgumentException("Người dùng chưa nói muốn đổi ca với đồng nghiệp nào. Đừng tự đặt tên: hãy hỏi người dùng tên đồng nghiệp.");
-        DateGrounding.RequireUserSaidDateAndReason(ToolArgs.Str(args, "reason"), ctx.UserText, ctx.Today);
-        var grounded = DateGrounding.Apply(date, date, ctx.UserText, ctx.Today);
+        DateGrounding.RequireUserSaidDateAndReason(ToolArgs.Str(args, "reason"), ctx.UserText, ctx.Today, ctx.DateText);
+        var grounded = DateGrounding.Apply(date, date, ctx.DateText, ctx.Today);
         var (shiftPart, partNote) = ShiftPartGrounding.Apply(ToolArgs.Part(args, "shift_part"), ctx.UserText);
         var targetDate = ToolArgs.Date(args, "target_date");
         // Ngày bên đồng nghiệp: nếu trùng ngày gốc (đã bị sửa) thì để trống = cùng ngày
@@ -186,10 +186,10 @@ public sealed class DraftOvertimeRequestTool : IAssistantTool
     public async Task<ToolResult> ExecuteAsync(ToolContext ctx, JsonObject args, CancellationToken ct)
     {
         var date = ToolArgs.DateOrWeekday(args, "date", ctx.Today)
-                   ?? DateGrounding.OnlyMentionedDate(ctx.UserText, ctx.Today)
+                   ?? DateGrounding.OnlyMentionedDate(ctx.DateText, ctx.Today)
                    ?? throw new ToolArgumentException("Thiếu ngày làm thêm: truyền date, relative_day hoặc weekday (+ week).");
-        DateGrounding.RequireUserSaidDateAndReason(ToolArgs.Str(args, "reason"), ctx.UserText, ctx.Today);
-        var grounded = DateGrounding.Apply(date, date, ctx.UserText, ctx.Today);
+        DateGrounding.RequireUserSaidDateAndReason(ToolArgs.Str(args, "reason"), ctx.UserText, ctx.Today, ctx.DateText);
+        var grounded = DateGrounding.Apply(date, date, ctx.DateText, ctx.Today);
         var start = ToolArgs.Time(args, "start_time") ?? throw new ToolArgumentException("Thiếu giờ bắt đầu OT (start_time, dạng HH:mm).");
         var end = ToolArgs.Time(args, "end_time") ?? throw new ToolArgumentException("Thiếu giờ kết thúc OT (end_time, dạng HH:mm).");
 
@@ -232,10 +232,10 @@ public sealed class DraftExplanationRequestTool : IAssistantTool
     public async Task<ToolResult> ExecuteAsync(ToolContext ctx, JsonObject args, CancellationToken ct)
     {
         var date = ToolArgs.DateOrWeekday(args, "date", ctx.Today)
-                   ?? DateGrounding.OnlyMentionedDate(ctx.UserText, ctx.Today)
+                   ?? DateGrounding.OnlyMentionedDate(ctx.DateText, ctx.Today)
                    ?? throw new ToolArgumentException("Thiếu ngày cần giải trình: truyền date, relative_day hoặc weekday (+ week).");
-        DateGrounding.RequireUserSaidDateAndReason(ToolArgs.Str(args, "reason"), ctx.UserText, ctx.Today);
-        var grounded = DateGrounding.Apply(date, date, ctx.UserText, ctx.Today);
+        DateGrounding.RequireUserSaidDateAndReason(ToolArgs.Str(args, "reason"), ctx.UserText, ctx.Today, ctx.DateText);
+        var grounded = DateGrounding.Apply(date, date, ctx.DateText, ctx.Today);
         var (part, partNote) = ShiftPartGrounding.Apply(ToolArgs.Part(args, "shift_part"), ctx.UserText);
 
         var result = await _drafts.BuildExplanationDraftAsync(

@@ -167,7 +167,7 @@ public sealed class AssistantService
         messages.Add(LlmMessage.User(text));
 
         var recentUserText = string.Join("\n", history.Where(h => h.Role == "user").TakeLast(2).Select(h => h.Content).Append(text));
-        var context = new ToolContext(userId, _user.BranchId, roles, conversation.Id, today, recentUserText);
+        var context = new ToolContext(userId, _user.BranchId, roles, conversation.Id, today, recentUserText, text);
         var drafts = new List<AssistantDraft>();
         var trace = new JsonArray();
         var toolsUsed = new List<string>();
@@ -194,24 +194,31 @@ public sealed class AssistantService
                 // Mô hình nhỏ hay "nói đã tạo bản nháp" mà không gọi công cụ nào → người dùng bấm xác nhận cũng không có gì.
                 // Nhắc nó gọi đúng công cụ (một lần); nếu vẫn bịa thì thay bằng câu trả lời an toàn.
                 if (drafts.Count == 0 && !toolsUsed.Any(n => n.StartsWith("draft_", StringComparison.Ordinal))
-                    && ClaimsDraftOrSubmission(response.Content))
+                    && (ClaimsDraftOrSubmission(response.Content) || AskedBackDespiteComplete(text, response.Content, today)))
                 {
                     if (!nudged)
                     {
                         nudged = true;
-                        _logger.LogWarning("Mô hình báo đã tạo bản nháp nhưng chưa gọi công cụ nào; nhắc gọi lại.");
+                        _logger.LogWarning("Mô hình chưa gọi công cụ nào dù người dùng đã nêu đủ ý định / báo đã tạo bản nháp; nhắc gọi lại.");
                         if (emit is not null) await emit(new ResetEvent());
-                        messages.Add(LlmMessage.Assistant(response.Content));
-                        messages.Add(LlmMessage.User(
-                            "(Hệ thống) Bạn chưa gọi công cụ nào nên CHƯA có bản nháp nào cả. " +
-                            "Hãy gọi đúng công cụ draft_* với thông tin người dùng vừa nói; nếu còn thiếu thông tin thì hỏi lại người dùng. " +
-                            "Không được nói đã tạo hay đã gửi đơn khi chưa có kết quả từ công cụ."));
+                        // Thử lại với ngữ cảnh GỌN: bỏ lịch sử (mô hình nhỏ bắt chước các câu trả lời chữ trước đó nên không chịu gọi công cụ)
+                        // và bỏ luôn câu trả lời sai vừa rồi; chỉ giữ lại các câu người dùng đã nói để còn hiểu "lý do giữ nguyên".
+                        var earlier = history.Where(h => h.Role == "user").TakeLast(2).Select(h => $"\"{h.Content}\"").ToList();
+                        var retryPrompt = earlier.Count == 0 ? text : $"(Các câu người dùng đã nói trước đó: {string.Join("; ", earlier)}){Environment.NewLine}{text}";
+                        messages.Clear();
+                        messages.Add(LlmMessage.System(SystemPromptBuilder.Build(today, roles, leaveTypes)));
+                        messages.Add(LlmMessage.User(retryPrompt + Environment.NewLine +
+                            "(Hệ thống: hãy gọi đúng công cụ draft_* với thông tin người dùng đã nói; chỉ khi thiếu thông tin mới hỏi lại.)"));
                         continue;
                     }
 
-                    if (emit is not null) await emit(new ResetEvent());
-                    reply = "Xin lỗi, mình chưa tạo được bản nháp. Bạn nói rõ giúp mình loại đơn, ngày, giờ (nếu có) và lý do nhé.";
-                    break;
+                    if (ClaimsDraftOrSubmission(response.Content))
+                    {
+                        if (emit is not null) await emit(new ResetEvent());
+                        reply = "Xin lỗi, mình chưa tạo được bản nháp. Bạn nói rõ giúp mình loại đơn, ngày, giờ (nếu có) và lý do nhé.";
+                        break;
+                    }
+                    // Chỉ hỏi lại (không bịa) sau lần nhắc: giữ câu hỏi của mô hình
                 }
 
                 reply = response.Content;
@@ -245,6 +252,20 @@ public sealed class AssistantService
         var chat = new ChatReply(conversation.Id, reply, drafts.Select(DraftView.From).ToList(), toolsUsed);
         if (emit is not null) await emit(new DoneEvent(chat));
         return chat;
+    }
+
+    /// <summary>
+    /// Người dùng đã nêu ý định làm đơn kèm ngày cụ thể và lý do mà mô hình chỉ hỏi lại / hứa hẹn thay vì gọi công cụ
+    /// (mô hình nhỏ hay làm vậy trong hội thoại nhiều lượt). Thiếu thông tin thật sự thì công cụ sẽ báo lỗi và mô hình hỏi đúng chỗ thiếu.
+    /// </summary>
+    public static bool AskedBackDespiteComplete(string userText, string? reply, DateOnly today)
+    {
+        var u = RelativeDateResolver.Normalize(userText);
+        var wantsForm = u.Contains("xin nghi") || u.Contains("nghi phep") || u.Contains("doi ca") || u.Contains("lam them")
+                        || System.Text.RegularExpressions.Regex.IsMatch(u, @"ot") || u.Contains("giai trinh");
+        // Đã nêu cả ngày lẫn lý do ("vì…", "do…", "để…", "lý do…") thì không còn gì để hỏi lại
+        var hasReason = System.Text.RegularExpressions.Regex.IsMatch(u, @"(vi|do|de|boi vi|ly do)");
+        return wantsForm && hasReason && DateMentionExtractor.Extract(userText, today).Count > 0 && !string.IsNullOrWhiteSpace(reply);
     }
 
     /// <summary>Câu trả lời khẳng định đã tạo bản nháp / đã gửi đơn (chỉ đáng tin khi có bản nháp thật).</summary>
