@@ -136,6 +136,7 @@ public static class DependencyInjection
         services.AddScoped<IShiftStaffingRuleRepository, ShiftStaffingRuleRepository>();
         services.AddScoped<IScheduleRepository, ScheduleRepository>();
         services.AddScoped<IAttendanceLogRepository, AttendanceLogRepository>();
+        services.AddScoped<IAttendanceAttemptRepository, AttendanceAttemptRepository>();
         services.AddScoped<IFaceProfileRepository, FaceProfileRepository>();
         services.AddScoped<IViolationRuleRepository, ViolationRuleRepository>();
         services.AddScoped<ISystemSettingRepository, SystemSettingRepository>();

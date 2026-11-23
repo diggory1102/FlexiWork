@@ -1,5 +1,6 @@
 using FW.Application.Common.Exceptions;
 using FW.Application.Common.Interfaces;
+using FW.Application.Common.Interfaces.Persistence;
 using FW.Application.Common.Settings;
 using FW.Application.Features.Attendance;
 using FW.Domain.Entities;
@@ -69,6 +70,15 @@ public class AttendanceServiceTests
         }
     }
 
+    /// <summary>Kho nhật ký lượt chấm công luôn lỗi — chứng minh lỗi ghi nhật ký không làm hỏng lượt chấm công.</summary>
+    private sealed class BrokenAttempts : AttendanceAttemptRepository
+    {
+        public BrokenAttempts(DbSession session) : base(session) { }
+
+        public override Task<long> AddAsync(AttendanceAttempt entity, CancellationToken cancellationToken = default) =>
+            throw new InvalidOperationException("kho nhật ký hỏng");
+    }
+
     private sealed class MemoryStorage : IFileStorageService
     {
         public List<string> Uploaded { get; } = new();
@@ -99,11 +109,11 @@ public class AttendanceServiceTests
         public RecordingNotifier Notes { get; } = new();
         public MemoryStorage Storage { get; } = new();
 
-        public AttendanceService Service(int? userId = null)
+        public AttendanceService Service(int? userId = null, IAttendanceAttemptRepository? attempts = null)
         {
             var s = Session;
             return new AttendanceService(
-                new AttendanceLogRepository(s), new ScheduleRepository(s), new ShiftRepository(s), new BranchRepository(s),
+                new AttendanceLogRepository(s), attempts ?? new AttendanceAttemptRepository(s), new ScheduleRepository(s), new ShiftRepository(s), new BranchRepository(s),
                 new BranchWifiRepository(s), new FaceProfileRepository(s), new UserRepository(s), Notes, new ShiftTaskAssignmentRepository(s),
                 Face, Storage, s, new TestUser(userId ?? UserId), Clock,
                 Options.Create(new AttendanceSettings()), NullLogger<AttendanceService>.Instance);
@@ -406,5 +416,103 @@ public class AttendanceServiceTests
         var checkOut = await CheckOut(service, AtBranch());
         Assert.Equal(0, checkOut.EarlyMinutes);
         Assert.Equal(7.00m, checkOut.ActualWorkHours); // 8 giờ có mặt − 60' nghỉ
+    }
+
+    private static async Task<List<AttendanceAttempt>> AttemptsOfAsync(Ctx ctx) =>
+        (await new AttendanceAttemptRepository(ctx.Session).GetByPeriodAsync(ctx.Schedule.WorkDate, ctx.Schedule.WorkDate.AddDays(2)))
+        .Where(a => a.UserId == ctx.UserId).ToList();
+
+    [SkippableFact]
+    public async Task Every_attempt_is_recorded_with_the_layer_that_decided_it()
+    {
+        Skip.IfNot(_db.IsAvailable, _db.SkipReason);
+        var ctx = await SetupAsync(new DateTime(2032, 5, 3));
+        await using var _ = ctx.Session;
+        var service = ctx.Service();
+
+        // 06:30 chưa tới khung check-in → chặn ở lớp thời gian, chưa biết chi nhánh
+        ctx.Clock.Now = ctx.At(6, 30);
+        await Assert.ThrowsAsync<BadRequestException>(() => CheckIn(service, AtBranch()));
+
+        ctx.Clock.Now = ctx.At(7, 55);
+        var mocked = AtBranch();
+        mocked.IsMocked = true;
+        await Assert.ThrowsAsync<BadRequestException>(() => CheckIn(service, mocked));
+        await Assert.ThrowsAsync<BadRequestException>(() => CheckIn(service, new AttendanceCaptureRequest()));
+        var weak = AtBranch();
+        weak.Accuracy = 150;
+        await Assert.ThrowsAsync<BadRequestException>(() => CheckIn(service, weak));
+        await Assert.ThrowsAsync<BadRequestException>(() => CheckIn(service, AtBranch(metersNorth: 80)));
+        ctx.Face.Score = 0.21;
+        await Assert.ThrowsAsync<BadRequestException>(() => CheckIn(service, AtBranch()));
+
+        // Sai Wi-Fi nhưng đạt GPS + khuôn mặt → được ghi nhận, chờ duyệt
+        ctx.Face.Score = 0.66;
+        ctx.Clock.Now = ctx.At(8, 1);
+        var pending = await CheckIn(service, AtBranch(bssid: "AA:BB:CC:11:22:33", deviceId: "dev-attempt"));
+        Assert.Equal(AttendanceStatus.PendingApproval, pending.Status);
+
+        var attempts = await AttemptsOfAsync(ctx);
+        Assert.Equal(7, attempts.Count);
+        Assert.All(attempts, a => Assert.Equal(AttendanceActions.CheckIn, a.Action));
+
+        var time = attempts[0];
+        Assert.Equal((AttemptOutcome.Rejected, AttemptStage.Time), (time.Outcome, time.Stage));
+        Assert.Null(time.BranchId);
+        Assert.Equal(ctx.At(6, 30), time.AttemptedAt);
+
+        var fake = attempts[1];
+        Assert.Equal((AttemptOutcome.Rejected, AttemptStage.Validate), (fake.Outcome, fake.Stage));
+        Assert.True(fake.IsMocked);
+        Assert.Contains("giả lập", fake.Message);
+
+        var noGps = attempts[2];
+        Assert.Equal(AttemptStage.Validate, noGps.Stage);
+        Assert.Null(noGps.Latitude);
+
+        var weakGps = attempts[3];
+        Assert.Equal((AttemptStage.Gps, 150d), (weakGps.Stage, weakGps.Accuracy));
+        Assert.Equal(Branch1, weakGps.BranchId);
+        Assert.Null(weakGps.Distance);
+
+        var far = attempts[4];
+        Assert.Equal((AttemptOutcome.Rejected, AttemptStage.Gps), (far.Outcome, far.Stage));
+        Assert.InRange(far.Distance!.Value, 79, 81);
+        Assert.Null(far.FaceScore);
+
+        var wrongFace = attempts[5];
+        Assert.Equal((AttemptOutcome.Rejected, AttemptStage.Face), (wrongFace.Outcome, wrongFace.Stage));
+        Assert.Equal(0.21, wrongFace.FaceScore);
+        Assert.Equal(0.35, wrongFace.FaceThreshold);
+        Assert.Equal(ctx.Schedule.Id, wrongFace.ScheduleId);
+
+        var saved = attempts[6];
+        Assert.Equal((AttemptOutcome.PendingApproval, AttemptStage.Save), (saved.Outcome, saved.Stage));
+        Assert.Equal("not_matched", saved.WifiStatus);
+        Assert.Equal("AA:BB:CC:11:22:33", saved.Bssid, ignoreCase: true);
+        Assert.Equal(0.66, saved.FaceScore);
+        Assert.Equal("dev-attempt", saved.DeviceId);
+        Assert.True(saved.DurationMs >= 0);
+
+        // Lượt check-out cũng được ghi
+        ctx.Clock.Now = ctx.At(17, 0);
+        await CheckOut(service, AtBranch());
+        var last = (await AttemptsOfAsync(ctx)).Last();
+        Assert.Equal((AttendanceActions.CheckOut, AttemptOutcome.PendingApproval, "matched"), (last.Action, last.Outcome, last.WifiStatus)); // bản ghi vẫn chờ duyệt vì lượt vào sai Wi-Fi
+    }
+
+    [SkippableFact]
+    public async Task A_failing_attempt_log_never_blocks_check_in()
+    {
+        Skip.IfNot(_db.IsAvailable, _db.SkipReason);
+        var ctx = await SetupAsync(new DateTime(2032, 5, 4));
+        await using var _ = ctx.Session;
+        var service = ctx.Service(attempts: new BrokenAttempts(ctx.Session));
+
+        ctx.Clock.Now = ctx.At(7, 55);
+        await Assert.ThrowsAsync<BadRequestException>(() => CheckIn(service, AtBranch(metersNorth: 80))); // vẫn trả đúng lỗi nghiệp vụ
+        var ok = await CheckIn(service, AtBranch());
+        Assert.Equal(AttendanceStatus.Valid, ok.Status);
+        Assert.Empty(await AttemptsOfAsync(ctx));
     }
 }

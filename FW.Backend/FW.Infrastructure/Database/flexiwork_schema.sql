@@ -32,6 +32,7 @@ DROP TABLE IF EXISTS leave_balance_adjustments;
 DROP TABLE IF EXISTS leave_balances;
 DROP TABLE IF EXISTS leave_requests;
 DROP TABLE IF EXISTS leave_types;
+DROP TABLE IF EXISTS attendance_attempts;
 DROP TABLE IF EXISTS attendance_logs;
 DROP TABLE IF EXISTS schedules;
 DROP TABLE IF EXISTS violation_rules;
@@ -322,6 +323,32 @@ CREATE TABLE attendance_logs (
     INDEX idx_attendance_status (status),
     INDEX idx_attendance_device_date (checkin_device_id, work_date)
 ) ENGINE=InnoDB COMMENT='Nhật ký đối soát chấm công đa lớp: GPS + Wi-Fi + Face ID';
+
+-- 4.2. Nhật ký mọi lượt bấm chấm công, kể cả bị từ chối (Task 6.5 — thống kê thí nghiệm; không có khóa ngoại)
+CREATE TABLE attendance_attempts (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    branch_id INT NULL COMMENT 'Chi nhánh của ca (NULL nếu bị chặn trước khi xác định được ca)',
+    schedule_id BIGINT NULL,
+    action VARCHAR(10) NOT NULL COMMENT 'check_in | check_out',
+    attempted_at DATETIME NOT NULL,
+    outcome VARCHAR(20) NOT NULL COMMENT 'accepted | pending_approval | rejected | error',
+    stage VARCHAR(20) NOT NULL COMMENT 'Lớp xử lý khi kết thúc: validate | time | gps | face | wifi | save',
+    message VARCHAR(255) NULL COMMENT 'Lý do từ chối / thông báo trả về',
+    latitude DECIMAL(12, 8) NULL,
+    longitude DECIMAL(12, 8) NULL,
+    accuracy DOUBLE NULL COMMENT 'Sai số GPS điện thoại báo cáo (m)',
+    distance DOUBLE NULL COMMENT 'Khoảng cách tới tâm chi nhánh (m)',
+    is_mocked TINYINT(1) NOT NULL DEFAULT 0 COMMENT 'Hệ điều hành báo vị trí giả lập',
+    bssid VARCHAR(17) NULL,
+    wifi_status VARCHAR(20) NULL COMMENT 'matched | not_matched | no_wifi_info | not_required',
+    face_score DOUBLE NULL COMMENT 'Độ tương đồng cosine (NULL nếu chưa tới lớp khuôn mặt)',
+    face_threshold DOUBLE NULL,
+    duration_ms INT NOT NULL DEFAULT 0 COMMENT 'Thời gian máy chủ xử lý toàn bộ lượt (ms)',
+    device_id VARCHAR(100) NULL,
+    INDEX idx_attempt_user_time (user_id, attempted_at),
+    INDEX idx_attempt_time (attempted_at)
+) ENGINE=InnoDB COMMENT='Nhật ký mọi lượt chấm công, kể cả bị từ chối (thí nghiệm Task 6.5)';
 
 -- =============================================================================
 -- 5. NHÓM BẢNG QUẢN LÝ ĐƠN TỪ & NGHỈ PHÉP (LEAVE & REQUESTS)

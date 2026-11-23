@@ -1,0 +1,6 @@
+scenario,employee_code,time,expected,expected_stage,device,client_ms,note
+S1,NV001,2026-12-01 07:58,accepted,,Samsung A54,3200,đúng vị trí - đúng Wi-Fi - chính chủ
+S3,NV001,2026-12-01 08:20,rejected,gps,Samsung A54,2100,đứng cách chi nhánh khoảng 150 m
+S8,NV002,2026-12-01 08:02,pending_approval,,Xiaomi Redmi 12,3500,nối Wi-Fi quán bên cạnh
+S10,NV002,2026-12-01 08:30,rejected,face,Xiaomi Redmi 12,2900,B chụp hộ tài khoản A
+S11,NV003,2026-12-01 08:40,rejected,liveness,Oppo A78,3000,ảnh chụp màn hình - hạn chế đã biết (chưa có liveness)

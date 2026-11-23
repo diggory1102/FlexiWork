@@ -61,3 +61,10 @@ public interface IAttendanceLogRepository : IGenericRepository<AttendanceLog, lo
     Task<IReadOnlyList<int>> GetOtherUsersOnDeviceAsync(string deviceId, DateTime workDate, int excludeUserId,
         CancellationToken cancellationToken = default);
 }
+
+/// <summary>Nhật ký mọi lượt bấm chấm công, kể cả bị từ chối (Task 6.5).</summary>
+public interface IAttendanceAttemptRepository : IGenericRepository<AttendanceAttempt, long>
+{
+    /// <summary>Các lượt có <c>from ≤ attempted_at &lt; to</c>, cũ trước.</summary>
+    Task<IReadOnlyList<AttendanceAttempt>> GetByPeriodAsync(DateTime from, DateTime to, CancellationToken cancellationToken = default);
+}

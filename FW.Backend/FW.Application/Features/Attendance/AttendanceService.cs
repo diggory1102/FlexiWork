@@ -6,6 +6,7 @@ using FW.Application.Features.Notifications;
 using FW.Domain.Entities;
 using FW.Domain.Enums;
 using FW.Domain.Services;
+using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -43,6 +44,7 @@ public class AttendanceService : IAttendanceService
     private const int DeviceIdMaxLength = 100;
 
     private readonly IAttendanceLogRepository _logs;
+    private readonly IAttendanceAttemptRepository _attempts;
     private readonly IScheduleRepository _schedules;
     private readonly IShiftRepository _shifts;
     private readonly IBranchRepository _branches;
@@ -61,6 +63,7 @@ public class AttendanceService : IAttendanceService
 
     public AttendanceService(
         IAttendanceLogRepository logs,
+        IAttendanceAttemptRepository attempts,
         IScheduleRepository schedules,
         IShiftRepository shifts,
         IBranchRepository branches,
@@ -78,6 +81,7 @@ public class AttendanceService : IAttendanceService
         ILogger<AttendanceService> logger)
     {
         _logs = logs;
+        _attempts = attempts;
         _schedules = schedules;
         _shifts = shifts;
         _branches = branches;
@@ -167,14 +171,20 @@ public class AttendanceService : IAttendanceService
     // Check-in
     // ------------------------------------------------------------------
 
-    public async Task<AttendanceResultDto> CheckInAsync(AttendanceCaptureRequest request, Stream image, string fileName, string contentType, long length,
-        CancellationToken cancellationToken = default)
+    public Task<AttendanceResultDto> CheckInAsync(AttendanceCaptureRequest request, Stream image, string fileName, string contentType, long length,
+        CancellationToken cancellationToken = default) =>
+        RunAndRecordAsync(AttendanceActions.CheckIn, request, trace => CheckInCoreAsync(request, image, fileName, contentType, length, trace, cancellationToken));
+
+    private async Task<AttendanceResultDto> CheckInCoreAsync(AttendanceCaptureRequest request, Stream image, string fileName, string contentType, long length,
+        AttemptTrace trace, CancellationToken cancellationToken)
     {
         var userId = CurrentUserId;
         var now = _clock.Now;
         ValidateCapture(request, contentType, length);
+        trace.Stage = AttemptStage.Face;
         var profile = await GetFaceProfileAsync(userId, cancellationToken);
 
+        trace.Stage = AttemptStage.Time;
         var open = await FindOpenAsync(userId, cancellationToken);
         if (open != null && now < open.Item.EndAt)
         {
@@ -186,12 +196,18 @@ public class AttendanceService : IAttendanceService
         var target = AttendanceRules.PickCheckIn(items, now, _settings.EarlyCheckInMinutes)
                      ?? throw new BadRequestException(NoCheckInMessage(items, now));
 
+        trace.ScheduleId = target.Schedule.Id;
+        trace.BranchId = target.Schedule.BranchId;
         var branch = await GetBranchAsync(target.Schedule.BranchId, cancellationToken);
-        var gps = CheckGps(branch, request, userId, AttendanceActions.CheckIn);
+        trace.Stage = AttemptStage.Gps;
+        var gps = CheckGps(branch, request, userId, AttendanceActions.CheckIn, trace);
 
+        trace.Stage = AttemptStage.Face;
         await using var photo = await BufferAsync(image, cancellationToken);
-        var face = await CheckFaceAsync(photo, fileName, profile, userId, AttendanceActions.CheckIn, cancellationToken);
-        var wifi = await CheckWifiAsync(branch, request, cancellationToken);
+        var face = await CheckFaceAsync(photo, fileName, profile, userId, AttendanceActions.CheckIn, trace, cancellationToken);
+        trace.Stage = AttemptStage.Wifi;
+        var wifi = await CheckWifiAsync(branch, request, trace, cancellationToken);
+        trace.Stage = AttemptStage.Save;
 
         var warnings = new List<string>();
         if (!wifi.IsPassed) warnings.Add(WifiWarning(wifi));
@@ -278,14 +294,20 @@ public class AttendanceService : IAttendanceService
     // Check-out
     // ------------------------------------------------------------------
 
-    public async Task<AttendanceResultDto> CheckOutAsync(AttendanceCaptureRequest request, Stream image, string fileName, string contentType, long length,
-        CancellationToken cancellationToken = default)
+    public Task<AttendanceResultDto> CheckOutAsync(AttendanceCaptureRequest request, Stream image, string fileName, string contentType, long length,
+        CancellationToken cancellationToken = default) =>
+        RunAndRecordAsync(AttendanceActions.CheckOut, request, trace => CheckOutCoreAsync(request, image, fileName, contentType, length, trace, cancellationToken));
+
+    private async Task<AttendanceResultDto> CheckOutCoreAsync(AttendanceCaptureRequest request, Stream image, string fileName, string contentType, long length,
+        AttemptTrace trace, CancellationToken cancellationToken)
     {
         var userId = CurrentUserId;
         var now = _clock.Now;
         ValidateCapture(request, contentType, length);
+        trace.Stage = AttemptStage.Face;
         var profile = await GetFaceProfileAsync(userId, cancellationToken);
 
+        trace.Stage = AttemptStage.Time;
         var open = await FindOpenAsync(userId, cancellationToken)
                    ?? throw new BadRequestException("Bạn chưa check-in ca nào nên chưa thể check-out.");
         var (log, item) = (open.Log, open.Item);
@@ -296,12 +318,18 @@ public class AttendanceService : IAttendanceService
                 $"Đã quá hạn check-out {Label(item.Shift)} ({deadline:HH:mm dd/MM}). Vui lòng liên hệ Quản lý để điều chỉnh giờ ra.");
         }
 
+        trace.ScheduleId = item.Schedule.Id;
+        trace.BranchId = log.BranchId;
         var branch = await GetBranchAsync(log.BranchId, cancellationToken);
-        var gps = CheckGps(branch, request, userId, AttendanceActions.CheckOut);
+        trace.Stage = AttemptStage.Gps;
+        var gps = CheckGps(branch, request, userId, AttendanceActions.CheckOut, trace);
 
+        trace.Stage = AttemptStage.Face;
         await using var photo = await BufferAsync(image, cancellationToken);
-        var face = await CheckFaceAsync(photo, fileName, profile, userId, AttendanceActions.CheckOut, cancellationToken);
-        var wifi = await CheckWifiAsync(branch, request, cancellationToken);
+        var face = await CheckFaceAsync(photo, fileName, profile, userId, AttendanceActions.CheckOut, trace, cancellationToken);
+        trace.Stage = AttemptStage.Wifi;
+        var wifi = await CheckWifiAsync(branch, request, trace, cancellationToken);
+        trace.Stage = AttemptStage.Save;
 
         var warnings = new List<string>();
         if (!wifi.IsPassed) warnings.Add(WifiWarning(wifi, checkOut: true));
@@ -389,7 +417,7 @@ public class AttendanceService : IAttendanceService
         }
     }
 
-    private GpsLayerDto CheckGps(Branch branch, AttendanceCaptureRequest request, int userId, string action)
+    private GpsLayerDto CheckGps(Branch branch, AttendanceCaptureRequest request, int userId, string action, AttemptTrace trace)
     {
         if (request.Accuracy > _settings.MaxGpsAccuracyMeters)
         {
@@ -399,6 +427,7 @@ public class AttendanceService : IAttendanceService
 
         var result = Geofence.Evaluate((double)branch.Latitude, (double)branch.Longitude, branch.Radius,
             request.Latitude!.Value, request.Longitude!.Value);
+        trace.Distance = Math.Round(result.DistanceMeters, 2);
         if (!result.IsInside)
         {
             _logger.LogInformation("Từ chối {Action}: người dùng {UserId} cách chi nhánh {BranchId} {Distance:0} m (bán kính {Radius} m)",
@@ -411,11 +440,13 @@ public class AttendanceService : IAttendanceService
     }
 
     private async Task<FaceLayerDto> CheckFaceAsync(Stream photo, string fileName, FaceProfile profile, int userId, string action,
-        CancellationToken cancellationToken)
+        AttemptTrace trace, CancellationToken cancellationToken)
     {
         photo.Position = 0;
         var result = await _recognition.VerifyAsync(photo, fileName, profile.FaceEncoding, cancellationToken);
         if (!result.Success) throw new BadRequestException(result.Message);
+        trace.FaceScore = result.Confidence;
+        trace.FaceThreshold = result.Threshold;
         if (!result.IsMatched)
         {
             _logger.LogWarning("Từ chối {Action}: khuôn mặt người dùng {UserId} không khớp (cosine {Score:0.000} < {Threshold})",
@@ -425,10 +456,20 @@ public class AttendanceService : IAttendanceService
         return new FaceLayerDto(true, result.Confidence, result.Threshold);
     }
 
-    private async Task<WifiCheckResult> CheckWifiAsync(Branch branch, AttendanceCaptureRequest request, CancellationToken cancellationToken)
+    private async Task<WifiCheckResult> CheckWifiAsync(Branch branch, AttendanceCaptureRequest request, AttemptTrace trace,
+        CancellationToken cancellationToken)
     {
         var wifis = await _wifis.GetByBranchIdAsync(branch.Id, activeOnly: true, cancellationToken);
-        return WifiVerifier.Verify(request.Bssid, wifis.Select(w => w.Bssid));
+        var result = WifiVerifier.Verify(request.Bssid, wifis.Select(w => w.Bssid));
+        trace.WifiStatus = result.Status switch
+        {
+            WifiCheckStatus.Matched => "matched",
+            WifiCheckStatus.NotMatched => "not_matched",
+            WifiCheckStatus.NoWifiInfo => "no_wifi_info",
+            _ => "not_required"
+        };
+        trace.Bssid = result.Bssid;
+        return result;
     }
 
     private static string WifiWarning(WifiCheckResult wifi, bool checkOut = false)
@@ -437,6 +478,88 @@ public class AttendanceService : IAttendanceService
         return wifi.Status == WifiCheckStatus.NoWifiInfo
             ? $"Không xác định được Wi-Fi {when} (chưa kết nối Wi-Fi chi nhánh hoặc thiết bị không cho đọc)."
             : $"Wi-Fi {when} ({wifi.Bssid}) không thuộc chi nhánh.";
+    }
+
+    // ------------------------------------------------------------------
+    // Nhật ký mọi lượt chấm công (Task 6.5)
+    // ------------------------------------------------------------------
+
+    /// <summary>Những gì từng lớp xác minh đã đo được — điền dần trong lúc xử lý để ghi vào attendance_attempts.</summary>
+    private sealed class AttemptTrace
+    {
+        public string Stage { get; set; } = AttemptStage.Validate;
+        public int? BranchId { get; set; }
+        public long? ScheduleId { get; set; }
+        public double? Distance { get; set; }
+        public double? FaceScore { get; set; }
+        public double? FaceThreshold { get; set; }
+        public string? WifiStatus { get; set; }
+        public string? Bssid { get; set; }
+    }
+
+    /// <summary>
+    /// Chạy một lượt chấm công và ghi lại kết quả (kể cả khi bị từ chối) cùng thời gian xử lý. Việc ghi nhật ký lỗi thì chỉ cảnh báo,
+    /// không bao giờ làm hỏng lượt chấm công của nhân viên.
+    /// </summary>
+    private async Task<AttendanceResultDto> RunAndRecordAsync(string action, AttendanceCaptureRequest request,
+        Func<AttemptTrace, Task<AttendanceResultDto>> run)
+    {
+        var userId = CurrentUserId;
+        var startedAt = _clock.Now;
+        var trace = new AttemptTrace();
+        var stopwatch = Stopwatch.StartNew();
+        try
+        {
+            var result = await run(trace);
+            await RecordAttemptAsync(action, userId, startedAt, request, trace, stopwatch,
+                result.Status == AttendanceStatus.Valid ? AttemptOutcome.Accepted : AttemptOutcome.PendingApproval, result.Message);
+            return result;
+        }
+        catch (AppException ex)
+        {
+            await RecordAttemptAsync(action, userId, startedAt, request, trace, stopwatch, AttemptOutcome.Rejected, ex.Message);
+            throw;
+        }
+        catch (Exception ex)
+        {
+            await RecordAttemptAsync(action, userId, startedAt, request, trace, stopwatch, AttemptOutcome.Error, ex.GetType().Name);
+            throw;
+        }
+    }
+
+    private async Task RecordAttemptAsync(string action, int userId, DateTime attemptedAt, AttendanceCaptureRequest request, AttemptTrace trace,
+        Stopwatch stopwatch, string outcome, string message)
+    {
+        try
+        {
+            var hasCoordinate = request.Latitude is { } lat && request.Longitude is { } lng && Geofence.IsValidCoordinate(lat, lng);
+            await _attempts.AddAsync(new AttendanceAttempt
+            {
+                UserId = userId,
+                BranchId = trace.BranchId,
+                ScheduleId = trace.ScheduleId,
+                Action = action,
+                AttemptedAt = attemptedAt,
+                Outcome = outcome,
+                Stage = trace.Stage,
+                Message = message.Length <= NoteMaxLength ? message : message[..(NoteMaxLength - 1)] + "…",
+                Latitude = hasCoordinate ? ToCoordinate(request.Latitude!.Value) : null,
+                Longitude = hasCoordinate ? ToCoordinate(request.Longitude!.Value) : null,
+                Accuracy = request.Accuracy is { } acc && double.IsFinite(acc) ? acc : null,
+                Distance = trace.Distance,
+                IsMocked = request.IsMocked,
+                Bssid = trace.Bssid,
+                WifiStatus = trace.WifiStatus,
+                FaceScore = trace.FaceScore,
+                FaceThreshold = trace.FaceThreshold,
+                DurationMs = (int)Math.Min(stopwatch.ElapsedMilliseconds, int.MaxValue),
+                DeviceId = NormalizeDeviceId(request.DeviceId)
+            }, CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Không ghi được nhật ký lượt chấm công của người dùng {UserId}", userId);
+        }
     }
 
     // ------------------------------------------------------------------
