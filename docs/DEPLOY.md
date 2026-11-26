@@ -140,20 +140,22 @@ Form chi nhánh (Web) có ô **Tìm địa điểm** gợi ý ngay khi gõ. Nomi
 > Render free chỉ có 512 MB RAM nên không chạy nổi mô hình ngôn ngữ. Mô hình chạy trên **máy của bạn** (đã chốt: RTX 3060 12 GB, `qwen2.5:7b`), backend trên Render gọi vào qua một đường hầm có khóa. **Máy bạn phải bật và Ollama phải chạy** khi người dùng dùng trợ lý (lúc bảo vệ chỉ cần bật trước giờ demo). Backend vẫn chạy bình thường khi máy tắt — chỉ riêng trợ lý báo "tạm thời không khả dụng".
 
 1. Cài Ollama (<https://ollama.com>), rồi `ollama pull qwen2.5:7b`. Đặt biến môi trường Windows `OLLAMA_KEEP_ALIVE=30m` để mô hình không bị nhả khỏi VRAM sau vài phút (nạp lạnh mất **1–2 phút**; trước giờ demo hãy hỏi thử một câu để “làm nóng”).
-2. **Khóa API ở trước Ollama** (Ollama không có xác thực; đường hầm là công khai nên bắt buộc có khóa). Dùng Caddy (<https://caddyserver.com>), file `Caddyfile`:
+2. **Khóa API ở trước Ollama** (Ollama không có xác thực; đường hầm là công khai nên bắt buộc có khóa). Dùng Caddy (<https://caddyserver.com>, cài: `winget install -e --id CaddyServer.Caddy`), file `Caddyfile`:
 
    ```
    :11435 {
+       bind 127.0.0.1
        @unauth not header Authorization "Bearer {env.OLLAMA_PROXY_KEY}"
        respond @unauth 401
        reverse_proxy localhost:11434 {
+           header_up Host localhost:11434
            flush_interval -1
        }
    }
    ```
 
-   Đặt `OLLAMA_PROXY_KEY` là một chuỗi ngẫu nhiên dài (vd tạo bằng `openssl rand -hex 24`) rồi chạy `caddy run`. `flush_interval -1` để dòng chữ trả về từng đoạn, không bị gom đệm.
-3. Mở đường hầm tới cổng của Caddy (**không** trỏ thẳng vào 11434): cài `cloudflared`, chạy `cloudflared tunnel --url http://localhost:11435` — lệnh in ra địa chỉ `https://xxxx.trycloudflare.com`. Địa chỉ dạng này **đổi mỗi lần chạy lại**; muốn cố định thì tạo *named tunnel* với một tên miền của bạn (Cloudflare Zero Trust → Tunnels).
+   Đặt `OLLAMA_PROXY_KEY` là một chuỗi ngẫu nhiên dài (vd tạo bằng `openssl rand -hex 24`) rồi chạy `caddy run` trong thư mục chứa file. `header_up Host` là bắt buộc: Ollama trả **403** nếu `Host` là tên miền của đường hầm. `flush_interval -1` để dòng chữ trả về từng đoạn, không bị gom đệm.
+3. Mở đường hầm tới cổng của Caddy (**không** trỏ thẳng vào 11434): cài `cloudflared` (`winget install -e --id Cloudflare.cloudflared`), chạy `cloudflared tunnel --url http://127.0.0.1:11435` — lệnh in ra địa chỉ `https://xxxx.trycloudflare.com`. Địa chỉ dạng này **đổi mỗi lần chạy lại**; muốn cố định thì tạo *named tunnel* với một tên miền của bạn (Cloudflare Zero Trust → Tunnels).
 4. Render → `flexiwork-api` → **Environment**: thêm
    * `Ollama__BaseUrl` = địa chỉ đường hầm (không có dấu `/` ở cuối),
    * `Ollama__ApiKey` = đúng giá trị `OLLAMA_PROXY_KEY` ở trên.
