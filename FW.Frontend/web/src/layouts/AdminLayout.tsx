@@ -4,53 +4,48 @@ import { AppShell } from '@astryxdesign/core/AppShell';
 import { DropdownMenu, DropdownMenuDivider, DropdownMenuItem } from '@astryxdesign/core/DropdownMenu';
 import { IconButton } from '@astryxdesign/core/IconButton';
 import { Icon } from '@astryxdesign/core/Icon';
-import { SideNav, SideNavItem, SideNavSection } from '@astryxdesign/core/SideNav';
+import { SegmentedControl, SegmentedControlItem } from '@astryxdesign/core/SegmentedControl';
+import { SideNav, SideNavHeading, SideNavItem, SideNavSection } from '@astryxdesign/core/SideNav';
+import { Layout, LayoutContent, LayoutHeader } from '@astryxdesign/core/Layout';
 import { HStack, VStack } from '@astryxdesign/core/Stack';
 import { Text } from '@astryxdesign/core/Text';
-import { TopNav, TopNavHeading } from '@astryxdesign/core/TopNav';
 import { ChevronDown, KeyRound, LogOut, Moon, Sun, UserRound } from 'lucide-react';
 import { menu, type MenuItem } from '@/config/menu';
 import { useAuthStore } from '@/stores/authStore';
 import { useUiStore } from '@/stores/uiStore';
 import { Avatar } from '@/components/ui/Layout';
-import { LogoMark } from '@/components/common/Logo';
+import { BrandIcon, SLOGAN } from '@/layouts/Brand';
 import { ChatButton, NotificationBell } from '@/components/common/HeaderBadges';
 import { RealtimeBridge } from '@/app/RealtimeBridge';
 import { roleLabels } from '@/lib/format';
 
-/** Khung giao diện Web Admin (Astryx AppShell): thanh trên + menu trái thu gọn được + vùng nội dung. */
+/** Khung giao diện Web Admin (Astryx AppShell): menu trái thu gọn được, thanh trên và vùng nội dung. */
 export function AdminLayout({ children }: { children?: ReactNode }) {
   return (
-    <AppShell topNav={<Header />} sideNav={<Sidebar />} contentPadding={6}>
+    <AppShell variant="section" sideNav={<Sidebar />} contentPadding={0}>
       <RealtimeBridge />
-      {children ?? <Outlet />}
+      <Layout
+        height="fill"
+        padding={0}
+        header={
+          <LayoutHeader hasDivider padding={0}>
+            <HStack hAlign="between" vAlign="center" gap={3} paddingInline={6} className="h-16 bg-[var(--fw-chrome)]">
+              <div className="min-w-0 flex-1">
+                <Text color="secondary" weight="medium" className="hidden md:block">
+                  {SLOGAN}
+                </Text>
+              </div>
+              <HStack gap={2} vAlign="center">
+                <ChatButton />
+                <NotificationBell />
+                <UserMenu />
+              </HStack>
+            </HStack>
+          </LayoutHeader>
+        }
+        content={<LayoutContent padding={4}>{children ?? <Outlet />}</LayoutContent>}
+      />
     </AppShell>
-  );
-}
-
-function Header() {
-  const colorMode = useUiStore((s) => s.colorMode);
-  const toggleColorMode = useUiStore((s) => s.toggleColorMode);
-
-  return (
-    <TopNav
-      label="Thanh điều hướng chính"
-      heading={<TopNavHeading logo={<LogoMark size={28} />} heading="FlexiWork" subheading="Quản lý ca & chấm công" headingHref="/" />}
-      endContent={
-        <HStack gap={1} vAlign="center">
-          <IconButton
-            variant="ghost"
-            label={colorMode === 'light' ? 'Chuyển sang giao diện tối' : 'Chuyển sang giao diện sáng'}
-            tooltip={colorMode === 'light' ? 'Giao diện tối' : 'Giao diện sáng'}
-            icon={<Icon icon={colorMode === 'light' ? Moon : Sun} />}
-            onClick={toggleColorMode}
-          />
-          <ChatButton />
-          <NotificationBell />
-          <UserMenu />
-        </HStack>
-      }
-    />
   );
 }
 
@@ -109,20 +104,46 @@ function UserMenu() {
 
 function Sidebar() {
   const hasAnyRole = useAuthStore((s) => s.hasAnyRole);
+  const colorMode = useUiStore((s) => s.colorMode);
+  const toggleColorMode = useUiStore((s) => s.toggleColorMode);
   const collapsed = useUiStore((s) => s.sideNavCollapsed);
   const setCollapsed = useUiStore((s) => s.setSideNavCollapsed);
   const { pathname } = useLocation();
   const items = menu.filter((item) => hasAnyRole(item.roles));
+  // Mục cấu hình hệ thống ghim ở đáy menu, tách khỏi nghiệp vụ hằng ngày
+  const pinned = items.filter((item) => item.label === 'Cài đặt');
 
   return (
     <SideNav
       aria-label="Menu chức năng"
+      header={<SideNavHeading heading="FlexiWork" icon={<BrandIcon size={44} />} headingHref="/" />}
       collapsible={{ isCollapsed: collapsed, onCollapsedChange: setCollapsed, buttonLabel: 'Thu gọn menu' }}
+      footer={
+        <VStack gap={2}>
+          {pinned.length > 0 && (
+            <SideNavSection title="Hệ thống" isHeaderHidden>
+              {pinned.map((item) => (
+                <MenuEntry key={item.label} item={item} pathname={pathname} />
+              ))}
+            </SideNavSection>
+          )}
+          {collapsed ? (
+            <IconButton variant="ghost" label="Đổi giao diện sáng / tối" icon={<Icon icon={colorMode === 'light' ? Moon : Sun} />} onClick={toggleColorMode} />
+          ) : (
+            <SegmentedControl label="Giao diện" size="sm" layout="fill" value={colorMode} onChange={(v) => v !== colorMode && toggleColorMode()}>
+              <SegmentedControlItem value="light" label="Sáng" icon={<Icon icon={Sun} size="sm" />} />
+              <SegmentedControlItem value="dark" label="Tối" icon={<Icon icon={Moon} size="sm" />} />
+            </SegmentedControl>
+          )}
+        </VStack>
+      }
     >
       <SideNavSection title="Chức năng" isHeaderHidden>
-        {items.map((item) => (
-          <MenuEntry key={item.label} item={item} pathname={pathname} />
-        ))}
+        {items
+          .filter((item) => !pinned.includes(item))
+          .map((item) => (
+            <MenuEntry key={item.label} item={item} pathname={pathname} />
+          ))}
       </SideNavSection>
     </SideNav>
   );
