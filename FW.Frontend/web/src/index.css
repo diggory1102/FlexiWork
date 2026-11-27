@@ -3,14 +3,16 @@
  * Thứ tự @layer bắt buộc giữ nguyên: nếu sai, style của component Astryx sẽ đè lên class Tailwind.
  * Màu/khoảng cách/bo góc đều lấy từ design token của theme (CSS variables) → đổi theme hoặc chế độ
  * sáng/tối không phải sửa từng trang (Dynamic Theming).
+ * Thứ tự ưu tiên: utilities (Tailwind) > astryx-theme (src/theme, chèn lúc chạy) > astryx-base (component)
+ * > base (preflight) > theme > reset. Theme "flexiwork" dựng lúc chạy nên không cần nạp CSS của theme neutral.
  */
 @layer reset, theme, base, astryx-base, astryx-theme, components, utilities;
 
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
 @import 'tailwindcss/theme.css' layer(theme);
 @import 'tailwindcss/preflight.css' layer(base);
 @import '@astryxdesign/core/reset.css';
 @import '@astryxdesign/core/astryx.css';
-@import '@astryxdesign/theme-neutral/theme.css';
 @import '@astryxdesign/core/tailwind-theme.css';
 @import 'tailwindcss/utilities.css' layer(utilities);
 
