@@ -6,9 +6,9 @@ import { Selector } from '@astryxdesign/core/Selector';
 import { HStack, VStack } from '@astryxdesign/core/Stack';
 import { Text } from '@astryxdesign/core/Text';
 import { KeyRound, Lock, Pencil, Plus, ShieldCheck, Trash2, Unlock } from 'lucide-react';
-import { PageHeader, Toolbar } from '@/components/ui/Layout';
+import { PageFrame } from '@/layouts/PageFrame';
 import { EmployeeCell } from '@/components/ui/EmployeeCell';
-import { ListCard, SearchInput } from '@/components/ui/ListCard';
+import { SearchInput } from '@/components/ui/ListCard';
 import { BranchSelect } from '@/components/ui/BranchSelect';
 import { Badge } from '@/components/ui/Feedback';
 import { ConfirmDialog } from '@/components/ui/Modal';
@@ -97,15 +97,16 @@ export function EmployeesPage() {
     {
       key: 'name',
       header: 'Nhân viên',
-      width: 260,
+      width: 270,
       render: (u) => (
         <EmployeeCell name={u.fullName} code={u.employeeCode} avatarUrl={u.avatarUrl} sub={u.email} />
       ),
     },
-    { key: 'branch', header: 'Chi nhánh', render: (u) => <Text type="supporting">{u.branchName ?? '—'}</Text> },
+    { key: 'branch', header: 'Chi nhánh', width: 150, render: (u) => <Text type="supporting">{u.branchName ?? '—'}</Text> },
     {
       key: 'org',
       header: 'Phòng ban / Chức vụ',
+      width: 170,
       render: (u) => (
         <VStack gap={0.5} className="max-w-[220px]">
           <Text maxLines={1}>{u.departmentName ?? '—'}</Text>
@@ -118,6 +119,7 @@ export function EmployeesPage() {
     {
       key: 'roles',
       header: 'Vai trò',
+      width: 165,
       render: (u) => (
         <HStack gap={1} wrap="wrap">
           {u.roles.map((r) => (
@@ -131,6 +133,7 @@ export function EmployeesPage() {
     {
       key: 'status',
       header: 'Trạng thái',
+      width: 140,
       render: (u) => (
         <VStack gap={1} hAlign="start">
           <Badge tone={statusTone(u.status)}>{userStatusLabels[u.status]}</Badge>
@@ -150,20 +153,20 @@ export function EmployeesPage() {
       render: (u) => (
         <div onClick={(e) => e.stopPropagation()}>
           <HStack gap={0.5} hAlign="end">
-            {canEditProfile(u) && <IconButton variant="ghost" size="sm" label="Sửa hồ sơ" tooltip="Sửa hồ sơ" icon={<Icon icon={Pencil} />} onClick={() => setEditing(u)} />}
+            {canEditProfile(u) && <IconButton variant="secondary" size="sm" label="Sửa hồ sơ" tooltip="Sửa hồ sơ" icon={<Icon icon={Pencil} />} onClick={() => setEditing(u)} />}
             {canActOn(u) && (
               <>
                 <IconButton
-                  variant="ghost"
+                  variant="secondary"
                   size="sm"
                   label={u.status === 'active' ? 'Khóa tài khoản' : 'Mở khóa / đổi trạng thái'}
                   tooltip={u.status === 'active' ? 'Khóa tài khoản' : 'Mở khóa / đổi trạng thái'}
                   icon={<Icon icon={u.status === 'active' ? Lock : Unlock} />}
                   onClick={() => setStatusFor(u)}
                 />
-                <IconButton variant="ghost" size="sm" label="Mật khẩu" tooltip="Mật khẩu (gửi email / tự đặt)" icon={<Icon icon={KeyRound} />} onClick={() => setReissueFor(u)} />
-                {isAdmin && <IconButton variant="ghost" size="sm" label="Phân quyền" tooltip="Phân quyền" icon={<Icon icon={ShieldCheck} />} onClick={() => setRolesFor(u)} />}
-                <IconButton variant="ghost" size="sm" label="Xóa" tooltip="Xóa" icon={<Icon icon={Trash2} color="error" />} onClick={() => setDeleting(u)} />
+                <IconButton variant="secondary" size="sm" label="Mật khẩu" tooltip="Mật khẩu (gửi email / tự đặt)" icon={<Icon icon={KeyRound} />} onClick={() => setReissueFor(u)} />
+                {isAdmin && <IconButton variant="secondary" size="sm" label="Phân quyền" tooltip="Phân quyền" icon={<Icon icon={ShieldCheck} />} onClick={() => setRolesFor(u)} />}
+                <IconButton variant="secondary" size="sm" label="Xóa" tooltip="Xóa" icon={<Icon icon={Trash2} color="error" />} onClick={() => setDeleting(u)} />
               </>
             )}
           </HStack>
@@ -176,31 +179,33 @@ export function EmployeesPage() {
 
   return (
     <>
-      <PageHeader
+      <PageFrame
         title="Nhân viên"
-        description={canManage ? 'Quản lý hồ sơ, tài khoản và phân quyền nhân sự toàn doanh nghiệp.' : 'Danh sách nhân sự thuộc chi nhánh bạn quản lý.'}
-        actions={canManage && <Button label="Thêm nhân viên" variant="primary" icon={<Icon icon={Plus} />} onClick={() => setEditing(null)} />}
-      />
-      <ListCard>
-        <Toolbar>
-          <SearchInput placeholder="Tìm mã, họ tên, email, SĐT…" value={search} onChange={setSearch} />
-          {canManage && (
-            <BranchSelect width={210} value={query.branchId ?? ''} onChange={(branchId) => setQuery({ branchId })} />
-          )}
-          <Selector
-            label="Phòng ban"
-            isLabelHidden
-            width={210}
-            options={[{ value: '', label: 'Tất cả phòng ban' }, ...departments.map((d) => ({ value: String(d.id), label: d.name }))]}
-            value={String(query.departmentId ?? '')}
-            onChange={(v) => setQuery({ departmentId: toId(v) })}
-          />
-          <Selector label="Vai trò" isLabelHidden width={180} options={roleFilterOptions} value={query.roleName ?? ''} onChange={(v) => setQuery({ roleName: (v ?? '') as Role | '' })} />
-          <Selector label="Trạng thái" isLabelHidden width={180} options={statusFilterOptions} value={query.status ?? ''} onChange={(v) => setQuery({ status: (v ?? '') as UserStatus | '' })} />
-        </Toolbar>
-        <DataTable columns={columns} rows={rows} rowKey={(u) => u.id} loading={loading} emptyText="Không tìm thấy nhân viên" onRowClick={setViewing} />
-        <Pagination page={page} onChange={(pageIndex) => setQuery({ pageIndex })} />
-      </ListCard>
+        layout="card"
+        meta={!canManage && <Text type="supporting">Nhân sự thuộc chi nhánh bạn quản lý</Text>}
+        actions={canManage && <Button label="Thêm nhân viên" variant="primary" size="lg" icon={<Icon icon={Plus} />} onClick={() => setEditing(null)} />}
+        toolbar={
+          <HStack gap={3} wrap="wrap" vAlign="center">
+            <div className="min-w-60 flex-1">
+              <SearchInput width="100%" placeholder="Tìm mã, họ tên, email, SĐT…" value={search} onChange={setSearch} />
+            </div>
+            {canManage && <BranchSelect width={190} value={query.branchId ?? ''} onChange={(branchId) => setQuery({ branchId })} />}
+            <Selector
+              label="Phòng ban"
+              isLabelHidden
+              width={190}
+              options={[{ value: '', label: 'Tất cả phòng ban' }, ...departments.map((d) => ({ value: String(d.id), label: d.name }))]}
+              value={String(query.departmentId ?? '')}
+              onChange={(v) => setQuery({ departmentId: toId(v) })}
+            />
+            <Selector label="Vai trò" isLabelHidden width={170} options={roleFilterOptions} value={query.roleName ?? ''} onChange={(v) => setQuery({ roleName: (v ?? '') as Role | '' })} />
+            <Selector label="Trạng thái" isLabelHidden width={170} options={statusFilterOptions} value={query.status ?? ''} onChange={(v) => setQuery({ status: (v ?? '') as UserStatus | '' })} />
+          </HStack>
+        }
+        footer={<Pagination page={page} onChange={(pageIndex) => setQuery({ pageIndex })} />}
+      >
+        <DataTable density="spacious" columns={columns} rows={rows} rowKey={(u) => u.id} loading={loading} emptyText="Không tìm thấy nhân viên" onRowClick={setViewing} minWidth={1100} />
+      </PageFrame>
 
       <EmployeeFormModal user={editing} roleOptions={roleOptions} onClose={() => setEditing(undefined)} onSaved={reload} />
       <EmployeeDetailModal user={viewing} onClose={() => setViewing(null)} />

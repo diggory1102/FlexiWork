@@ -50,13 +50,13 @@ export function ScheduleGrid({ days, today, employees, schedules, shifts, staffi
 
   return (
     <div className="overflow-x-auto">
-      <div className="min-w-[1080px]">
+      <div className="min-w-[1084px]">
         <Table dividers="grid" density="compact" verticalAlign="top">
           <TableHeader>
             <TableRow>
-              <TableHeaderCell style={{ width: 220, minWidth: 220 }}>Nhân viên</TableHeaderCell>
+              <TableHeaderCell style={{ width: 300, minWidth: 300 }}>Nhân viên</TableHeaderCell>
               {days.map((day, i) => (
-                <TableHeaderCell key={day} style={{ minWidth: 120 }}>
+                <TableHeaderCell key={day} style={{ minWidth: 112 }}>
                   <HStack gap={1} vAlign="center" wrap="wrap">
                     <Text weight="semibold" color={day === today ? 'accent' : undefined}>
                       {weekdayLabels[i]}
@@ -75,20 +75,20 @@ export function ScheduleGrid({ days, today, employees, schedules, shifts, staffi
               <TableRow key={emp.id}>
                 <TableCell>
                   <HStack gap={2} vAlign="center">
-                    <Avatar name={emp.fullName} url={emp.avatarUrl} size={32} />
-                    <VStack gap={0}>
-                      <Text weight="medium" maxLines={1}>
-                        {emp.fullName}
-                      </Text>
+                    <Avatar name={emp.fullName} url={emp.avatarUrl} size={24} />
+                    <Text weight="medium" maxLines={1}>
+                      {emp.fullName}
+                    </Text>
+                    <span className="shrink-0 whitespace-nowrap">
                       <Text type="supporting">{emp.employeeCode}</Text>
-                    </VStack>
+                    </span>
                   </HStack>
                 </TableCell>
                 {days.map((day) => {
                   const items = byCell.get(`${emp.id}|${day}`) ?? [];
                   return (
                     <TableCell key={day}>
-                      <VStack gap={1} hAlign="start">
+                      <HStack gap={1} vAlign="center" wrap="wrap">
                         {items.map((s) => (
                           <Tooltip
                             key={s.id}
@@ -112,7 +112,7 @@ export function ScheduleGrid({ days, today, employees, schedules, shifts, staffi
                             onClick={() => onAdd(emp, day)}
                           />
                         )}
-                      </VStack>
+                      </HStack>
                     </TableCell>
                   );
                 })}

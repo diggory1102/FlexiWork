@@ -8,8 +8,7 @@ import { HStack } from '@astryxdesign/core/Stack';
 import { Text } from '@astryxdesign/core/Text';
 import { Token } from '@astryxdesign/core/Token';
 import { CalendarCheck, ChevronLeft, ChevronRight, Copy, Eraser, Users, Zap } from 'lucide-react';
-import { PageHeader, Toolbar } from '@/components/ui/Layout';
-import { ListCard } from '@/components/ui/ListCard';
+import { PageFrame } from '@/layouts/PageFrame';
 import { EmptyState, ErrorList, Spinner, type ErrorDetail } from '@/components/ui/Feedback';
 import { ConfirmDialog } from '@/components/ui/Modal';
 import { scheduleApi, shiftApi, staffingApi } from '@/services/schedulingApi';
@@ -153,11 +152,30 @@ export function SchedulesPage() {
 
   return (
     <>
-      <PageHeader
+      <PageFrame
         title="Xếp lịch làm việc"
-        description="Bấm vào ô để xếp ca cho từng người, hoặc dùng Xếp nhanh / Sao chép tuần trước. Lịch mới là bản nháp — bấm Công bố để nhân viên thấy."
+        layout="dense"
         actions={
           <>
+            {isCompanyWide && (
+              <Selector
+                label="Chi nhánh"
+                isLabelHidden
+                width={260}
+                options={branchOptions}
+                value={branchId ? String(branchId) : ''}
+                onChange={(v) => v && setBranchId(Number(v))}
+                placeholder="Chọn chi nhánh"
+              />
+            )}
+            <ButtonGroup label="Chọn tuần">
+              <IconButton label="Tuần trước" tooltip="Tuần trước" variant="secondary" icon={<Icon icon={ChevronLeft} />} onClick={() => setWeekStart(addDays(weekStart, -7))} />
+              <Button label="Tuần này" variant="secondary" onClick={() => setWeekStart(startOfWeek(today))} />
+              <IconButton label="Tuần sau" tooltip="Tuần sau" variant="secondary" icon={<Icon icon={ChevronRight} />} onClick={() => setWeekStart(addDays(weekStart, 7))} />
+            </ButtonGroup>
+            <Text weight="semibold" hasTabularNumbers>
+              {formatDate(days[0])} – {formatDate(days[6])}
+            </Text>
             <Button label="Xếp nhanh" variant="secondary" icon={<Icon icon={Zap} />} onClick={() => setQuickOpen(true)} isDisabled={!branchId || isPastWeek} />
             <Button
               label={drafts > 0 ? `Công bố ${drafts} ca` : 'Công bố'}
@@ -168,47 +186,25 @@ export function SchedulesPage() {
             />
           </>
         }
-      />
-
-      <ListCard>
-        <Toolbar>
-          {isCompanyWide && (
-            <Selector
-              label="Chi nhánh"
-              isLabelHidden
-              width={260}
-              options={branchOptions}
-              value={branchId ? String(branchId) : ''}
-              onChange={(v) => v && setBranchId(Number(v))}
-              placeholder="Chọn chi nhánh"
-            />
-          )}
-          <ButtonGroup label="Chọn tuần">
-            <IconButton label="Tuần trước" tooltip="Tuần trước" variant="secondary" icon={<Icon icon={ChevronLeft} />} onClick={() => setWeekStart(addDays(weekStart, -7))} />
-            <Button label="Tuần này" variant="secondary" onClick={() => setWeekStart(startOfWeek(today))} />
-            <IconButton label="Tuần sau" tooltip="Tuần sau" variant="secondary" icon={<Icon icon={ChevronRight} />} onClick={() => setWeekStart(addDays(weekStart, 7))} />
-          </ButtonGroup>
-          <Text weight="semibold" hasTabularNumbers>
-            {formatDate(days[0])} – {formatDate(days[6])}
-          </Text>
-          <HStack gap={1} wrap="wrap" hAlign="end" vAlign="center">
-            <Button label="Sao chép tuần trước" variant="ghost" size="sm" icon={<Icon icon={Copy} />} onClick={() => setConfirm('copy')} isDisabled={!branchId || isPastWeek} />
-            <Button label="Xóa nháp" variant="ghost" size="sm" icon={<Icon icon={Eraser} />} onClick={() => setConfirm('clear')} isDisabled={drafts === 0} />
-            <Button label="Định biên ca" variant="ghost" size="sm" icon={<Icon icon={Users} />} onClick={() => setStaffingTarget({ open: true })} isDisabled={!branchId} />
+        toolbar={
+          <HStack gap={3} wrap="wrap" vAlign="center" hAlign="between">
+            <HStack gap={1} wrap="wrap" vAlign="center">
+              <Button label="Sao chép tuần trước" variant="ghost" size="sm" icon={<Icon icon={Copy} />} onClick={() => setConfirm('copy')} isDisabled={!branchId || isPastWeek} />
+              <Button label="Xóa nháp" variant="ghost" size="sm" icon={<Icon icon={Eraser} />} onClick={() => setConfirm('clear')} isDisabled={drafts === 0} />
+              <Button label="Định biên ca" variant="ghost" size="sm" icon={<Icon icon={Users} />} onClick={() => setStaffingTarget({ open: true })} isDisabled={!branchId} />
+              <Text type="supporting">
+                {schedules.length === 0 ? 'Tuần này chưa có ca nào.' : `${published} ca đã công bố · ${drafts} ca nháp${cancelled > 0 ? ` · ${cancelled} ca đã hủy` : ''}`}
+              </Text>
+            </HStack>
+            <HStack gap={1} wrap="wrap">
+              {legend.map((l) => (
+                <Token key={l.label} size="sm" color={l.color} label={l.label} />
+              ))}
+            </HStack>
           </HStack>
-        </Toolbar>
-
-        <HStack gap={3} wrap="wrap" vAlign="center" hAlign="between" padding={3}>
-          <Text type="supporting">
-            {schedules.length === 0 ? 'Tuần này chưa có ca nào.' : `${published} ca đã công bố · ${drafts} ca nháp${cancelled > 0 ? ` · ${cancelled} ca đã hủy` : ''}`}
-          </Text>
-          <HStack gap={1} wrap="wrap">
-            {legend.map((l) => (
-              <Token key={l.label} size="sm" color={l.color} label={l.label} />
-            ))}
-          </HStack>
-        </HStack>
-
+        }
+      >
+        <div className="min-h-full bg-surface">
         {report && (
           <HStack padding={3}>
             <ErrorList error={report} status="warning" />
@@ -226,7 +222,8 @@ export function SchedulesPage() {
         ) : (
           <ScheduleGrid days={days} today={today} employees={employees} schedules={schedules} shifts={shifts} staffing={staffing} onStaffing={(shift, day) => setStaffingTarget({ open: true, shiftId: shift.id, date: day })} onAdd={(employee, day) => setAddTarget({ employee, day })} onOpen={setDetail} />
         )}
-      </ListCard>
+        </div>
+      </PageFrame>
 
       <AddShiftModal
         target={addTarget}

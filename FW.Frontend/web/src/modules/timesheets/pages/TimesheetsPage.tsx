@@ -5,9 +5,8 @@ import { HStack, VStack } from '@astryxdesign/core/Stack';
 import { Tab, TabList } from '@astryxdesign/core/TabList';
 import { Text } from '@astryxdesign/core/Text';
 import { Calculator, CheckCheck, Lock } from 'lucide-react';
-import { PageHeader, Toolbar } from '@/components/ui/Layout';
-import { EmployeeCell } from '@/components/ui/EmployeeCell';
-import { ListCard, SearchInput } from '@/components/ui/ListCard';
+import { SearchInput } from '@/components/ui/ListCard';
+import { PageFrame } from '@/layouts/PageFrame';
 import { Badge, Notice } from '@/components/ui/Feedback';
 import { DataTable, Pagination, type Column } from '@/components/ui/DataTable';
 import { ConfirmDialog, Modal } from '@/components/ui/Modal';
@@ -108,81 +107,103 @@ export function TimesheetsPage() {
     {
       key: 'employee',
       header: 'Nhân viên',
-      width: 230,
-      render: (t) => <EmployeeCell name={t.employee.fullName} code={t.employee.employeeCode} avatarUrl={t.employee.avatarUrl} sub={branchFilter.companyWide ? t.branchName : null} />,
+      width: 235,
+      className: 'whitespace-nowrap',
+      render: (t) => (
+        <HStack gap={2} vAlign="center">
+          <Text weight="medium" maxLines={1}>
+            {t.employee.fullName}
+          </Text>
+          <Text type="supporting">{t.employee.employeeCode}</Text>
+        </HStack>
+      ),
+    },
+    ...(branchFilter.companyWide
+      ? [{ key: 'branch', header: 'Chi nhánh', width: 130, className: 'whitespace-nowrap', render: (t: Timesheet) => <Text maxLines={1}>{t.branchName}</Text> }]
+      : []),
+    {
+      key: 'status',
+      header: 'Trạng thái',
+      width: 155,
+      className: 'whitespace-nowrap',
+      render: (t) => (
+        <HStack gap={2} vAlign="center">
+          <Badge tone={timesheetStatusTone[t.status]}>{timesheetStatusLabels[t.status]}</Badge>
+          {t.isPreview && <Text type="supporting">Tạm tính</Text>}
+        </HStack>
+      ),
     },
     {
       key: 'shifts',
+      width: 165,
+      className: 'whitespace-nowrap',
       header: 'Ca làm / xếp',
       align: 'end',
       render: (t) => (
-        <VStack gap={0.5} hAlign="end">
+        <HStack gap={2} hAlign="end" vAlign="center">
           <Text hasTabularNumbers>
             {t.figures.workedShifts}/{t.figures.scheduledShifts}
           </Text>
           {t.figures.pendingLogs > 0 && <Text type="supporting">{t.figures.pendingLogs} chờ duyệt</Text>}
           {t.figures.missingCheckouts > 0 && <Text type="supporting">{t.figures.missingCheckouts} thiếu check-out</Text>}
-        </VStack>
+        </HStack>
       ),
     },
     {
       key: 'days',
+      width: 115,
+      className: 'whitespace-nowrap',
       header: 'Ngày công',
       align: 'end',
       render: (t) => (
-        <VStack gap={0.5} hAlign="end">
+        <HStack gap={2} hAlign="end" vAlign="center">
           <Text weight="semibold" hasTabularNumbers>
             {num(t.figures.actualWorkDays)}
           </Text>
           <Text type="supporting">{num(t.figures.actualWorkHours)} giờ</Text>
-        </VStack>
+        </HStack>
       ),
     },
     {
       key: 'violations',
+      width: 125,
+      className: 'whitespace-nowrap',
       header: 'Vi phạm',
       align: 'end',
       render: (t) =>
         t.figures.violationCount === 0 && t.figures.absentShifts === 0 ? (
           <Text type="supporting">—</Text>
         ) : (
-          <VStack gap={0.5} hAlign="end">
+          <HStack gap={2} hAlign="end" vAlign="center">
             <Text hasTabularNumbers>{t.figures.violationCount} lần</Text>
             {t.figures.absentShifts > 0 && <Text type="supporting">{t.figures.absentShifts} ca vắng</Text>}
-          </VStack>
+          </HStack>
         ),
     },
-    { key: 'ot', header: 'OT (giờ)', align: 'end', render: (t) => (t.figures.totalOvertimeHours > 0 ? <Text hasTabularNumbers>{num(t.figures.totalOvertimeHours)}</Text> : <Text type="supporting">—</Text>) },
+    { key: 'ot', header: 'OT (giờ)', width: 90, align: 'end', render: (t) => (t.figures.totalOvertimeHours > 0 ? <Text hasTabularNumbers>{num(t.figures.totalOvertimeHours)}</Text> : <Text type="supporting">—</Text>) },
     {
       key: 'leave',
+      width: 175,
+      className: 'whitespace-nowrap',
       header: 'Nghỉ phép',
       align: 'end',
       render: (t) =>
         t.figures.paidLeaveDays + t.figures.unpaidLeaveDays === 0 ? (
           <Text type="supporting">—</Text>
         ) : (
-          <VStack gap={0.5} hAlign="end">
+          <HStack gap={2} hAlign="end" vAlign="center">
             <Text hasTabularNumbers>{num(t.figures.paidLeaveDays)} có lương</Text>
             {t.figures.unpaidLeaveDays > 0 && <Text type="supporting">{num(t.figures.unpaidLeaveDays)} không lương</Text>}
-          </VStack>
+          </HStack>
         ),
     },
     {
       key: 'penalty',
+      width: 100,
+      className: 'whitespace-nowrap',
       header: 'Tiền phạt',
       align: 'end',
       render: (t) => (t.figures.penaltyAmount > 0 ? <Text hasTabularNumbers>{formatCurrency(t.figures.penaltyAmount)}</Text> : <Text type="supporting">—</Text>),
-    },
-    {
-      key: 'status',
-      header: 'Trạng thái',
-      width: 140,
-      render: (t) => (
-        <VStack gap={0.5} hAlign="start">
-          <Badge tone={timesheetStatusTone[t.status]}>{timesheetStatusLabels[t.status]}</Badge>
-          {t.isPreview && <Text type="supporting">Tạm tính</Text>}
-        </VStack>
-      ),
     },
   ];
 
@@ -206,55 +227,58 @@ export function TimesheetsPage() {
   };
 
   return (
-    <VStack gap={4}>
-      <PageHeader
+    <>
+      <PageFrame
         title="Bảng công"
-        description="Tổng hợp công từ chấm công, ca làm, nghỉ phép và tăng ca. Xác nhận rồi khóa trước khi tính lương."
+        layout="dense"
         actions={
           <>
             <MonthPicker value={ym} onChange={setYm} max={currentYearMonth()} />
             <BranchSelector filter={branchFilter} />
+            <SearchInput placeholder="Tìm theo tên hoặc mã nhân viên…" value={search} onChange={setSearch} width={270} />
             <ExportButton url={timesheetApi.exportUrl} params={{ year: ym.year, month: ym.month, branchId: apiBranchId }} />
+            <Button label="Xác nhận bảng công" variant="primary" icon={<Icon icon={CheckCheck} />} isDisabled={unconfirmed === 0} onClick={() => setAction('confirm')} />
           </>
         }
-      />
-
-      <HStack gap={2} wrap="wrap" vAlign="center">
-        <Button label="Tính bảng công" variant="secondary" icon={<Icon icon={Calculator} />} onClick={() => setAction('calculate')} />
-        <Button label="Xác nhận bảng công" variant="primary" icon={<Icon icon={CheckCheck} />} isDisabled={unconfirmed === 0} onClick={() => setAction('confirm')} />
-        {canLock && (
-          <Button
-            label="Khóa bảng công"
-            variant="secondary"
-            icon={<Icon icon={Lock} />}
-            isDisabled={!summary?.monthEnded || (summary?.confirmed ?? 0) === 0}
-            onClick={() => setAction('lock')}
+        toolbar={
+          <HStack gap={3} vAlign="center" hAlign="between" wrap="wrap">
+            <TabList value={tab} onChange={(v) => setTab(v as StatusTab)}>
+              <Tab value="all" label="Tất cả" />
+              <Tab value="draft" label={tabLabel('Nháp', summary?.draft)} />
+              <Tab value="confirmed" label={tabLabel('Đã xác nhận', summary?.confirmed)} />
+              <Tab value="locked" label={tabLabel('Đã khóa', summary?.locked)} />
+              <Tab value="finalized" label={tabLabel('Đã chốt lương', summary?.finalized)} />
+            </TabList>
+            <HStack gap={2} vAlign="center" wrap="wrap">
+              {summary && !summary.monthEnded && canLock && <Text type="supporting">Chỉ khóa được sau khi tháng kết thúc.</Text>}
+              <Button label="Tính bảng công" variant="secondary" size="sm" icon={<Icon icon={Calculator} />} onClick={() => setAction('calculate')} />
+              {canLock && (
+                <Button
+                  label="Khóa bảng công"
+                  variant="secondary"
+                  size="sm"
+                  icon={<Icon icon={Lock} />}
+                  isDisabled={!summary?.monthEnded || (summary?.confirmed ?? 0) === 0}
+                  onClick={() => setAction('lock')}
+                />
+              )}
+            </HStack>
+          </HStack>
+        }
+        footer={page && page.totalCount > 0 ? <Pagination page={page} onChange={(pageIndex) => setQuery({ pageIndex })} /> : undefined}
+      >
+        <div className="min-h-full bg-surface">
+          <DataTable
+            columns={columns}
+            rows={rows}
+            rowKey={(t) => `${t.employee.id}-${t.year}-${t.month}`}
+            loading={loading}
+            emptyText="Chưa có bảng công trong tháng này"
+            onRowClick={setSelected}
+            stickyStart={['employee']}
           />
-        )}
-        {summary && !summary.monthEnded && canLock && <Text type="supporting">Chỉ khóa được sau khi tháng kết thúc.</Text>}
-      </HStack>
-
-      <ListCard>
-        <Toolbar>
-          <TabList value={tab} onChange={(v) => setTab(v as StatusTab)}>
-            <Tab value="all" label="Tất cả" />
-            <Tab value="draft" label={tabLabel('Nháp', summary?.draft)} />
-            <Tab value="confirmed" label={tabLabel('Đã xác nhận', summary?.confirmed)} />
-            <Tab value="locked" label={tabLabel('Đã khóa', summary?.locked)} />
-            <Tab value="finalized" label={tabLabel('Đã chốt lương', summary?.finalized)} />
-          </TabList>
-          <SearchInput placeholder="Tìm theo tên hoặc mã nhân viên…" value={search} onChange={setSearch} />
-        </Toolbar>
-        <DataTable
-          columns={columns}
-          rows={rows}
-          rowKey={(t) => `${t.employee.id}-${t.year}-${t.month}`}
-          loading={loading}
-          emptyText="Chưa có bảng công trong tháng này"
-          onRowClick={setSelected}
-        />
-        <Pagination page={page} onChange={(pageIndex) => setQuery({ pageIndex })} />
-      </ListCard>
+        </div>
+      </PageFrame>
 
       <TimesheetDetailDrawer row={selected} onClose={() => setSelected(null)} onChanged={refresh} />
 
@@ -282,6 +306,6 @@ export function TimesheetsPage() {
           ))}
         </VStack>
       </Modal>
-    </VStack>
+    </>
   );
 }

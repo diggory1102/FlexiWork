@@ -19,8 +19,14 @@ import { ChatButton, NotificationBell } from '@/components/common/HeaderBadges';
 import { RealtimeBridge } from '@/app/RealtimeBridge';
 import { roleLabels } from '@/lib/format';
 
+const FRAMED_PAGES = ['/', '/employees', '/timesheets', '/schedules'];
+
 /** Khung giao diện Web Admin (Astryx AppShell): menu trái thu gọn được, thanh trên và vùng nội dung. */
 export function AdminLayout({ children }: { children?: ReactNode }) {
+  const { pathname } = useLocation();
+  // Trang dùng PageFrame tự lo lề; các trang còn lại giữ lề 16px của khung
+  const framed = FRAMED_PAGES.includes(pathname);
+
   return (
     <AppShell variant="section" sideNav={<Sidebar />} contentPadding={0}>
       <RealtimeBridge />
@@ -43,7 +49,7 @@ export function AdminLayout({ children }: { children?: ReactNode }) {
             </HStack>
           </LayoutHeader>
         }
-        content={<LayoutContent padding={4}>{children ?? <Outlet />}</LayoutContent>}
+        content={<LayoutContent padding={framed ? 0 : 4}>{children ?? <Outlet />}</LayoutContent>}
       />
     </AppShell>
   );
