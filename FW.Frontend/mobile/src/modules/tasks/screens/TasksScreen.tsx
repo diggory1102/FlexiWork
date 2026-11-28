@@ -223,7 +223,7 @@ function TaskRow({ task, editable, open, onToggle, onChanged, onStale }: {
             <>
               <TextField label="Ghi chú" value={note} onChangeText={setNote} placeholder="Không bắt buộc" maxLength={255} />
               <PhotoField label="Ảnh hiện trường" value={photo} onChange={setPhoto} required={task.requiresPhoto} />
-              <Button title="Hoàn thành" loading={busy} onPress={complete} icon={<Ionicons name="checkmark" size={20} color={colors.white} />} />
+              <Button title="Hoàn thành" loading={busy} onPress={complete} icon={<Ionicons name="checkmark" size={20} color={colors.onPrimary} />} />
             </>
           )}
         </View>
@@ -253,7 +253,7 @@ const styles = StyleSheet.create({
   phase: { gap: 8 },
   section: { marginLeft: 4, fontSize: 13, fontWeight: '700', color: colors.muted, textTransform: 'uppercase' },
   task: { padding: 14 },
-  taskDone: { backgroundColor: colors.successSoft, borderColor: '#BBF7D0' },
+  taskDone: { backgroundColor: colors.successSoft, borderColor: colors.successBorder },
   taskRow: { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
   taskTitle: { fontSize: 15, fontWeight: '600', color: colors.foreground },
   taskTitleDone: { color: colors.success },

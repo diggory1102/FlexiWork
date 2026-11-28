@@ -93,7 +93,7 @@ export function ProfileScreen() {
         <Pressable onPress={pickAvatar} disabled={vm.uploading} accessibilityRole="button" accessibilityLabel="Đổi ảnh đại diện">
           <Avatar name={p.fullName} url={p.avatarUrl} size={96} />
           <View style={styles.cameraBadge}>
-            {vm.uploading ? <ActivityIndicator size="small" color={colors.white} /> : <Ionicons name="camera" size={16} color={colors.white} />}
+            {vm.uploading ? <ActivityIndicator size="small" color={colors.onPrimary} /> : <Ionicons name="camera" size={16} color={colors.onPrimary} />}
           </View>
         </Pressable>
         <Text style={styles.name}>{p.fullName}</Text>
@@ -204,7 +204,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     backgroundColor: colors.primary,
     borderWidth: 2,
-    borderColor: colors.white,
+    borderColor: colors.onPrimary,
     alignItems: 'center',
     justifyContent: 'center',
   },

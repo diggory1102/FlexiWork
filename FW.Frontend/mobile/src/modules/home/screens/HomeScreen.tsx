@@ -14,18 +14,18 @@ import { scheduleApi } from '@/services/scheduleApi';
 import { profileApi } from '@/services/profileApi';
 import { scheduleStatusBadges, shiftHours } from '@/modules/shifts/shiftUi';
 import type { Schedule } from '@/types/scheduling';
-import { colors, radius } from '@/theme';
+import { colors, hues, radius } from '@/theme';
 
 type IconName = ComponentProps<typeof Ionicons>['name'];
 
 const shortcuts: { icon: IconName; label: string; href: Href; tint: string }[] = [
-  { icon: 'calendar-outline', label: 'Lịch ca', href: '/schedule', tint: '#2563EB' },
-  { icon: 'document-text-outline', label: 'Đơn từ', href: '/requests', tint: '#D97706' },
-  { icon: 'checkbox-outline', label: 'Công việc', href: '/tasks', tint: '#16A34A' },
-  { icon: 'time-outline', label: 'Bảng công', href: '/timesheet', tint: '#0891B2' },
-  { icon: 'receipt-outline', label: 'Phiếu lương', href: '/payslips', tint: '#DB2777' },
-  { icon: 'chatbubbles-outline', label: 'Tin nhắn', href: '/chat', tint: '#7C3AED' },
-  { icon: 'sparkles-outline', label: 'Trợ lý AI', href: '/assistant', tint: '#0EA5E9' },
+  { icon: 'calendar-outline', label: 'Lịch ca', href: '/schedule', tint: hues.blue },
+  { icon: 'document-text-outline', label: 'Đơn từ', href: '/requests', tint: hues.orange },
+  { icon: 'checkbox-outline', label: 'Công việc', href: '/tasks', tint: hues.green },
+  { icon: 'time-outline', label: 'Bảng công', href: '/timesheet', tint: hues.teal },
+  { icon: 'receipt-outline', label: 'Phiếu lương', href: '/payslips', tint: hues.pink },
+  { icon: 'chatbubbles-outline', label: 'Tin nhắn', href: '/chat', tint: colors.primary },
+  { icon: 'sparkles-outline', label: 'Trợ lý AI', href: '/assistant', tint: hues.cyan },
 ];
 
 /** Trang chủ nhân viên: lời chào, đồng hồ, ca hôm nay, nút chấm công nhanh và lối tắt. */
@@ -177,21 +177,21 @@ const styles = StyleSheet.create({
   headerText: { flex: 1 },
   greeting: { fontSize: 14, color: colors.muted },
   name: { fontSize: 20, fontWeight: '800', color: colors.foreground },
-  clockCard: { backgroundColor: colors.header, borderRadius: radius.lg, padding: 20, alignItems: 'center' },
-  date: { fontSize: 14, color: 'rgba(255,255,255,0.7)' },
-  clock: { marginTop: 4, fontSize: 48, fontWeight: '800', color: colors.white, letterSpacing: 1 },
+  clockCard: { backgroundColor: colors.band, borderRadius: radius.lg, padding: 20, alignItems: 'center' },
+  date: { fontSize: 14, color: colors.onBandMuted },
+  clock: { marginTop: 4, fontSize: 48, fontWeight: '800', color: colors.onPrimary, letterSpacing: 1 },
   checkIn: {
     marginTop: 16,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: colors.white,
+    backgroundColor: colors.onPrimary,
     paddingHorizontal: 28,
     paddingVertical: 12,
     borderRadius: radius.full,
   },
   checkInText: { fontSize: 16, fontWeight: '700', color: colors.primary },
-  clockHint: { marginTop: 12, fontSize: 12, color: 'rgba(255,255,255,0.6)' },
+  clockHint: { marginTop: 12, fontSize: 12, color: colors.onBandMuted },
   section: { marginTop: 24, marginBottom: 10, marginLeft: 4, fontSize: 13, fontWeight: '700', color: colors.muted, textTransform: 'uppercase' },
   shiftCard: { flexDirection: 'row', gap: 12, alignItems: 'center' },
   shiftSpacing: { marginBottom: 8 },
@@ -206,7 +206,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     backgroundColor: colors.warningSoft,
     borderWidth: 1,
-    borderColor: colors.warning,
+    borderColor: colors.warningBorder,
   },
   faceTitle: { fontSize: 15, fontWeight: '700', color: colors.warning },
   shiftIcon: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center' },
@@ -237,7 +237,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  countText: { fontSize: 10, fontWeight: '800', color: colors.white },
+  countText: { fontSize: 10, fontWeight: '800', color: colors.onPrimary },
   tileLabel: { fontSize: 15, fontWeight: '600', color: colors.foreground },
   pressed: { opacity: 0.85 },
 });

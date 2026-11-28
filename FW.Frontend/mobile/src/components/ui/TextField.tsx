@@ -38,7 +38,7 @@ export const TextField = forwardRef<TextInputInstance, TextFieldProps>(function 
           {...props}
           editable={editable}
           secureTextEntry={password && !visible}
-          placeholderTextColor="#94A3B8"
+          placeholderTextColor={colors.placeholder}
           onFocus={(e) => {
             setFocused(true);
             props.onFocus?.(e);
@@ -76,7 +76,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.borderStrong,
     backgroundColor: colors.surface,
   },
   multiline: { height: undefined, minHeight: 110, alignItems: 'flex-start', paddingVertical: 4 },

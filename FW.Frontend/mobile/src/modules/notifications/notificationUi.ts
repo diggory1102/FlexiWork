@@ -2,16 +2,17 @@ import type { ComponentProps } from 'react';
 import type { Ionicons } from '@expo/vector-icons';
 import type { Href } from 'expo-router';
 import type { AppNotification, NotificationType } from '@/types/notification';
+import { hues } from '@/theme';
 
 type IconName = ComponentProps<typeof Ionicons>['name'];
 
 export const notificationIcons: Record<NotificationType, { icon: IconName; tint: string }> = {
-  attendance: { icon: 'finger-print-outline', tint: '#2563EB' },
-  leave_approval: { icon: 'checkmark-done-outline', tint: '#16A34A' },
-  leave_request: { icon: 'mail-unread-outline', tint: '#D97706' },
-  schedule_new: { icon: 'calendar-outline', tint: '#7C3AED' },
-  task_assigned: { icon: 'clipboard-outline', tint: '#0891B2' },
-  payslip: { icon: 'receipt-outline', tint: '#DB2777' },
+  attendance: { icon: 'finger-print-outline', tint: hues.blue },
+  leave_approval: { icon: 'checkmark-done-outline', tint: hues.green },
+  leave_request: { icon: 'mail-unread-outline', tint: hues.orange },
+  schedule_new: { icon: 'calendar-outline', tint: hues.brown },
+  task_assigned: { icon: 'clipboard-outline', tint: hues.teal },
+  payslip: { icon: 'receipt-outline', tint: hues.pink },
 };
 
 /** Màn hình mở khi chạm vào thông báo. */

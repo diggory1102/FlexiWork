@@ -67,7 +67,7 @@ export function ForgotPasswordScreen() {
   };
 
   return (
-    <Screen background={colors.surface} contentStyle={styles.container}>
+    <Screen contentStyle={styles.container}>
       <Pressable onPress={() => (step === 2 ? setStep(1) : router.back())} style={styles.back} hitSlop={10} accessibilityLabel="Quay lại">
         <Ionicons name="arrow-back" size={24} color={colors.foreground} />
       </Pressable>

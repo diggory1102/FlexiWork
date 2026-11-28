@@ -141,7 +141,7 @@ const styles = StyleSheet.create({
   preview: { flex: 1, marginTop: 3, fontSize: 13, color: colors.muted },
   previewUnread: { color: colors.foreground, fontWeight: '600' },
   badge: { minWidth: 20, height: 20, paddingHorizontal: 6, borderRadius: 10, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
-  badgeText: { fontSize: 11, fontWeight: '700', color: colors.white },
+  badgeText: { fontSize: 11, fontWeight: '700', color: colors.onPrimary },
   empty: { alignItems: 'center', gap: 8, paddingVertical: 28 },
   emptyText: { fontSize: 14, color: colors.muted, textAlign: 'center' },
   loading: { marginTop: 32 },

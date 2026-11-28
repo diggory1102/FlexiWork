@@ -275,7 +275,7 @@ function ActionCard({ action, shift, today, probe, onReprobe, error, busy, disab
         onPress={onPress}
         loading={busy}
         disabled={disabled}
-        icon={<Ionicons name={checkIn ? 'log-in-outline' : 'log-out-outline'} size={20} color={colors.white} />}
+        icon={<Ionicons name={checkIn ? 'log-in-outline' : 'log-out-outline'} size={20} color={colors.onPrimary} />}
         style={styles.bigButton}
       />
     </Card>
@@ -353,7 +353,7 @@ function ResultCard({ result, onClose }: { result: AttendanceResult; onClose: ()
       {result.action === 'check_in' && (
         <Button
           title="Xem công việc trong ca"
-          icon={<Ionicons name="checkbox-outline" size={18} color={colors.white} />}
+          icon={<Ionicons name="checkbox-outline" size={18} color={colors.onPrimary} />}
           onPress={() => {
             onClose();
             router.push('/tasks');
@@ -411,9 +411,9 @@ const styles = StyleSheet.create({
   loading: { marginTop: 40 },
   muted: { fontSize: 13, lineHeight: 18, color: colors.muted },
   busyTitle: { marginTop: 8, fontSize: 18, fontWeight: '700', color: colors.foreground },
-  clockCard: { backgroundColor: colors.header, borderRadius: radius.lg, paddingVertical: 18, alignItems: 'center' },
-  date: { fontSize: 14, color: 'rgba(255,255,255,0.75)' },
-  clock: { marginTop: 2, fontSize: 44, fontWeight: '800', color: colors.white, fontVariant: ['tabular-nums'] },
+  clockCard: { backgroundColor: colors.band, borderRadius: radius.lg, paddingVertical: 18, alignItems: 'center' },
+  date: { fontSize: 14, color: colors.onBandMuted },
+  clock: { marginTop: 2, fontSize: 44, fontWeight: '800', color: colors.onPrimary, fontVariant: ['tabular-nums'] },
   actionCard: { gap: 14 },
   actionHeader: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   shiftName: { fontSize: 18, fontWeight: '800', color: colors.foreground },

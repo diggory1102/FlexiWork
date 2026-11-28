@@ -59,7 +59,7 @@ export function ChangePasswordScreen() {
   };
 
   return (
-    <Screen edges={forced ? ['top', 'bottom'] : ['bottom']} background={colors.surface} contentStyle={styles.container}>
+    <Screen edges={forced ? ['top', 'bottom'] : ['bottom']} contentStyle={styles.container}>
       {forced && (
         <View style={styles.header}>
           <Text style={styles.title}>Đặt mật khẩu mới</Text>

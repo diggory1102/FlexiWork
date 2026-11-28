@@ -224,7 +224,7 @@ export function ThreadScreen() {
           value={draft}
           onChangeText={setDraft}
           placeholder="Nhập tin nhắn…"
-          placeholderTextColor="#94A3B8"
+          placeholderTextColor={colors.placeholder}
           multiline
           maxLength={MAX_MESSAGE_LENGTH}
         />
@@ -236,7 +236,7 @@ export function ThreadScreen() {
           accessibilityLabel="Gửi"
           style={[styles.send, (!draft.trim() || sending) && styles.sendDisabled]}
         >
-          {sending ? <ActivityIndicator color={colors.white} /> : <Ionicons name="send" size={18} color={colors.white} />}
+          {sending ? <ActivityIndicator color={colors.onPrimary} /> : <Ionicons name="send" size={18} color={colors.onPrimary} />}
         </Pressable>
       </View>
     </KeyboardAvoidingView>
@@ -305,7 +305,7 @@ const styles = StyleSheet.create({
   bubbleImage: { paddingHorizontal: 4, paddingVertical: 4 },
   bubbleDeleted: { backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border },
   text: { fontSize: 15, lineHeight: 21, color: colors.foreground },
-  textMine: { color: colors.white },
+  textMine: { color: colors.onPrimary },
   deleted: { fontSize: 14, fontStyle: 'italic', color: colors.muted },
   image: { width: 220, height: 220, borderRadius: 12, backgroundColor: colors.border },
   meta: { flexDirection: 'row', gap: 12, marginTop: 3, marginHorizontal: 4 },

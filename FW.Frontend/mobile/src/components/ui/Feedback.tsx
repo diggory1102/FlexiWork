@@ -6,7 +6,7 @@ import { colors, radius } from '@/theme';
 type Tone = 'info' | 'success' | 'warning' | 'danger';
 
 const tones: Record<Tone, { bg: string; fg: string; icon: ComponentProps<typeof Ionicons>['name'] }> = {
-  info: { bg: colors.primarySoft, fg: colors.primaryDark, icon: 'information-circle-outline' },
+  info: { bg: colors.infoSoft, fg: colors.info, icon: 'information-circle-outline' },
   success: { bg: colors.successSoft, fg: colors.success, icon: 'checkmark-circle-outline' },
   warning: { bg: colors.warningSoft, fg: colors.warning, icon: 'alert-circle-outline' },
   danger: { bg: colors.dangerSoft, fg: colors.danger, icon: 'close-circle-outline' },

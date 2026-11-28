@@ -38,7 +38,7 @@ export default function RootLayout() {
         screenOptions={{
           headerTitleAlign: 'center',
           headerTintColor: colors.foreground,
-          headerStyle: { backgroundColor: colors.surface },
+          headerStyle: { backgroundColor: colors.chrome },
           headerTitleStyle: { fontWeight: '700' },
           headerBackButtonDisplayMode: 'minimal',
           contentStyle: { backgroundColor: colors.background },

@@ -112,11 +112,11 @@ export function RequestsScreen() {
               {vm.balance.pendingDays > 0 ? ` · đang chờ duyệt ${days(vm.balance.pendingDays)}` : ''}
             </Text>
           </View>
-          <Ionicons name="sunny-outline" size={36} color="rgba(255,255,255,0.8)" />
+          <Ionicons name="sunny-outline" size={36} color={colors.onBandMuted} />
         </View>
       )}
 
-      <Button title="Tạo đơn mới" icon={<Ionicons name="add" size={20} color={colors.white} />} onPress={() => router.push('/request-new')} />
+      <Button title="Tạo đơn mới" icon={<Ionicons name="add" size={20} color={colors.onPrimary} />} onPress={() => router.push('/request-new')} />
       <Notice tone="danger" message={vm.error} />
 
       {vm.incoming.length > 0 && (
@@ -201,11 +201,11 @@ function RequestRow({ request: r }: { request: LeaveRequest }) {
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   content: { padding: 16, paddingBottom: 32, gap: 12 },
-  balance: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.header, borderRadius: radius.lg, padding: 18 },
-  balanceLabel: { fontSize: 13, color: 'rgba(255,255,255,0.7)' },
-  balanceValue: { marginTop: 2, fontSize: 28, fontWeight: '800', color: colors.white },
-  balanceUnit: { fontSize: 15, fontWeight: '600', color: 'rgba(255,255,255,0.7)' },
-  balanceHint: { marginTop: 2, fontSize: 12, color: 'rgba(255,255,255,0.6)' },
+  balance: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.band, borderRadius: radius.lg, padding: 18 },
+  balanceLabel: { fontSize: 13, color: colors.onBandMuted },
+  balanceValue: { marginTop: 2, fontSize: 28, fontWeight: '800', color: colors.onPrimary },
+  balanceUnit: { fontSize: 15, fontWeight: '600', color: colors.onBandMuted },
+  balanceHint: { marginTop: 2, fontSize: 12, color: colors.onBandMuted },
   section: { marginTop: 8, marginLeft: 4, fontSize: 13, fontWeight: '700', color: colors.muted, textTransform: 'uppercase' },
   incoming: { gap: 8, borderColor: colors.warning, backgroundColor: colors.warningSoft },
   row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
@@ -214,7 +214,7 @@ const styles = StyleSheet.create({
   chip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: radius.full, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface },
   chipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
   chipText: { fontSize: 13, fontWeight: '600', color: colors.foreground },
-  chipTextActive: { color: colors.white },
+  chipTextActive: { color: colors.onPrimary },
   item: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   icon: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   title: { flexShrink: 1, fontSize: 15, fontWeight: '600', color: colors.foreground },

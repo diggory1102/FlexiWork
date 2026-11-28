@@ -3,15 +3,16 @@ import type { Ionicons } from '@expo/vector-icons';
 import { formatDate, formatTime } from '@/lib/format';
 import { formatDayMonth } from '@/lib/dates';
 import type { LeaveRequest, RequestCategory, RequestSchedule, RequestStatus } from '@/types/requests';
+import { hues } from '@/theme';
 
 type Tone = 'info' | 'success' | 'warning' | 'danger';
 type IconName = ComponentProps<typeof Ionicons>['name'];
 
 export const categoryInfo: Record<RequestCategory, { label: string; icon: IconName; tint: string; hint: string }> = {
-  leave: { label: 'Nghỉ', icon: 'airplane-outline', tint: '#2563EB', hint: 'Nghỉ phép, nghỉ ốm, việc riêng — theo ngày' },
-  shift_swap: { label: 'Đổi ca', icon: 'swap-horizontal-outline', tint: '#7C3AED', hint: 'Đổi ca với đồng nghiệp hoặc nhờ làm thay' },
-  overtime: { label: 'Làm thêm giờ', icon: 'time-outline', tint: '#D97706', hint: 'Đăng ký OT ngoài giờ ca đã xếp' },
-  explanation: { label: 'Giải trình', icon: 'chatbox-ellipses-outline', tint: '#16A34A', hint: 'Giải trình đi muộn, về sớm hoặc lượt chấm công chờ duyệt' },
+  leave: { label: 'Nghỉ', icon: 'airplane-outline', tint: hues.blue, hint: 'Nghỉ phép, nghỉ ốm, việc riêng — theo ngày' },
+  shift_swap: { label: 'Đổi ca', icon: 'swap-horizontal-outline', tint: hues.brown, hint: 'Đổi ca với đồng nghiệp hoặc nhờ làm thay' },
+  overtime: { label: 'Làm thêm giờ', icon: 'time-outline', tint: hues.orange, hint: 'Đăng ký OT ngoài giờ ca đã xếp' },
+  explanation: { label: 'Giải trình', icon: 'chatbox-ellipses-outline', tint: hues.green, hint: 'Giải trình đi muộn, về sớm hoặc lượt chấm công chờ duyệt' },
 };
 
 export const statusBadges: Record<RequestStatus, { label: string; tone: Tone }> = {

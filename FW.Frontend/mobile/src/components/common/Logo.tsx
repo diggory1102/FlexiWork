@@ -1,39 +1,31 @@
-import { StyleSheet, Text, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Image, StyleSheet, Text, View } from 'react-native';
 import { colors } from '@/theme';
 
-/** Logo FlexiWork (đồng hồ + dấu tích chấm công) — cùng nhận diện với Web Admin. */
-export function Logo({ size = 56, showText = true }: { size?: number; showText?: boolean }) {
-  const badge = size * 0.38;
+// Cùng ảnh với Web Admin (web/src/assets): chỉ lấy hình, màu tô bằng màu nhấn của theme
+const icon = require('../../../assets/logo-icon.png');
+const wordmark = require('../../../assets/logo-wordmark.png');
+
+export const SLOGAN = 'Flex your schedule. Own your work.';
+
+/** Logo FlexiWork xếp dọc: biểu tượng bàn làm việc, tên thương hiệu và khẩu hiệu. */
+export function Logo({ width = 220 }: { width?: number }) {
+  const iconWidth = Math.round(width * 0.6);
   return (
-    <View style={styles.row}>
-      <View style={[styles.mark, { width: size, height: size, borderRadius: size * 0.25 }]}>
-        <Ionicons name="time-outline" size={size * 0.62} color={colors.white} />
-        <View style={[styles.badge, { width: badge, height: badge, borderRadius: badge / 2, right: -badge * 0.2, bottom: -badge * 0.2 }]}>
-          <Ionicons name="checkmark" size={badge * 0.7} color={colors.white} />
-        </View>
-      </View>
-      {showText && (
-        <View>
-          <Text style={styles.title}>FlexiWork</Text>
-          <Text style={styles.subtitle}>Quản lý ca & chấm công</Text>
-        </View>
-      )}
+    <View style={styles.column}>
+      <Image source={icon} tintColor={colors.primary} resizeMode="contain" style={{ width: iconWidth, height: Math.round(iconWidth * 0.877) }} />
+      <Image
+        source={wordmark}
+        tintColor={colors.primary}
+        resizeMode="contain"
+        style={{ width, height: Math.round(width * 0.163) }}
+        accessibilityLabel="FlexiWork"
+      />
+      <Text style={styles.slogan}>{SLOGAN}</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', gap: 14 },
-  mark: { backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
-  badge: {
-    position: 'absolute',
-    backgroundColor: '#22C55E',
-    borderWidth: 2,
-    borderColor: colors.white,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  title: { fontSize: 24, fontWeight: '800', color: colors.foreground, letterSpacing: -0.5 },
-  subtitle: { fontSize: 13, color: colors.muted },
+  column: { alignItems: 'center', gap: 10 },
+  slogan: { fontSize: 13, color: colors.muted },
 });

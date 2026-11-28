@@ -248,7 +248,7 @@ function AssistantThread({ initialConversationId }: { initialConversationId: num
             value={text}
             onChangeText={setText}
             placeholder="Hỏi trợ lý hoặc nhờ soạn đơn…"
-            placeholderTextColor="#94A3B8"
+            placeholderTextColor={colors.placeholder}
             multiline
             maxLength={MAX_LENGTH}
           />
@@ -260,7 +260,7 @@ function AssistantThread({ initialConversationId }: { initialConversationId: num
             accessibilityLabel="Gửi"
             style={[styles.send, (!text.trim() || sending) && styles.sendDisabled]}
           >
-            {sending ? <ActivityIndicator color={colors.white} /> : <Ionicons name="send" size={18} color={colors.white} />}
+            {sending ? <ActivityIndicator color={colors.onPrimary} /> : <Ionicons name="send" size={18} color={colors.onPrimary} />}
           </Pressable>
         </View>
         <Text style={styles.disclaimer}>Trợ lý có thể nhầm — hãy kiểm tra kỹ bản nháp trước khi xác nhận gửi đơn.</Text>
@@ -290,7 +290,7 @@ const styles = StyleSheet.create({
   bubbleOther: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderBottomLeftRadius: 4, maxWidth: '100%' },
   bubbleFailed: { borderColor: colors.danger },
   text: { fontSize: 15, lineHeight: 21, color: colors.foreground },
-  textMine: { color: colors.white },
+  textMine: { color: colors.onPrimary },
   status: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   statusText: { fontSize: 13, color: colors.muted },
   composerWrap: { paddingHorizontal: 10, paddingTop: 8, gap: 6, backgroundColor: colors.surface, borderTopWidth: 1, borderTopColor: colors.border },

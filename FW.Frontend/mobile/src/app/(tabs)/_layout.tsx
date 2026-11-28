@@ -29,7 +29,7 @@ export default function TabsLayout() {
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.muted,
         tabBarStyle: {
-          backgroundColor: colors.surface,
+          backgroundColor: colors.chrome,
           borderTopColor: colors.border,
           height: 64 + bottom,
           paddingTop: 4,
@@ -38,7 +38,7 @@ export default function TabsLayout() {
         },
         tabBarLabelStyle: { fontSize: 11, lineHeight: 15, fontWeight: '600' },
         headerTitleAlign: 'center',
-        headerStyle: { backgroundColor: colors.surface },
+        headerStyle: { backgroundColor: colors.chrome },
         headerTitleStyle: { fontWeight: '700', color: colors.foreground },
         sceneStyle: { backgroundColor: colors.background },
       }}

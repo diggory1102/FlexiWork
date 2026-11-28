@@ -393,7 +393,7 @@ export function NewRequestScreen() {
       />
 
       <Notice tone="danger" message={error} />
-      <Button title="Gửi đơn" loading={saving} onPress={submit} icon={<Ionicons name="send" size={18} color={colors.white} />} />
+      <Button title="Gửi đơn" loading={saving} onPress={submit} icon={<Ionicons name="send" size={18} color={colors.onPrimary} />} />
     </ScrollView>
   );
 }

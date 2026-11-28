@@ -151,7 +151,7 @@ export function FaceRegisterScreen() {
       {permission && !permission.granted && !permission.canAskAgain ? (
         <Button title="Mở Cài đặt để cấp quyền camera" variant="secondary" onPress={() => void Linking.openSettings()} />
       ) : (
-        <Button title="Bắt đầu chụp" onPress={() => void startCamera()} icon={<Ionicons name="camera" size={18} color={colors.white} />} />
+        <Button title="Bắt đầu chụp" onPress={() => void startCamera()} icon={<Ionicons name="camera" size={18} color={colors.onPrimary} />} />
       )}
     </ScrollView>
   );

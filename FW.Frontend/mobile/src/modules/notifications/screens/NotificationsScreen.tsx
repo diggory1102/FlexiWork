@@ -154,7 +154,7 @@ const styles = StyleSheet.create({
   headerAction: { fontSize: 14, fontWeight: '600', color: colors.primary },
   error: { marginBottom: 4 },
   item: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
-  itemUnread: { backgroundColor: colors.primarySoft, borderColor: '#C7D7FE' },
+  itemUnread: { backgroundColor: colors.primarySoft, borderColor: colors.primaryBorder },
   icon: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   texts: { flex: 1, gap: 2 },
   title: { fontSize: 14, fontWeight: '600', color: colors.foreground },
