@@ -3,13 +3,16 @@ using FW.Domain.Services;
 
 namespace FW.Application.Features.Attendance;
 
-/// <summary>Dữ liệu điện thoại gửi kèm ảnh selfie khi check-in / check-out (form-data).</summary>
+/// <summary>
+/// Dữ liệu điện thoại gửi kèm ảnh selfie khi check-in / check-out (form-data).
+/// Mọi trường đều do ứng dụng tự báo: máy chủ kiểm tra được tính hợp lệ, không chứng minh được dữ liệu là thật.
+/// </summary>
 public class AttendanceCaptureRequest
 {
     public double? Latitude { get; set; }
     public double? Longitude { get; set; }
 
-    /// <summary>Sai số vị trí (m) do hệ điều hành báo cáo.</summary>
+    /// <summary>Sai số vị trí (m) do hệ điều hành báo cáo. Bắt buộc, lớn hơn 0 (lớp GPS từ chối nếu thiếu).</summary>
     public double? Accuracy { get; set; }
 
     /// <summary>BSSID Wi-Fi đang kết nối; bỏ trống nếu không bật Wi-Fi / không đọc được.</summary>

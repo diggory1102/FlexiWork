@@ -411,18 +411,19 @@ public class AttendanceService : IAttendanceService
         {
             throw new BadRequestException("Không lấy được vị trí GPS. Hãy bật định vị và cấp quyền vị trí cho FlexiWork.");
         }
-        if (request.Accuracy is { } accuracy && (!double.IsFinite(accuracy) || accuracy < 0))
-        {
-            throw new BadRequestException("Sai số GPS không hợp lệ.");
-        }
     }
 
     private GpsLayerDto CheckGps(Branch branch, AttendanceCaptureRequest request, int userId, string action, AttemptTrace trace)
     {
-        if (request.Accuracy > _settings.MaxGpsAccuracyMeters)
+        // Không có sai số thì không biết vị trí đáng tin tới đâu → không được coi là đạt (bỏ trống trường này không né được kiểm tra)
+        if (request.Accuracy is not { } accuracy || !double.IsFinite(accuracy) || accuracy <= 0)
+        {
+            throw new BadRequestException("Điện thoại không cung cấp sai số GPS hợp lệ. Hãy bật chế độ vị trí chính xác rồi thử lại.");
+        }
+        if (accuracy > _settings.MaxGpsAccuracyMeters)
         {
             throw new BadRequestException(
-                $"Tín hiệu GPS yếu (sai số {request.Accuracy:0} m). Hãy ra chỗ thoáng, bật chế độ vị trí chính xác rồi thử lại.");
+                $"Tín hiệu GPS yếu (sai số {accuracy:0} m). Hãy ra chỗ thoáng, bật chế độ vị trí chính xác rồi thử lại.");
         }
 
         var result = Geofence.Evaluate((double)branch.Latitude, (double)branch.Longitude, branch.Radius,

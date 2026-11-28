@@ -303,6 +303,49 @@ public class AttendanceServiceTests
     }
 
     [SkippableFact]
+    public async Task Missing_or_non_positive_gps_accuracy_is_rejected_at_the_gps_layer()
+    {
+        Skip.IfNot(_db.IsAvailable, _db.SkipReason);
+        var ctx = await SetupAsync(new DateTime(2037, 1, 5));
+        await using var _ = ctx.Session;
+        var service = ctx.Service();
+        var invalid = new double?[] { null, 0, -5, double.NaN, double.PositiveInfinity };
+
+        AttendanceCaptureRequest WithAccuracy(double? accuracy)
+        {
+            var request = AtBranch(); // đứng đúng chỗ, đúng Wi-Fi: chỉ sai số là không đạt
+            request.Accuracy = accuracy;
+            return request;
+        }
+
+        async Task AssertAllRejected(Func<AttendanceCaptureRequest, Task<AttendanceResultDto>> attempt)
+        {
+            foreach (var accuracy in invalid)
+            {
+                var ex = await Assert.ThrowsAsync<BadRequestException>(() => attempt(WithAccuracy(accuracy)));
+                Assert.Contains("sai số GPS", ex.Message);
+            }
+        }
+
+        ctx.Clock.Now = ctx.At(7, 55);
+        await AssertAllRejected(request => CheckIn(service, request));
+        Assert.Null(await new AttendanceLogRepository(ctx.Session).GetByScheduleIdAsync(ctx.Schedule.Id));
+        Assert.Equal(0, ctx.Face.Calls);
+
+        // Sai số đúng ngưỡng tối đa (100 m) vẫn được nhận
+        var checkIn = await CheckIn(service, WithAccuracy(100));
+        Assert.Equal(AttendanceStatus.Valid, checkIn.Status);
+
+        ctx.Clock.Now = ctx.At(17);
+        await AssertAllRejected(request => CheckOut(service, request));
+        Assert.Null((await new AttendanceLogRepository(ctx.Session).GetByIdAsync(checkIn.LogId))!.CheckoutTime);
+
+        var rejected = (await AttemptsOfAsync(ctx)).Where(a => a.Outcome == AttemptOutcome.Rejected).ToList();
+        Assert.Equal(invalid.Length * 2, rejected.Count);
+        Assert.All(rejected, a => Assert.Equal(AttemptStage.Gps, a.Stage));
+    }
+
+    [SkippableFact]
     public async Task Employee_without_a_usable_face_profile_cannot_check_in()
     {
         Skip.IfNot(_db.IsAvailable, _db.SkipReason);
