@@ -14,6 +14,7 @@ import type { PickedImage } from '@/services/multipart';
 import { notify } from '@/lib/dialog';
 import { addDays, formatDayMonth, todayIso } from '@/lib/dates';
 import { formatDate, formatTime } from '@/lib/format';
+import { matchesSearch } from '@/lib/search';
 import { colors, radius } from '@/theme';
 import type { AttendanceLogItem } from '@/types/attendance';
 import type { CreateRequestInput, LeaveBalance, LeaveType, RequestCategory, SwapOptions } from '@/types/requests';
@@ -25,6 +26,9 @@ const MAX_BACK_DAYS = 7;
 const MAX_REASON = 1000;
 
 const categoryOrder: RequestCategory[] = ['leave', 'shift_swap', 'overtime', 'explanation'];
+
+/** Số lựa chọn đổi ca hiện mỗi đợt — chi nhánh đông người thì danh sách không đẩy ô lý do và nút gửi đi quá xa. */
+const OPTIONS_PER_PAGE = 20;
 
 const dayCount = (from: string, to: string) => Math.round((Date.parse(to) - Date.parse(from)) / 86_400_000) + 1;
 
@@ -303,28 +307,38 @@ export function NewRequestScreen() {
                 options.shifts.length === 0 ? (
                   <Notice tone="warning" message="Chưa có ca nào của đồng nghiệp trong 7 ngày quanh ca này để đổi. Bạn có thể nhờ làm thay." />
                 ) : (
-                  options.shifts.map((o) => (
-                    <Option
-                      key={o.scheduleId}
-                      selected={targetScheduleId === o.scheduleId}
-                      title={`${o.fullName} · ${o.shiftName}`}
-                      subtitle={`${formatDayMonth(o.workDate)} · ${o.startTime}–${o.endTime}`}
-                      onPress={() => setTargetScheduleId(o.scheduleId)}
-                    />
-                  ))
+                  <SearchableOptions
+                    items={options.shifts}
+                    searchFields={(o) => [o.fullName, o.employeeCode]}
+                    isSelected={(o) => targetScheduleId === o.scheduleId}
+                    renderItem={(o) => (
+                      <Option
+                        key={o.scheduleId}
+                        selected={targetScheduleId === o.scheduleId}
+                        title={`${o.fullName} · ${o.shiftName}`}
+                        subtitle={`${o.employeeCode} · ${formatDayMonth(o.workDate)} · ${o.startTime}–${o.endTime}`}
+                        onPress={() => setTargetScheduleId(o.scheduleId)}
+                      />
+                    )}
+                  />
                 )
               ) : options.colleagues.length === 0 ? (
                 <Notice tone="warning" message="Chi nhánh chưa có đồng nghiệp nào khác." />
               ) : (
-                options.colleagues.map((c) => (
-                  <Option
-                    key={c.id}
-                    selected={targetUserId === c.id}
-                    title={c.fullName}
-                    subtitle={c.employeeCode}
-                    onPress={() => setTargetUserId(c.id)}
-                  />
-                ))
+                <SearchableOptions
+                  items={options.colleagues}
+                  searchFields={(c) => [c.fullName, c.employeeCode]}
+                  isSelected={(c) => targetUserId === c.id}
+                  renderItem={(c) => (
+                    <Option
+                      key={c.id}
+                      selected={targetUserId === c.id}
+                      title={c.fullName}
+                      subtitle={c.employeeCode}
+                      onPress={() => setTargetUserId(c.id)}
+                    />
+                  )}
+                />
               )}
               <Text style={styles.muted}>Đồng nghiệp đồng ý trước, sau đó Quản lý duyệt.</Text>
             </>
@@ -381,6 +395,53 @@ export function NewRequestScreen() {
       <Notice tone="danger" message={error} />
       <Button title="Gửi đơn" loading={saving} onPress={submit} icon={<Ionicons name="send" size={18} color={colors.white} />} />
     </ScrollView>
+  );
+}
+
+/**
+ * Danh sách lựa chọn có ô tìm theo tên / mã nhân viên, hiện dần từng đợt. Mục đang chọn luôn nhìn thấy
+ * (đưa lên đầu nếu không khớp từ khóa hoặc nằm ngoài đợt đang hiện).
+ */
+function SearchableOptions<T>({
+  items,
+  searchFields,
+  isSelected,
+  renderItem,
+}: {
+  items: T[];
+  searchFields: (item: T) => string[];
+  isSelected: (item: T) => boolean;
+  renderItem: (item: T) => ReactNode;
+}) {
+  const [query, setQuery] = useState('');
+  const [limit, setLimit] = useState(OPTIONS_PER_PAGE);
+
+  const matched = items.filter((item) => matchesSearch(query, ...searchFields(item)));
+  const shown = matched.slice(0, limit);
+  const selected = items.find(isSelected);
+  if (selected && !shown.includes(selected)) shown.unshift(selected);
+
+  return (
+    <>
+      <TextField
+        icon="search-outline"
+        placeholder="Tìm theo tên hoặc mã nhân viên"
+        accessibilityLabel="Tìm theo tên hoặc mã nhân viên"
+        value={query}
+        onChangeText={(text) => {
+          setQuery(text);
+          setLimit(OPTIONS_PER_PAGE);
+        }}
+        autoCapitalize="none"
+        autoCorrect={false}
+        testID="swap-search"
+      />
+      {matched.length === 0 && <Text style={styles.muted}>Không tìm thấy đồng nghiệp phù hợp.</Text>}
+      {shown.map(renderItem)}
+      {matched.length > limit && (
+        <Button variant="ghost" title={`Xem thêm (còn ${matched.length - limit})`} onPress={() => setLimit(limit + OPTIONS_PER_PAGE)} />
+      )}
+    </>
   );
 }
 

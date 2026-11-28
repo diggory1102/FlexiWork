@@ -2,12 +2,12 @@ import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@astryxdesign/core/Button';
 import { CheckboxList, CheckboxListItem } from '@astryxdesign/core/CheckboxList';
 import { MetadataList, MetadataListItem } from '@astryxdesign/core/MetadataList';
-import { MultiSelector } from '@astryxdesign/core/MultiSelector';
 import { ScrollableArea } from '@astryxdesign/core/ScrollableArea';
 import { Selector } from '@astryxdesign/core/Selector';
 import { HStack, VStack } from '@astryxdesign/core/Stack';
 import { Text } from '@astryxdesign/core/Text';
 import { Token } from '@astryxdesign/core/Token';
+import { Tokenizer } from '@astryxdesign/core/Tokenizer';
 import { Modal } from '@/components/ui/Modal';
 import { ErrorList, Notice, type ErrorDetail } from '@/components/ui/Feedback';
 import { scheduleApi } from '@/services/schedulingApi';
@@ -15,6 +15,7 @@ import { getErrorDetail } from '@/services/apiClient';
 import { toast } from '@/stores/toastStore';
 import { formatDate } from '@/lib/format';
 import { formatDayMonth, formatMinutes, weekdayLabels } from '@/lib/dates';
+import { matchesSearch } from '@/lib/search';
 import type { Schedule, ScheduleItem, Shift } from '@/types/scheduling';
 import { scheduleColor, scheduleStateLabel, shiftLabel } from '../scheduleUi';
 import type { GridEmployee } from './ScheduleGrid';
@@ -141,6 +142,14 @@ export function QuickScheduleModal({ open, branchId, days, today, employees, shi
   const { saving, error, setError, submit } = useCreateSchedules(branchId, onSaved, onClose);
 
   const futureDays = useMemo(() => days.filter((d) => d >= today), [days, today]);
+  const employeeItems = useMemo(() => employees.map((e) => ({ id: String(e.id), label: `${e.fullName} (${e.employeeCode})` })), [employees]);
+  const employeeSource = useMemo(
+    () => ({
+      search: (query: string) => employeeItems.filter((item) => matchesSearch(query, item.label)),
+      bootstrap: () => employeeItems,
+    }),
+    [employeeItems],
+  );
 
   useEffect(() => {
     if (!open) return;
@@ -179,13 +188,18 @@ export function QuickScheduleModal({ open, branchId, days, today, employees, shi
     >
       <VStack gap={4}>
         <ErrorList error={error} />
-        <MultiSelector
+        <Tokenizer
           label="Nhân viên"
-          placeholder="Chọn nhân viên"
-          options={employees.map((e) => ({ value: String(e.id), label: `${e.fullName} (${e.employeeCode})` }))}
-          value={userIds}
-          onChange={setUserIds}
-          triggerDisplay="count"
+          description={userIds.length > 0 ? `Đã chọn ${userIds.length} nhân viên` : 'Gõ tên (có dấu hoặc không dấu) hoặc mã nhân viên để tìm.'}
+          placeholder="Tìm và chọn nhân viên"
+          searchSource={employeeSource}
+          value={employeeItems.filter((item) => userIds.includes(item.id))}
+          onChange={(items) => setUserIds(items.map((item) => item.id))}
+          hasEntriesOnFocus
+          hasClear
+          debounceMs={0}
+          maxMenuItems={employeeItems.length}
+          emptySearchText="Không tìm thấy nhân viên"
         />
         <Selector
           label="Ca làm việc"

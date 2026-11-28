@@ -167,11 +167,10 @@ public class RequestScheduleChecker : IRequestScheduleChecker
                 s.StartTime.ToString(@"hh\:mm"), s.EndTime.ToString(@"hh\:mm")))
             .ToList();
 
-        var colleagues = (await _users.GetPagedAsync(new UserFilter
-            {
-                BranchId = source.Schedule.BranchId, Status = UserStatus.Active, PageSize = PagedQueryMax
-            }, cancellationToken)).Items
-            .Where(u => u.Id != requesterId)
+        // Lấy đủ cả chi nhánh (không phân trang): người dùng tìm theo tên / mã ngay trên danh sách này
+        var branchUserIds = await _users.GetIdsByBranchAsync(source.Schedule.BranchId, cancellationToken);
+        var colleagues = (await _users.GetByIdsAsync(branchUserIds, cancellationToken))
+            .Where(u => u.Id != requesterId && u.Status == UserStatus.Active)
             .OrderBy(u => u.FullName)
             .Select(u => new RequestPersonDto(u.Id, u.EmployeeCode, u.FullName, u.AvatarUrl))
             .ToList();
@@ -180,8 +179,6 @@ public class RequestScheduleChecker : IRequestScheduleChecker
             source.Shift.StartTime.ToString(@"hh\:mm"), source.Shift.EndTime.ToString(@"hh\:mm"), source.Schedule.Status);
         return new SwapOptionsDto(sourceDto, shifts, colleagues);
     }
-
-    private const int PagedQueryMax = FW.Application.Common.Models.PagedQuery.MaxPageSize;
 
     // ------------------------------------------------------------------
 

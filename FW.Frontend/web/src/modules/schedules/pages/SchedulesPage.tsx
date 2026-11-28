@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { Button } from '@astryxdesign/core/Button';
 import { ButtonGroup } from '@astryxdesign/core/ButtonGroup';
 import { Icon } from '@astryxdesign/core/Icon';
@@ -11,6 +11,7 @@ import { CalendarCheck, ChevronLeft, ChevronRight, Copy, Eraser, Users, Zap } fr
 import { PageFrame } from '@/layouts/PageFrame';
 import { EmptyState, ErrorList, Spinner, type ErrorDetail } from '@/components/ui/Feedback';
 import { ConfirmDialog } from '@/components/ui/Modal';
+import { SearchInput } from '@/components/ui/ListCard';
 import { scheduleApi, shiftApi, staffingApi } from '@/services/schedulingApi';
 import { userApi } from '@/services/userApi';
 import { getErrorDetail, getErrorMessage } from '@/services/apiClient';
@@ -19,6 +20,7 @@ import { useLookupStore } from '@/stores/lookupStore';
 import { toast } from '@/stores/toastStore';
 import { formatDate, todayIso } from '@/lib/format';
 import { addDays, startOfWeek, weekDays } from '@/lib/dates';
+import { matchesSearch } from '@/lib/search';
 import { RoleGroups } from '@/types/auth';
 import type { EffectiveStaffing, Schedule, Shift } from '@/types/scheduling';
 import { ScheduleGrid, type GridEmployee } from '../components/ScheduleGrid';
@@ -56,6 +58,10 @@ export function SchedulesPage() {
   const [detail, setDetail] = useState<Schedule | null>(null);
   const [confirm, setConfirm] = useState<Confirm>(null);
   const [busy, setBusy] = useState(false);
+  const [search, setSearch] = useState('');
+  // Lưới có thể rất dài: để ô nhập phản hồi ngay, lọc lại lưới sau
+  const query = useDeferredValue(search);
+  const visibleEmployees = useMemo(() => employees.filter((e) => matchesSearch(query, e.fullName, e.employeeCode)), [employees, query]);
 
   useEffect(() => void loadLookups().catch(() => undefined), [loadLookups]);
 
@@ -66,13 +72,16 @@ export function SchedulesPage() {
     }
   }, [isCompanyWide, branchId, branches]);
 
+  // Từ khóa của chi nhánh trước không còn ý nghĩa khi chuyển chi nhánh
+  useEffect(() => setSearch(''), [branchId]);
+
   const load = useCallback(async () => {
     if (branchId == null) return;
     setLoading(true);
     try {
-      const [scheduleRes, userRes, shiftRes, staffingRes] = await Promise.all([
+      const [scheduleRes, users, shiftRes, staffingRes] = await Promise.all([
         scheduleApi.branch(range),
-        userApi.list({ branchId, status: 'active', pageSize: 100 }),
+        userApi.listAll({ branchId, status: 'active' }),
         shiftApi.available(branchId),
         staffingApi.effective(range),
       ]);
@@ -81,7 +90,7 @@ export function SchedulesPage() {
       setStaffing(staffingRes.data);
 
       // Nhân viên đang làm tại chi nhánh + người đã có lịch trong tuần (VD vừa chuyển chi nhánh / nghỉ việc)
-      const people = new Map<number, GridEmployee>(userRes.data.items.map((u) => [u.id, u]));
+      const people = new Map<number, GridEmployee>(users.map((u) => [u.id, u]));
       for (const s of scheduleRes.data) {
         if (!people.has(s.userId)) people.set(s.userId, { id: s.userId, fullName: s.fullName, employeeCode: s.employeeCode });
       }
@@ -189,11 +198,13 @@ export function SchedulesPage() {
         toolbar={
           <HStack gap={3} wrap="wrap" vAlign="center" hAlign="between">
             <HStack gap={1} wrap="wrap" vAlign="center">
+              <SearchInput value={search} onChange={setSearch} placeholder="Tìm theo tên hoặc mã nhân viên" width={280} />
               <Button label="Sao chép tuần trước" variant="ghost" size="sm" icon={<Icon icon={Copy} />} onClick={() => setConfirm('copy')} isDisabled={!branchId || isPastWeek} />
               <Button label="Xóa nháp" variant="ghost" size="sm" icon={<Icon icon={Eraser} />} onClick={() => setConfirm('clear')} isDisabled={drafts === 0} />
               <Button label="Định biên ca" variant="ghost" size="sm" icon={<Icon icon={Users} />} onClick={() => setStaffingTarget({ open: true })} isDisabled={!branchId} />
               <Text type="supporting">
                 {schedules.length === 0 ? 'Tuần này chưa có ca nào.' : `${published} ca đã công bố · ${drafts} ca nháp${cancelled > 0 ? ` · ${cancelled} ca đã hủy` : ''}`}
+                {query.trim() ? ` · Hiện ${visibleEmployees.length}/${employees.length} nhân viên` : ''}
               </Text>
             </HStack>
             <HStack gap={1} wrap="wrap">
@@ -219,8 +230,10 @@ export function SchedulesPage() {
           </HStack>
         ) : employees.length === 0 ? (
           <EmptyState title="Chi nhánh chưa có nhân viên" description="Thêm nhân viên vào chi nhánh ở trang Nhân viên để xếp lịch." />
+        ) : visibleEmployees.length === 0 ? (
+          <EmptyState title="Không tìm thấy nhân viên" description={`Không có nhân viên nào khớp "${query.trim()}". Thử tên hoặc mã khác.`} />
         ) : (
-          <ScheduleGrid days={days} today={today} employees={employees} schedules={schedules} shifts={shifts} staffing={staffing} onStaffing={(shift, day) => setStaffingTarget({ open: true, shiftId: shift.id, date: day })} onAdd={(employee, day) => setAddTarget({ employee, day })} onOpen={setDetail} />
+          <ScheduleGrid days={days} today={today} employees={visibleEmployees} schedules={schedules} shifts={shifts} staffing={staffing} onStaffing={(shift, day) => setStaffingTarget({ open: true, shiftId: shift.id, date: day })} onAdd={(employee, day) => setAddTarget({ employee, day })} onOpen={setDetail} />
         )}
         </div>
       </PageFrame>

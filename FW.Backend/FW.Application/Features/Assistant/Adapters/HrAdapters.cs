@@ -129,16 +129,11 @@ public sealed class HrDataService : IHrDataService
         if (me?.BranchId is not { } branchId || string.IsNullOrWhiteSpace(name)) return Array.Empty<ColleagueDto>();
 
         var wanted = RelativeDateResolver.Normalize(name);
-        var page = await _users.GetPagedAsync(new UserFilter
-        {
-            BranchId = branchId,
-            Status = UserStatus.Active,
-            RoleName = RoleNames.Employee,
-            PageIndex = 1,
-            PageSize = 100
-        }, ct);
-        return page.Items
+        // Lọc theo tên (không dấu) trên TOÀN BỘ nhân viên đang làm của chi nhánh, không chỉ trang đầu
+        var ids = await _users.GetActiveIdsByRoleAsync(RoleNames.Employee, branchId, ct);
+        return (await _users.GetByIdsAsync(ids, ct))
             .Where(u => u.Id != requesterId && RelativeDateResolver.Normalize(u.FullName).Contains(wanted, StringComparison.Ordinal))
+            .OrderBy(u => u.EmployeeCode, StringComparer.OrdinalIgnoreCase)
             .Select(u => new ColleagueDto(u.Id, u.FullName, u.EmployeeCode))
             .ToList();
     }

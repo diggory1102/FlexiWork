@@ -12,8 +12,20 @@ import type {
   UserStatus,
 } from '@/types/user';
 
+const list = (filter: UserFilter) => api.get<PaginatedResult<User>>('/users', filter);
+
+/** API giới hạn số dòng mỗi trang (PagedQuery.MaxPageSize ở backend). */
+const MAX_PAGE_SIZE = 100;
+
 export const userApi = {
-  list: (filter: UserFilter) => api.get<PaginatedResult<User>>('/users', filter),
+  list,
+  /** Mọi nhân viên khớp bộ lọc (tải đủ các trang) — cho màn hình cần cả danh sách, VD lưới xếp lịch. */
+  listAll: async (filter: Omit<UserFilter, 'pageIndex' | 'pageSize'>) => {
+    const page = (pageIndex: number) => list({ ...filter, pageIndex, pageSize: MAX_PAGE_SIZE });
+    const first = await page(1);
+    const rest = await Promise.all(Array.from({ length: Math.max(first.data.totalPages - 1, 0) }, (_, i) => page(i + 2)));
+    return [first, ...rest].flatMap((res) => res.data.items);
+  },
   get: (id: number) => api.get<User>(`/users/${id}`),
   create: (body: CreateUserRequest) => api.post<CreateUserResult>('/users', body),
   update: (id: number, body: UserProfileRequest) => api.put<User>(`/users/${id}`, body),
