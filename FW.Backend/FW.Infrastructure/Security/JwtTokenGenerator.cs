@@ -12,7 +12,7 @@ using Microsoft.IdentityModel.Tokens;
 namespace FW.Infrastructure.Security;
 
 /// <summary>
-/// Phát hành JWT (HMAC-SHA256) chứa: sub (UserId), email, name, employee_code, pwd_stamp, branch_id và các role.
+/// Phát hành JWT (HMAC-SHA256) chứa: sub (UserId), email, name, employee_code, session_stamp, branch_id và các role.
 /// </summary>
 public class JwtTokenGenerator : IJwtTokenGenerator
 {
@@ -33,7 +33,7 @@ public class JwtTokenGenerator : IJwtTokenGenerator
             new(AppClaimTypes.Email, user.Email),
             new(AppClaimTypes.Name, user.FullName),
             new(AppClaimTypes.EmployeeCode, user.EmployeeCode),
-            new(AppClaimTypes.SessionStamp, SessionStampService.StampOf(user).ToString()),
+            new(AppClaimTypes.SessionStamp, SessionStampService.StampOf(user, roles)),
             new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString("N"))
         };
         if (user.BranchId.HasValue)

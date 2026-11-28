@@ -140,6 +140,7 @@ public class UserService : IUserService
         EnsureManagerHasBranch(roles, user.BranchId);
 
         await _users.UpdateAsync(user, cancellationToken);
+        await _sessions.InvalidateAsync(id, cancellationToken); // đổi chi nhánh → phải đăng nhập lại
         return await GetByIdAsync(id, cancellationToken);
     }
 
@@ -156,6 +157,7 @@ public class UserService : IUserService
 
         user.Status = status;
         await _users.UpdateAsync(user, cancellationToken);
+        await _sessions.InvalidateAsync(id, cancellationToken); // khóa / cho nghỉ → đăng xuất ngay
         return await GetByIdAsync(id, cancellationToken);
     }
 
@@ -171,6 +173,7 @@ public class UserService : IUserService
 
         var roles = await ResolveRolesAsync(roleNames, cancellationToken);
         await _users.SetRolesAsync(id, roles.Select(r => r.Id), cancellationToken);
+        await _sessions.InvalidateAsync(id, cancellationToken); // đổi vai trò → phải đăng nhập lại
         return await GetByIdAsync(id, cancellationToken);
     }
 
@@ -210,6 +213,7 @@ public class UserService : IUserService
         UserManagementRules.EnsureNotSelf(_currentUser, id, "xóa");
         await GetManageableAsync(id, cancellationToken);
         await _users.DeleteAsync(id, cancellationToken);
+        await _sessions.InvalidateAsync(id, cancellationToken);
     }
 
     // ------------------------------------------------------------------

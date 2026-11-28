@@ -67,8 +67,8 @@ public static class ServiceCollectionExtensions
                         }
                         return Task.CompletedTask;
                     },
-                    // Thu hồi phiên: token phát hành trước lần đổi mật khẩu gần nhất (dấu phiên không khớp) bị từ chối.
-                    // Token cũ chưa có claim pwd_stamp được coi là 0 — vẫn hợp lệ nếu người dùng chưa từng đổi mật khẩu.
+                    // Thu hồi phiên: tài khoản không còn hoạt động, hoặc mật khẩu / vai trò / chi nhánh đã đổi so với lúc
+                    // phát hành (dấu phiên không khớp, hoặc token không có dấu phiên) thì từ chối.
                     OnTokenValidated = async context =>
                     {
                         var principal = context.Principal!;
@@ -77,7 +77,7 @@ public static class ServiceCollectionExtensions
                             context.Fail("Token thiếu mã người dùng.");
                             return;
                         }
-                        _ = long.TryParse(principal.FindFirst(AppClaimTypes.SessionStamp)?.Value, out var stamp);
+                        var stamp = principal.FindFirst(AppClaimTypes.SessionStamp)?.Value;
 
                         var sessions = context.HttpContext.RequestServices.GetRequiredService<ISessionStampService>();
                         if (!await sessions.IsCurrentAsync(userId, stamp, context.HttpContext.RequestAborted))
@@ -91,7 +91,7 @@ public static class ServiceCollectionExtensions
                         context.HandleResponse();
                         await WriteApiErrorAsync(context.Response, StatusCodes.Status401Unauthorized,
                             context.AuthenticateFailure is SessionRevokedException
-                                ? "Mật khẩu tài khoản đã được thay đổi. Vui lòng đăng nhập lại."
+                                ? "Phiên đăng nhập không còn hiệu lực do tài khoản đã thay đổi. Vui lòng đăng nhập lại."
                                 : "Bạn chưa đăng nhập hoặc phiên đăng nhập đã hết hạn.");
                     },
                     OnForbidden = context =>
@@ -163,10 +163,10 @@ public static class ServiceCollectionExtensions
         return string.IsNullOrWhiteSpace(message) ? "Giá trị không hợp lệ." : message;
     }
 
-    /// <summary>Token hợp lệ về chữ ký/thời hạn nhưng đã bị thu hồi do đổi mật khẩu.</summary>
+    /// <summary>Token hợp lệ về chữ ký/thời hạn nhưng phiên đã bị thu hồi (xem SessionStampService).</summary>
     private sealed class SessionRevokedException : SecurityTokenException
     {
-        public SessionRevokedException() : base("Phiên đăng nhập đã bị thu hồi do đổi mật khẩu.") { }
+        public SessionRevokedException() : base("Phiên đăng nhập đã bị thu hồi.") { }
     }
 
     private static Task WriteApiErrorAsync(HttpResponse response, int statusCode, string message)

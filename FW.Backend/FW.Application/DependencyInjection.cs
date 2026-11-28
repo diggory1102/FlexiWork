@@ -28,6 +28,7 @@ public static class DependencyInjection
     {
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<ISessionStampService, SessionStampService>();
+        services.AddSingleton<ILiveSessionRegistry, LiveSessionRegistry>();
 
         services.AddScoped<IBranchService, BranchService>();
         services.AddScoped<IAddressLookupService, AddressLookupService>();

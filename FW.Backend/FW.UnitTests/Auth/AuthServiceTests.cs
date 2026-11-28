@@ -24,7 +24,7 @@ public class AuthServiceTests
     public AuthServiceTests()
     {
         _cache = new FakeCache(_clock);
-        _sessions = new SessionStampService(_users, _cache, _clock);
+        _sessions = new SessionStampService(_users, _cache, _clock, new LiveSessionRegistry());
         _service = new AuthService(_users, _hasher, new FakeTokenGenerator(), _cache, _email, _clock,
             _sessions, NullLogger<AuthService>.Instance);
         _employee = _users.Add(NewUser("nv@flexiwork.vn"), RoleNames.Employee);
@@ -143,7 +143,7 @@ public class AuthServiceTests
     [Fact]
     public async Task Change_password_revokes_old_sessions_returns_new_session_and_notifies_owner()
     {
-        var oldStamp = SessionStampService.StampOf(_employee);
+        var oldStamp = CurrentStamp();
         Assert.True(await _sessions.IsCurrentAsync(_employee.Id, oldStamp)); // nạp dấu phiên vào cache
 
         _clock.Advance(TimeSpan.FromMinutes(1));
@@ -152,8 +152,8 @@ public class AuthServiceTests
 
         // Token cũ bị từ chối dù dấu phiên cũ đang nằm trong cache; dấu phiên mới (của token vừa cấp) hợp lệ
         Assert.False(await _sessions.IsCurrentAsync(_employee.Id, oldStamp));
-        Assert.True(await _sessions.IsCurrentAsync(_employee.Id, SessionStampService.StampOf(_employee)));
-        Assert.Equal(new DateTimeOffset(_clock.UtcNow).ToUnixTimeSeconds(), SessionStampService.StampOf(_employee));
+        Assert.True(await _sessions.IsCurrentAsync(_employee.Id, CurrentStamp()));
+        Assert.Equal(_clock.UtcNow, _employee.PasswordChangedAt);
 
         Assert.Equal($"token-for-{_employee.Id}", session.AccessToken);
         Assert.False(session.User.MustChangePassword);
@@ -167,7 +167,7 @@ public class AuthServiceTests
     [Fact]
     public async Task Reset_password_by_otp_also_revokes_sessions_and_notifies_owner()
     {
-        var oldStamp = SessionStampService.StampOf(_employee);
+        var oldStamp = CurrentStamp();
         var otp = await RequestOtp();
 
         await Reset(otp);
@@ -189,12 +189,8 @@ public class AuthServiceTests
         Assert.NotNull(await Login("nv@flexiwork.vn", "NewPass123"));
     }
 
-    [Fact]
-    public async Task Session_stamp_rejects_deleted_user_and_accepts_tokens_of_user_who_never_changed_password()
-    {
-        Assert.True(await _sessions.IsCurrentAsync(_employee.Id, 0)); // token cũ chưa có claim pwd_stamp
-        Assert.False(await _sessions.IsCurrentAsync(999, 0));
-    }
+    /// <summary>Dấu phiên mà token cấp ở thời điểm này sẽ mang.</summary>
+    private string CurrentStamp() => SessionStampService.StampOf(_employee, _users.Roles[_employee.Id]);
 
     private sealed class FailingEmailService : FW.Application.Common.Interfaces.IEmailService
     {

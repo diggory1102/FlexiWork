@@ -7,6 +7,7 @@ using FW.Application.Common.Interfaces;
 using FW.Application.Features.Chat;
 using FW.Application.Features.Setup;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.SignalR;
 using FW.Infrastructure;
 using FW.Infrastructure.Services.Storage;
 using Microsoft.Extensions.FileProviders;
@@ -49,7 +50,8 @@ builder.Services.AddCorsPolicy(builder.Configuration);
 builder.Services.AddSwaggerDocumentation();
 
 // 6. SignalR: NotificationHub (thông báo tức thì) và ChatHub (chat nội bộ)
-builder.Services.AddSignalR();
+builder.Services.AddSingleton<SessionRevocationHubFilter>();
+builder.Services.AddSignalR(options => options.AddFilter<SessionRevocationHubFilter>());
 builder.Services.AddSingleton<INotificationPublisher, SignalRNotificationPublisher>();
 builder.Services.AddSingleton<IChatPublisher, SignalRChatPublisher>();
 

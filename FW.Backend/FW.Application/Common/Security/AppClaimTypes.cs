@@ -13,6 +13,6 @@ public static class AppClaimTypes
     public const string BranchId = "branch_id";
     public const string EmployeeCode = "employee_code";
 
-    /// <summary>Dấu phiên: giây Unix của lần đổi mật khẩu gần nhất (0 nếu chưa đổi) — xem SessionStampService.</summary>
-    public const string SessionStamp = "pwd_stamp";
+    /// <summary>Dấu phiên: mã băm của mật khẩu, trạng thái, chi nhánh, vai trò lúc phát hành — xem SessionStampService.</summary>
+    public const string SessionStamp = "session_stamp";
 }

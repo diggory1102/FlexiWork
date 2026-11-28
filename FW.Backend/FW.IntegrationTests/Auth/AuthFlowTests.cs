@@ -62,7 +62,7 @@ public class AuthFlowTests
             cache,
             email,
             clock,
-            new SessionStampService(new UserRepository(session), cache, clock),
+            new SessionStampService(new UserRepository(session), cache, clock, new LiveSessionRegistry()),
             NullLogger<AuthService>.Instance);
     }
 
@@ -137,13 +137,12 @@ public class AuthFlowTests
         // Kiểm tra bằng phiên CSDL mới và cache rỗng → dấu phiên phải đọc lại đúng từ cột DATETIME
         await using var verify = _db.CreateSession();
         var stamps = new SessionStampService(new UserRepository(verify),
-            new MemoryCacheService(new MemoryCache(new MemoryCacheOptions())), new DateTimeProvider());
+            new MemoryCacheService(new MemoryCache(new MemoryCacheOptions())), new DateTimeProvider(), new LiveSessionRegistry());
 
         Assert.False(await stamps.IsCurrentAsync(oldToken.User.Id, StampIn(oldToken.AccessToken)));
         Assert.True(await stamps.IsCurrentAsync(oldToken.User.Id, StampIn(newSession.AccessToken)));
-        Assert.NotEqual(0, StampIn(newSession.AccessToken));
     }
 
-    private static long StampIn(string jwt) =>
-        long.Parse(new Microsoft.IdentityModel.JsonWebTokens.JsonWebToken(jwt).GetClaim(AppClaimTypes.SessionStamp).Value);
+    private static string StampIn(string jwt) =>
+        new Microsoft.IdentityModel.JsonWebTokens.JsonWebToken(jwt).GetClaim(AppClaimTypes.SessionStamp).Value;
 }

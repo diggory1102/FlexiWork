@@ -2,6 +2,7 @@ using System.Text.RegularExpressions;
 using FW.Application.Common.Exceptions;
 using FW.Application.Common.Interfaces;
 using FW.Application.Common.Interfaces.Persistence;
+using FW.Application.Common.Security;
 using FW.Application.Common.Settings;
 using FW.Application.Features.Auth;
 using FW.Application.Features.Users;
@@ -15,6 +16,7 @@ using FW.Infrastructure.Services.Storage;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.JsonWebTokens;
 
 namespace FW.IntegrationTests.Users;
 
@@ -70,13 +72,13 @@ public class UserServiceTests
     private static readonly TestUser Hr = new(4, null, RoleNames.Hr);
     private static readonly TestUser Manager = new(2, 1, RoleNames.Manager);
 
-    private static UserService Users(DbSession s, ICurrentUserService user, IEmailService email) => new(
+    private static UserService Users(DbSession s, ICurrentUserService user, IEmailService email, SessionStampService? sessions = null) => new(
         new UserRepository(s), new RoleRepository(s), new BranchRepository(s), new DepartmentRepository(s),
         new PositionRepository(s), s, new BCryptPasswordHasher(), email, user,
-        Sessions(s, new MemoryCacheService(new MemoryCache(new MemoryCacheOptions()))), NullLogger<UserService>.Instance);
+        sessions ?? Sessions(s, new MemoryCacheService(new MemoryCache(new MemoryCacheOptions()))), NullLogger<UserService>.Instance);
 
-    private static SessionStampService Sessions(DbSession s, ICacheService cache) =>
-        new(new UserRepository(s), cache, new DateTimeProvider());
+    private static SessionStampService Sessions(DbSession s, ICacheService cache, ILiveSessionRegistry? liveSessions = null) =>
+        new(new UserRepository(s), cache, new DateTimeProvider(), liveSessions ?? new LiveSessionRegistry());
 
     private static AuthService Auth(DbSession s)
     {
@@ -236,6 +238,62 @@ public class UserServiceTests
 
         await Assert.ThrowsAsync<BadRequestException>(() =>
             adminService.UpdateRolesAsync(1, new UpdateUserRolesRequest { Roles = new() { RoleNames.Employee } })); // tự đổi vai trò
+    }
+
+    [SkippableFact]
+    public async Task Lock_role_change_branch_change_and_delete_revoke_sessions_immediately()
+    {
+        Skip.IfNot(_db.IsAvailable, _db.SkipReason);
+        await using var session = _db.CreateSession();
+        var email = new CapturingEmail();
+        var liveSessions = new LiveSessionRegistry();
+        // Cùng một cache cho nơi kiểm tra token và nơi sửa tài khoản, như khi API đang chạy
+        var sessions = Sessions(session, new MemoryCacheService(new MemoryCache(new MemoryCacheOptions())), liveSessions);
+        var admin = Users(session, Admin, email, sessions);
+        var created = (await admin.CreateAsync(NewEmployee())).User;
+        var password = email.LastTemporaryPassword();
+        var disconnected = 0;
+
+        async Task<string> SignIn()
+        {
+            var login = await Auth(session).LoginAsync(new LoginRequest { Email = created.Email, Password = password });
+            var stamp = new JsonWebToken(login.AccessToken).GetClaim(AppClaimTypes.SessionStamp).Value;
+            Assert.True(await sessions.IsCurrentAsync(created.Id, stamp)); // nạp vào cache
+            liveSessions.Add(created.Id, Guid.NewGuid().ToString("N"), stamp, () => disconnected++);
+            return stamp;
+        }
+
+        async Task AssertRevoked(string stamp, int expectedDisconnections)
+        {
+            Assert.False(await sessions.IsCurrentAsync(created.Id, stamp));
+            Assert.Equal(expectedDisconnections, disconnected);
+        }
+
+        var current = await SignIn();
+        await admin.UpdateStatusAsync(created.Id, new UpdateUserStatusRequest { Status = UserStatus.Suspended });
+        await AssertRevoked(current, 1);
+
+        await admin.UpdateStatusAsync(created.Id, new UpdateUserStatusRequest { Status = UserStatus.Active });
+        current = await SignIn();
+        await admin.UpdateRolesAsync(created.Id, new UpdateUserRolesRequest { Roles = new() { RoleNames.Manager } });
+        await AssertRevoked(current, 2);
+
+        // Sửa hồ sơ không đụng tới quyền: giữ nguyên phiên và kết nối
+        current = await SignIn();
+        var profile = NewEmployee(created.EmployeeCode);
+        profile.Email = created.Email;
+        profile.FullName = "Chỉ đổi tên";
+        await admin.UpdateAsync(created.Id, profile);
+        Assert.True(await sessions.IsCurrentAsync(created.Id, current));
+        Assert.Equal(2, disconnected);
+
+        profile.BranchId = 2;
+        await admin.UpdateAsync(created.Id, profile);
+        await AssertRevoked(current, 3);
+
+        current = await SignIn();
+        await admin.DeleteAsync(created.Id);
+        await AssertRevoked(current, 4);
     }
 
     [SkippableFact]
